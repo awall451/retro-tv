@@ -32,3 +32,6 @@ es_settings.cfg
 __pycache__/
 .DS_Store
 Thumbs.db
+
+# Viewer: real addresses live only here
+docker/.env
