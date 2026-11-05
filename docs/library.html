@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Game Library</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="shell">
+<nav class="nav" aria-label="Guide pages">
+  <p class="brand">Batocera Pi 4 Guide<small>Retro games and Plex on a Trinitron</small></p>
+  <div class="grille" aria-hidden="true"></div>
+  <ol>
+    <li><a href="index.html">Overview</a></li>
+    <li><a href="setup.html">Base setup</a></li>
+    <li><a href="library.html" aria-current="page">Game library</a></li>
+    <li><a href="shaders.html">Shaders</a></li>
+    <li><a href="display.html">HDMI and Trinitron</a></li>
+    <li><a href="tv.html">Live TV channels</a></li>
+    <li><a href="reference.html">Reference</a></li>
+  </ol>
+  <p class="meta">Batocera 43.1 on a Raspberry Pi 4. Last updated 2026-11-05.</p>
+</nav>
+
+<main>
+<header class="page">
+  <h1>Game library</h1>
+  <p class="lead">Games and box art came from a Miyoo Mini running Onion. Each system was staged in a holding folder on the SSD, then imported by script so the art could be checked and the game lists written in one pass.</p>
+</header>
+
+<section>
+  <h2>Result</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>System</th><th>Onion folder</th><th>Batocera folder</th><th class="num">Games</th><th class="num">With art</th></tr></thead>
+    <tbody>
+      <tr><td>SNES</td><td><code>SFC</code></td><td><code>snes</code></td><td class="num">315</td><td class="num">272</td></tr>
+      <tr><td>PlayStation</td><td><code>PS</code></td><td><code>psx</code></td><td class="num">180</td><td class="num">180</td></tr>
+      <tr><td>NES</td><td><code>FC</code></td><td><code>nes</code></td><td class="num">160</td><td class="num">157</td></tr>
+      <tr><td>Mega Drive</td><td><code>MD</code></td><td><code>megadrive</code></td><td class="num">159</td><td class="num">155</td></tr>
+      <tr><td>Game Boy</td><td><code>GB</code></td><td><code>gb</code></td><td class="num">145</td><td class="num">136</td></tr>
+      <tr><td>GBA</td><td><code>GBA</code></td><td><code>gba</code></td><td class="num">142</td><td class="num">142</td></tr>
+      <tr><td>Game Boy Color</td><td><code>GBC</code></td><td><code>gbc</code></td><td class="num">134</td><td class="num">130</td></tr>
+    </tbody>
+  </table></div>
+  <p>Counts include one bundled Batocera game each in SNES, NES, Mega Drive and GBA. PS1 counts are visible entries: 203 discs, with multi-disc games shown once.</p>
+</section>
+
+<section>
+  <h2>1. Stage the files</h2>
+  <p>Copy each Onion system folder from the backup to <code>/userdata/temp-rom-holding/&lt;Onion name&gt;/</code> over the share (<code>\\&lt;pi-ip&gt;\share\temp-rom-holding</code>) or with rsync. Onion keeps art in an <code>Imgs/</code> subfolder named after each ROM, plus a <code>&lt;SYS&gt;_cache6.db</code> file that Batocera can't use.</p>
+</section>
+
+<section>
+  <h2>2. Import cartridge systems: <code>tools/import_onion.py</code></h2>
+<pre><code>python3 import_onion.py &lt;onion_dir&gt; &lt;batocera_system_dir&gt; &lt;broken_art_dir&gt; [--dry-run]</code></pre>
+  <ul>
+    <li>Takes the accepted file types from the system's own <code>_info.txt</code>, so <code>.sfc</code>, <code>.smc</code>, <code>.md</code> or <code>.bin</code> all go where they belong.</li>
+    <li>Moves each ROM, and its art from <code>Imgs/&lt;rom&gt;.png</code> to <code>images/&lt;rom&gt;-image.png</code>.</li>
+    <li>Writes a <code>gamelist.xml</code> entry per game: a clean name (region and revision tags removed) and the image path, so art shows without relying on filename matching.</li>
+    <li><strong>Validates every PNG fully</strong>: every chunk's CRC, an end marker, and the image data inflates. Broken images go to the broken-art folder instead of being linked.</li>
+  </ul>
+  <p>Run with <code>--dry-run</code> first, and stop EmulationStation while writing game lists (<code>/etc/init.d/S31emulationstation stop</code>, then <code>start</code>).</p>
+  <div class="warn"><strong>Why the full PNG check</strong><p>41 SNES covers showed blank in the menu, and its log said <code>invalid data</code>. They were cut off at 64, 80 or 96 KB in the Miyoo backup itself: an interrupted copy. A header check passes them; decoding the whole file catches them. Across the other systems, 18 more were set aside the same way.</p></div>
+</section>
+
+<section>
+  <h2>3. Import PlayStation discs: <code>tools/import_onion_psx.py</code></h2>
+  <ul>
+    <li>Reads each <code>.cue</code> sheet and moves it together with every <code>.bin</code> track it lists. A game with any missing track is skipped. All 203 cue sheets referenced 948 tracks, none missing.</li>
+    <li>Multi-disc games get one <code>.m3u</code> playlist (16 games, 39 discs). The individual discs are hidden in the game list, so each game shows once; swap discs in-game with Hotkey + L3. The grouping uses everything before <code>(Disc N)</code>, so "Red Alert (Disc 1) (Allies)" and "(Disc 2) (Soviet)" become one game.</li>
+    <li>Art falls back to Onion's <code>(Track 01)</code> image when there's no main one.</li>
+  </ul>
+  <p>PS1 used about 105 GB as cue/bin. Converting to <code>.chd</code> would roughly halve that; it hasn't been done.</p>
+</section>
+
+<section>
+  <h2>4. Replacing or restoring art: <code>tools/unlink_onion_art.py</code></h2>
+  <p>Moves imported art back to a holding folder and removes the image links, so the scraper sees those games as missing art. It only touches entries the importers wrote (path, name, image), so bundled and scraped games keep theirs. Each game list is backed up as <code>gamelist.xml.bak-art</code>.</p>
+  <p>This was tried and reverted: the scraped covers weren't preferred over the Miyoo ones. To restore after a scrape, stop the menu first (it can save half-finished scraper data), move scraped files aside, move the Miyoo art back, and restore each <code>gamelist.xml.bak-art</code>.</p>
+</section>
+
+<section>
+  <h2>5. Scraping what's missing</h2>
+  <p>Main menu → Scraper, source <strong>ScreenScraper</strong> with a free account, and <strong>only games missing media</strong>, which leaves the Miyoo covers alone. A full SNES pass downloads covers only for games without one, plus a logo (marquee) for every game.</p>
+  <p>ScreenScraper replies in French. The common messages:</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Message</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><em>Erreur de login : Vérifier vos identifiants utilisateur !</em></td><td>Wrong username or password, or the account isn't activated yet</td></tr>
+      <tr><td><em>Erreur de login : Vérifier vos identifiants développeur !</em></td><td>Batocera's built-in app key was rejected; usually temporary</td></tr>
+      <tr><td><em>L'API est fermée pour les non membres</em></td><td>Server is busy; only logged-in users get through</td></tr>
+      <tr><td><em>Le serveur est fermé / saturé</em></td><td>ScreenScraper is down or overloaded</td></tr>
+      <tr><td><em>Votre quota de scrape est dépassé</em></td><td>Daily limit reached; it continues the next day</td></tr>
+    </tbody>
+  </table></div>
+  <p>Restarting EmulationStation stops a running scrape. Downloaded covers stay; rerun with "missing media" to finish.</p>
+</section>
+
+<nav class="pager" aria-label="Previous and next page"><a href="setup.html">← Base setup</a><a href="shaders.html">Shaders →</a></nav>
+</main>
+</div>
+</body>
+</html>

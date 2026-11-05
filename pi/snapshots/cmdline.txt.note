@@ -1,0 +1,3 @@
+Snapshot of /boot/cmdline.txt, taken 2026-11-05 with the Pi in the Trinitron (crt) profile.
+Anything named like a password, key, token, user or SSID was filtered out.
+The video= option at the end is added by the Trinitron profile.

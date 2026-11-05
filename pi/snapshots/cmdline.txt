@@ -1,0 +1,1 @@
+console=tty3 loglevel=3 vt.global_cursor_default=0 logo.nologo dev=LABEL=BATOCERA rootwait fastboot noswap usbcore.autosuspend=-1 usbhid.mousepoll=8 video=HDMI-A-1:640x480@60,margin_left=13,margin_right=27,margin_top=0,margin_bottom=20

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Batocera Pi 4 Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="shell">
+<nav class="nav" aria-label="Guide pages">
+  <p class="brand">Batocera Pi 4 Guide<small>Retro games and Plex on a Trinitron</small></p>
+  <div class="grille" aria-hidden="true"></div>
+  <ol>
+    <li><a href="index.html" aria-current="page">Overview</a></li>
+    <li><a href="setup.html">Base setup</a></li>
+    <li><a href="library.html">Game library</a></li>
+    <li><a href="shaders.html">Shaders</a></li>
+    <li><a href="display.html">HDMI and Trinitron</a></li>
+    <li><a href="tv.html">Live TV channels</a></li>
+    <li><a href="reference.html">Reference</a></li>
+  </ol>
+  <p class="meta">Batocera 43.1 on a Raspberry Pi 4. Last updated 2026-11-05.</p>
+</nav>
+
+<main>
+<header class="page">
+  <h1>Batocera Pi 4: games and Plex on a Sony Trinitron</h1>
+  <p class="lead">One Raspberry Pi 4 that plays retro games and a shared Plex library, switchable from the controller between a flat HDMI TV and a 4:3 Sony Trinitron. This guide records every step so the whole setup can be rebuilt from a blank SD card.</p>
+</header>
+
+<section>
+  <h2>What the finished system does</h2>
+  <ul>
+    <li><strong>1,075 games</strong> across SNES, NES, Mega Drive, Game Boy, GBC, GBA and PlayStation, imported from a Miyoo Mini (Onion) backup with its box art.</li>
+    <li><strong>Two display profiles</strong>, picked from the Ports menu: a 16:9 HDMI TV with a Trinitron-style CRT shader, or the real Trinitron through an HDMI-to-composite converter at 640×480, with no shaders, overscan margins and a CRT-legible menu.</li>
+    <li><strong>Kodi</strong> with live 90s-style TV channels (ErsatzTV on the homelab) and on-demand Plex (PM4K), both following the active display profile.</li>
+    <li><strong>Storage on a 1 TB SSD</strong>, SSH from the PC by key, and an Argon ONE case with fan control enabled.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>How the pieces connect</h2>
+  <div class="flow">
+    <div>Windows PC: this repo, the SSH key, the flash and import tools</div>
+    <div class="arrow">SSH by key, file share <code>\\&lt;pi-ip&gt;\share</code></div>
+    <div>Raspberry Pi 4, Batocera 43.1 on microSD, <code>/userdata</code> on the 1 TB SSD (Argon ONE M.2 case)</div>
+    <div class="arrow">HDMI 0: straight to a flat TV, or through the Dingsun converter (480i composite)</div>
+    <div>Flat HDMI TV at 1080p, or the Sony Trinitron at 640×480</div>
+    <div class="arrow">Kodi pulls live channels from ErsatzTV on a home server and on-demand video from the shared Plex server</div>
+  </div>
+</section>
+
+<section>
+  <h2>Pages</h2>
+  <div class="cards">
+    <a class="card" href="setup.html"><h3>Base setup</h3><span>Flash the card, move storage to the SSD, SSH key, network, Argon fan, BIOS files.</span></a>
+    <a class="card" href="library.html"><h3>Game library</h3><span>Import ROMs and art from an Onion backup, PS1 discs and playlists, validate art, scrape gaps.</span></a>
+    <a class="card" href="shaders.html"><h3>Shaders</h3><span>How each shader was benchmarked on the Pi and why these ones were picked.</span></a>
+    <a class="card" href="display.html"><h3>HDMI and Trinitron</h3><span>The two profiles, the converter, overscan, CRT-readable menus, Kodi and Plex.</span></a>
+    <a class="card" href="tv.html"><h3>Live TV channels</h3><span>ErsatzTV on a home server: sixteen scheduled channels with period commercials, and tuning in from Kodi.</span></a>
+    <a class="card" href="reference.html"><h3>Reference</h3><span>Every file and script, the gotchas found along the way, troubleshooting.</span></a>
+  </div>
+</section>
+
+<section>
+  <h2>Quick facts</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Item</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>Pi address</td><td><code>&lt;pi-ip&gt;</code>, fixed by a DHCP reservation on the router (wired)</td></tr>
+      <tr><td>SSH</td><td><code>ssh -i ~/.ssh/batocera_ed25519 root@&lt;pi-ip&gt;</code>. Password login still works (<code>root</code> / <code>linux</code>, Batocera's default).</td></tr>
+      <tr><td>File share</td><td><code>\\&lt;pi-ip&gt;\share</code> (the SSD's <code>batocera</code> folder)</td></tr>
+      <tr><td>Storage</td><td>1 TB SSD, ext4, UUID <code>a9c92283-e75c-4f99-9745-9458be449d7f</code>, about 630 GB free</td></tr>
+      <tr><td>Controller</td><td>PS5 DualSense over Bluetooth. Hotkey is the PS button.</td></tr>
+      <tr><td>Display profiles</td><td>Ports → <strong>Display: HDMI TV (16:9)</strong> or <strong>Display: Sony Trinitron (4:3 CRT)</strong></td></tr>
+      <tr><td>Repo</td><td><a href="https://github.com/awall451/retro-tv">awall451/retro-tv</a> (private, branch <code>main</code>)</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>Open items</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Item</th><th>State</th></tr></thead>
+    <tbody>
+      <tr><td>Argon case fan stays silent even at 100% (control board answers on I2C)</td><td><span class="pill warn">Hardware</span> check the fan cable, or replace the 30 mm 5 V fan</td></tr>
+      <tr><td>63 games without box art (43 SNES, 9 GB, 4 Mega Drive, 4 GBC, 3 NES)</td><td><span class="pill info">To do</span> scrape with "only missing media"</td></tr>
+      <tr><td>Plex (PM4K) menus at 640×480</td><td><span class="pill info">Unchecked</span> on the Trinitron; Kodi's TV guide has its own CRT skin</td></tr>
+      <tr><td>Keyboard key for the Control Center</td><td><span class="pill info">Optional</span> no key is bound on the wireless keyboard</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<nav class="pager" aria-label="Next page"><span></span><a href="setup.html">Base setup →</a></nav>
+</main>
+</div>
+</body>
+</html>

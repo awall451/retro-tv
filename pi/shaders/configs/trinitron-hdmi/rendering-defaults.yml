@@ -1,0 +1,49 @@
+# Shader set for playing on a flat HDMI TV (1080p output from the Pi 4).
+# Consoles get a Trinitron simulation; handhelds get their own LCD look.
+# Every shader here was measured at full speed (about 60 fps) on this Pi at 1080p.
+# See BENCHMARKING.md. Installed at /userdata/shaders/configs/trinitron-hdmi/.
+# Select it with global.shaderset=trinitron-hdmi in batocera.conf.
+
+# Any system not listed below: crt-pi with an aperture-grille mask and
+# horizontal-only (cylindrical Trinitron) curvature. Custom preset in /userdata/shaders/crt/.
+default:
+  shader: crt/trinitron
+  scanline: true
+
+# Original Game Boy: paper-textured LCD with the grid on dark pixels, like the
+# non-backlit DMG screen. Gambatte supplies the classic green palette.
+gb:
+  shader: handheld/simpletex_lcd
+# Game Boy Color: same LCD texture plus GBC color correction (softer, true-to-screen colors).
+gbc:
+  shader: handheld/simpletex_lcd+gbc-color
+# Game Boy Advance: endrift's (mGBA author) recreation of the original AGB-001 screen,
+# with per-pixel RGB subpixels and its color response.
+gba:
+  shader: handheld/agb001
+
+# Other LCD handhelds: lightweight LCD grid (Batocera's own choice for these).
+gamegear:
+  shader: handheld/zfast-lcd
+ngp:
+  shader: handheld/zfast-lcd
+ngpc:
+  shader: handheld/zfast-lcd
+wswan:
+  shader: handheld/zfast-lcd
+wswanc:
+  shader: handheld/zfast-lcd
+lynx:
+  shader: handheld/zfast-lcd
+
+# No shader: high-resolution or non-CRT displays, and systems with no GPU headroom on a Pi 4.
+virtualboy:
+  shader:
+nds:
+  shader:
+3ds:
+  shader:
+psp:
+  shader:
+dreamcast:
+  shader:

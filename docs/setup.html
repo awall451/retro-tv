@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Base Setup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="shell">
+<nav class="nav" aria-label="Guide pages">
+  <p class="brand">Batocera Pi 4 Guide<small>Retro games and Plex on a Trinitron</small></p>
+  <div class="grille" aria-hidden="true"></div>
+  <ol>
+    <li><a href="index.html">Overview</a></li>
+    <li><a href="setup.html" aria-current="page">Base setup</a></li>
+    <li><a href="library.html">Game library</a></li>
+    <li><a href="shaders.html">Shaders</a></li>
+    <li><a href="display.html">HDMI and Trinitron</a></li>
+    <li><a href="tv.html">Live TV channels</a></li>
+    <li><a href="reference.html">Reference</a></li>
+  </ol>
+  <p class="meta">Batocera 43.1 on a Raspberry Pi 4. Last updated 2026-11-05.</p>
+</nav>
+
+<main>
+<header class="page">
+  <h1>Base setup</h1>
+  <p class="lead">From a blank microSD card to a Pi that boots Batocera, keeps its data on the SSD, accepts SSH by key, has a fixed address, and runs the case fan.</p>
+</header>
+
+<section>
+  <h2>Hardware</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Part</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Raspberry Pi 4 Model B</td><td>8 GB. Wired Ethernet.</td></tr>
+      <tr><td>Argon ONE M.2 case</td><td>Aluminium shell is the heatsink. The fan and power button sit on a small control board at I2C address <code>0x1a</code>.</td></tr>
+      <tr><td>1 TB M.2 SATA SSD</td><td>In the case's base, connected over a USB 3 bridge. Already held a <code>plex_library</code> folder, which stays untouched.</td></tr>
+      <tr><td>32 GB microSD card</td><td>Holds Batocera. The old Raspbian card is kept as a fallback.</td></tr>
+      <tr><td>Dingsun HDMI-to-composite converter</td><td>Only for the Trinitron. See <a href="display.html">HDMI and Trinitron</a>.</td></tr>
+      <tr><td>PS5 DualSense</td><td>Bluetooth. A wireless keyboard and mouse also work in the menu.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>1. Flash Batocera to the microSD card</h2>
+  <ol class="steps">
+    <li><div>
+      <strong>Download the image</strong>
+      <p>From batocera.org, the Raspberry Pi 4 build (<code>bcm2711</code>). Used here: <code>batocera-bcm2711-43.1-20260530.img.gz</code>, 2.2 GB. Check it against the published <code>.md5</code> file next to it.</p>
+    </div></li>
+    <li><div>
+      <strong>Identify the card</strong>
+      <p>In PowerShell, <code>Get-Disk</code> shows each disk's number, bus and size. The card reader shows as <code>USB</code>, about 29.7 GB for a 32 GB card. Check what is on it first: the card used here still had a 2021 Raspberry Pi OS on it, which was confirmed as a spare before erasing.</p>
+    </div></li>
+    <li><div>
+      <strong>Write it with <code>tools/flash-sd.ps1</code></strong>
+      <p>Run from an elevated PowerShell (Windows asks for admin). The script refuses any disk that is a boot or system disk, not on USB, or not 28–33 GB; clears the partitions; decompresses the image straight to <code>\\.\PhysicalDriveN</code>; writes the first 1 MB last so Windows doesn't mount half-written partitions; then reads the card back and compares SHA-256.</p>
+<pre><code>powershell -ExecutionPolicy Bypass -File tools\flash-sd.ps1 -Image &lt;path&gt;\batocera-bcm2711-43.1-20260530.img.gz -DiskNumber 1 -Log flash.log</code></pre>
+      <p>Expected result: <code>RESULT: VERIFIED</code>, about 6.98 GB written.</p>
+    </div></li>
+  </ol>
+  <div class="warn"><strong>Lesson learned</strong><p>The first run failed at the very end: PowerShell's <code>[math]::Min</code> picked a 32-bit overload and couldn't hold the 6.98 GB size. Everything except the partition table had been written. Sizes in the script are now cast to <code>[int64]</code>.</p></div>
+</section>
+
+<section>
+  <h2>2. Move storage to the SSD</h2>
+  <p>Batocera keeps everything you change (ROMs, saves, settings) in <code>/userdata</code>. Out of the box that's a partition on the card; it belongs on the SSD.</p>
+  <ol class="steps">
+    <li><div>
+      <strong>Make the SSD ext4, keeping its data</strong>
+      <p>The SSD was ext3, which isn't on Batocera's supported list. It was upgraded in place from Raspbian, without reformatting:</p>
+<pre><code>sudo umount /dev/sdX1
+sudo tune2fs -O extents,uninit_bg,dir_index /dev/sdX1
+sudo e2fsck -fD /dev/sdX1</code></pre>
+      <p>Change the drive's type to <code>ext4</code> in Raspbian's <code>/etc/fstab</code> too. Back up first. This SSD's filesystem is on the whole disk, with no partition table; Batocera handles that fine.</p>
+    </div></li>
+    <li><div>
+      <strong>Copy the card's <code>/userdata</code> to the SSD</strong>
+      <p>Batocera uses a folder named <code>batocera</code> on the external drive as <code>/userdata</code> (read in <code>/etc/init.d/S11share</code>). Copying the card's data there first keeps settings, Bluetooth pairings and the SSH key:</p>
+<pre><code>mkdir /media/sdb/batocera
+cp -a /userdata/. /media/sdb/batocera/</code></pre>
+    </div></li>
+    <li><div>
+      <strong>Point Batocera at the SSD by UUID</strong>
+      <p>In <code>/boot/batocera-boot.conf</code> (remount <code>/boot</code> read-write first):</p>
+<pre><code>sharedevice=DEV a9c92283-e75c-4f99-9745-9458be449d7f</code></pre>
+      <p>Using the UUID survives the drive's name changing (it was <code>sdb</code>, then <code>sda</code> after a reboot). If the SSD ever fails to mount, Batocera falls back to the card instead of failing to boot. The menu's System settings → Storage device does the same thing.</p>
+    </div></li>
+    <li><div>
+      <strong>Verify after a reboot</strong>
+<pre><code>df -h /userdata          # should show /dev/sda, about 916 G
+findmnt /userdata        # /dev/sda[/batocera]</code></pre>
+    </div></li>
+  </ol>
+</section>
+
+<section>
+  <h2>3. SSH by key</h2>
+  <p>SSH is on by default (<code>root</code> / <code>linux</code>). A dedicated key lets scripts and tools connect without a password:</p>
+<pre><code>ssh-keygen -t ed25519 -N "" -C batocera-pi -f ~/.ssh/batocera_ed25519
+ssh root@batocera.local "mkdir -p ~/.ssh &amp;&amp; chmod 700 ~/.ssh &amp;&amp; echo '&lt;contents of batocera_ed25519.pub&gt;' &gt;&gt; ~/.ssh/authorized_keys &amp;&amp; chmod 600 ~/.ssh/authorized_keys"</code></pre>
+  <p>Root's home is <code>/userdata/system</code>, so the key lives on the SSD and survives Batocera updates. The private key never goes in this repo (<code>.gitignore</code> blocks it).</p>
+  <div class="note"><strong>Use the IP address</strong><p><code>batocera.local</code> relies on mDNS, which was unreliable from Windows. <code>&lt;pi-ip&gt;</code> always works.</p></div>
+</section>
+
+<section>
+  <h2>4. Fixed address</h2>
+  <p>Batocera gets its address by DHCP. A router reservation pins it: the Pi's wired MAC → <code>&lt;pi-ip&gt;</code>. Don't also set a static IP on the Pi. (The reservation predates Batocera: it was made for the same Pi under Raspbian, and carried over because it follows the network card.)</p>
+</section>
+
+<section>
+  <h2>5. Argon ONE fan and power button</h2>
+  <p>The case's fan and button need Batocera's <code>rpi-argonone</code> service, which talks to the case over I2C. Two changes, then one reboot:</p>
+<pre><code># /boot/config.txt, under [all]
+dtparam=i2c_arm=on
+dtparam=i2c-1=on
+enable_uart=1
+
+# /userdata/system/batocera.conf
+system.power.switch=ARGONONE</code></pre>
+  <p>Batocera's own setup script adds the <code>config.txt</code> lines on first start, but they only take effect at the next boot; adding them by hand saves a reboot. Check after booting:</p>
+<pre><code>i2cdetect -y 1                  # 1a should appear
+ps -eo args | grep [r]pi-argonone</code></pre>
+  <p>Default curve: off below 55 °C, 10% at 55, 55% at 60, 100% at 65. Change it in <code>/userdata/system/configs/argonone.conf</code> (lines like <code>50=30</code>). A short press on the case button shuts down cleanly, a double press quits the current game.</p>
+  <div class="warn"><strong>This unit's fan doesn't spin</strong><p>The board answers at <code>0x1a</code> and accepts <code>i2cset -y 1 0x1a 0x80 100</code> (the service's own command), and a <code>0=100</code> curve held it at full speed, but the fan stayed silent. That points to the fan's 2-pin cable or the fan itself. Temperatures stayed at 49–56 °C with no throttling (<code>vcgencmd get_throttled</code> = <code>0x0</code>) on the case alone.</p></div>
+</section>
+
+<section>
+  <h2>6. BIOS files</h2>
+  <p>BIOS files came from the Miyoo backup. <code>tools/check_bios.py</code> compares each file's MD5 with Batocera's list in <code>/usr/share/batocera/datainit/bios/readme.txt</code>:</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>File</th><th>System</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td><code>scph5501.bin</code></td><td>PlayStation (US)</td><td><span class="pill ok">Good</span></td></tr>
+      <tr><td><code>gba_bios.bin</code>, <code>gb_bios.bin</code>, <code>gbc_bios.bin</code></td><td>GBA, GB, GBC</td><td><span class="pill ok">Good</span></td></tr>
+      <tr><td><code>bios_CD_U/E/J.bin</code></td><td>Sega CD</td><td><span class="pill ok">Good</span></td></tr>
+      <tr><td><code>syscard3.pce</code></td><td>PC Engine CD</td><td><span class="pill ok">Good</span> after stripping a 512-byte header: <code>tail -c +513</code></td></tr>
+      <tr><td><code>neogeo.zip</code></td><td>Neo Geo</td><td><span class="pill info">Different zip</span> full FBNeo set, should work</td></tr>
+    </tbody>
+  </table></div>
+  <p>The PS1 emulator log confirms the BIOS loads: <code>found BIOS file: scph5501.bin</code>. The menu still warned before every PS1 game, because it wants all seven PS1 BIOS versions. The pre-launch check is off (<code>CheckBiosesAtLaunch=false</code> in <code>es_settings.cfg</code>), so run <code>check_bios.py</code> when adding a new system.</p>
+</section>
+
+<section>
+  <h2>7. Airplane mode recovery</h2>
+  <p>The Control Center's Plane Mode stops Bluetooth and Wi-Fi, which disconnects the controller you'd use to switch it back. Wired SSH still works:</p>
+<pre><code>batocera-planemode disable
+/etc/init.d/S32bluetooth restart
+bluetoothctl show | grep Powered      # Powered: yes</code></pre>
+  <p>Pairings survive; press the controller's PS button. The toggle is now removed from the Control Center (see <a href="display.html">HDMI and Trinitron</a>).</p>
+</section>
+
+<nav class="pager" aria-label="Previous and next page"><a href="index.html">← Overview</a><a href="library.html">Game library →</a></nav>
+</main>
+</div>
+</body>
+</html>

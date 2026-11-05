@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reference</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="shell">
+<nav class="nav" aria-label="Guide pages">
+  <p class="brand">Batocera Pi 4 Guide<small>Retro games and Plex on a Trinitron</small></p>
+  <div class="grille" aria-hidden="true"></div>
+  <ol>
+    <li><a href="index.html">Overview</a></li>
+    <li><a href="setup.html">Base setup</a></li>
+    <li><a href="library.html">Game library</a></li>
+    <li><a href="shaders.html">Shaders</a></li>
+    <li><a href="display.html">HDMI and Trinitron</a></li>
+    <li><a href="tv.html">Live TV channels</a></li>
+    <li><a href="reference.html" aria-current="page">Reference</a></li>
+  </ol>
+  <p class="meta">Batocera 43.1 on a Raspberry Pi 4. Last updated 2026-11-05.</p>
+</nav>
+
+<main>
+<header class="page">
+  <h1>Reference</h1>
+  <p class="lead">Where everything lives, what each script does, and the traps found while building this, so the next rebuild avoids them.</p>
+</header>
+
+<section>
+  <h2>This repo</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Path</th><th>What it is</th></tr></thead>
+    <tbody>
+      <tr><td><code>docs/</code></td><td>This guide</td></tr>
+      <tr><td><code>tools/flash-sd.ps1</code></td><td>Flash a Batocera image to the microSD card, with safety checks and read-back verification (Windows, admin)</td></tr>
+      <tr><td><code>tools/import_onion.py</code></td><td>Import an Onion system folder: ROMs, validated art, game list</td></tr>
+      <tr><td><code>tools/import_onion_psx.py</code></td><td>Import Onion PS1 discs: cue + tracks, <code>.m3u</code> playlists, hidden discs</td></tr>
+      <tr><td><code>tools/unlink_onion_art.py</code></td><td>Move imported art out and unlink it, so the scraper refills it</td></tr>
+      <tr><td><code>tools/check_bios.py</code></td><td>Check BIOS files against Batocera's MD5 list</td></tr>
+      <tr><td><code>tools/shader_bench.sh</code></td><td>Measure a shader's fps on the Pi and save a GPU screenshot</td></tr>
+      <tr><td><code>tools/verify_launch.sh</code></td><td>Launch games through Batocera's launcher and print the settings RetroArch got</td></tr>
+      <tr><td><code>pi/display-profiles/</code></td><td>The profile switcher and its helpers, installed to <code>/userdata/system/display-profiles/</code></td></tr>
+      <tr><td><code>pi/shaders/configs/</code></td><td>The two shader sets, installed to <code>/userdata/shaders/configs/</code></td></tr>
+      <tr><td><code>pi/shaders/crt/</code></td><td>The Trinitron CRT presets (curved and flat), installed to <code>/userdata/shaders/crt/</code></td></tr>
+      <tr><td><code>pi/snapshots/</code></td><td>Sanitized copies of the Pi's config files (2026-11-05, Trinitron profile), for rebuilding</td></tr>
+    </tbody>
+  </table></div>
+  <p>Scripts are copied to the Pi with <code>scp -i ~/.ssh/batocera_ed25519 &lt;file&gt; root@&lt;pi-ip&gt;:&lt;path&gt;</code>. <code>.gitattributes</code> keeps them in Unix line endings; a script with Windows line endings fails on Batocera.</p>
+</section>
+
+<section>
+  <h2>Display profile files</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>File on the Pi</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td><code>/userdata/system/display-profiles/apply.sh hdmi|crt [--no-reboot]</code></td><td>Applies a profile, backs up the files it changes, logs, reboots</td></tr>
+      <tr><td><code>/userdata/roms/ports/Display - *.sh</code> and <code>gamelist.xml</code></td><td>The two Ports menu entries and their names</td></tr>
+      <tr><td><code>display-profiles/crt-margins.conf</code></td><td>Overscan margins for the Trinitron</td></tr>
+      <tr><td><code>display-profiles/make_crt_theme.sh</code></td><td>Builds <code>/userdata/themes/es-theme-carbon-crt</code></td></tr>
+      <tr><td><code>display-profiles/make_bcc_compact_css.py</code>, <code>make_bcc_layout.py</code></td><td>Control Center stylesheet and layout</td></tr>
+      <tr><td><code>display-profiles/make_kodi_crt_skin.sh</code>, <code>kodi-skin/</code></td><td>Builds Kodi's Estuary CRT skin (retro guide, show details) and enables it</td></tr>
+      <tr><td><code>display-profiles/kodi_tv_settings.py</code></td><td>Live-TV settings and controller map for Kodi, both profiles</td></tr>
+      <tr><td><code>/userdata/system/scripts/kodi-fullscreen-fix.sh</code></td><td>Runs at each Kodi launch; fixes the 19 px full-screen offset</td></tr>
+      <tr><td><code>display-profiles/current</code></td><td>Active profile name</td></tr>
+      <tr><td><code>display-profiles/backups/</code></td><td><code>batocera.conf</code>, <code>batocera-boot.conf</code>, <code>cmdline.txt</code> and PM4K settings before each switch</td></tr>
+      <tr><td><code>/userdata/system/logs/display-profile.log</code></td><td>What each switch did</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>Gotchas found along the way</h2>
+  <ul>
+    <li><strong><code>es.resolution</code> must be in <code>batocera.conf</code>.</strong> The shutdown service <code>S65values4boot</code> copies it from <code>batocera.conf</code> into <code>/boot/batocera-boot.conf</code> on every reboot, so a value set only in the boot file is wiped. Set both.</li>
+    <li><strong>EmulationStation doesn't rewrite <code>es_settings.cfg</code> on shutdown</strong> (tested), so editing it while the menu runs is safe. Stop the menu anyway before editing game lists.</li>
+    <li><strong>Kodi rewrites add-on settings when it exits.</strong> Close Kodi before editing PM4K's <code>settings.xml</code>.</li>
+    <li><strong><code>pgrep -f</code> / <code>pkill -f</code> over SSH match their own command line.</strong> Use a bracket pattern such as <code>grep "^/usr/bin/[r]etroarch"</code>. One <code>pkill</code> killed its own session.</li>
+    <li><strong>Restarting the menu over SSH</strong> once took the display server down with the session. After <code>/etc/init.d/S31emulationstation start</code>, check from a new session that <code>sway</code> and <code>emulationstation</code> are running. Restarting the menu also stops a running scrape.</li>
+    <li><strong>Relaunch the Control Center</strong> with <code>setsid batocera-controlcenter hidden</code>; calling the app directly fails with <code>failed to create display</code>. <code>kill -10 $(cat /var/run/batocera-controlcenter.pid)</code> shows or hides it.</li>
+    <li><strong>Screenshots</strong>: <code>grim</code> captures the whole screen (with <code>XDG_RUNTIME_DIR=/var/run WAYLAND_DISPLAY=wayland-1</code>). To capture a game list, temporarily set <code>StartupSystem=snes</code> and <code>StartupOnGameList=true</code> in <code>es_settings.cfg</code>.</li>
+    <li><strong>The menu's BIOS warning</strong> fires if any of a system's known BIOS versions is missing, even when the emulator has the one it needs.</li>
+    <li><strong>Onion art can be truncated</strong> in a backup; check full PNG decoding, not just the header.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Troubleshooting</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Problem</th><th>Fix</th></tr></thead>
+    <tbody>
+      <tr><td>No picture on the Trinitron</td><td>Converter powered and on NTSC, TV on the Video input. Reboot the Pi with the converter already on. If still blank, add <code>hdmi_force_hotplug=1</code> under <code>[all]</code> in <code>/boot/config.txt</code> (the BATOCERA drive with the card in a PC).</td></tr>
+      <tr><td>Picture rolls or is black and white</td><td>Converter set to PAL; switch to NTSC.</td></tr>
+      <tr><td>Edges cut off on the Trinitron</td><td>Re-measure with the overscan pattern and edit <code>crt-margins.conf</code>.</td></tr>
+      <tr><td>Wrong profile picked</td><td>Choose the other Ports entry; both work on either TV.</td></tr>
+      <tr><td>Controller won't connect</td><td>Airplane mode: <code>batocera-planemode disable</code> then <code>/etc/init.d/S32bluetooth restart</code>.</td></tr>
+      <tr><td>Blank covers in a list</td><td>Check the menu log for <code>invalid data</code>; the PNG is broken. Rerun the import's art check or scrape that game.</td></tr>
+      <tr><td><code>/userdata</code> on the card instead of the SSD</td><td><code>findmnt /userdata</code>; check <code>sharedevice=DEV &lt;UUID&gt;</code> in <code>batocera-boot.conf</code> and that the SSD is detected (<code>lsblk -f</code>).</td></tr>
+      <tr><td>Can't reach <code>batocera.local</code></td><td>Use <code>&lt;pi-ip&gt;</code>.</td></tr>
+      <tr><td>Hot case, worried about throttling</td><td><code>vcgencmd measure_temp; vcgencmd get_throttled</code>. <code>0x0</code> means no throttling since boot; the Pi slows itself at 80 °C.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>Rebuilding from scratch, in order</h2>
+  <ol>
+    <li>Flash the card (<code>tools/flash-sd.ps1</code>) and boot once.</li>
+    <li>Install the SSH key, then move <code>/userdata</code> to the SSD (<a href="setup.html">Base setup</a>).</li>
+    <li>Enable I2C and the Argon service; check the BIOS files.</li>
+    <li>Stage and import each system, then PS1 (<a href="library.html">Game library</a>).</li>
+    <li>Copy <code>pi/shaders/configs/*</code> to <code>/userdata/shaders/configs/</code> and <code>pi/shaders/crt/*.glslp</code> to <code>/userdata/shaders/crt/</code>.</li>
+    <li>Copy <code>pi/display-profiles/*</code> to <code>/userdata/system/display-profiles/</code> and <code>pi/display-profiles/ports/*</code> (the two scripts and <code>gamelist.xml</code>) to <code>/userdata/roms/ports/</code>, <code>pi/kodi-skin/*</code> to <code>/userdata/system/display-profiles/kodi-skin/</code>, and <code>pi/scripts/*</code> to <code>/userdata/system/scripts/</code> (executable), then run <code>apply.sh hdmi</code>.</li>
+    <li>Compare with <code>pi/snapshots/</code> and set anything left: <code>subset.optimizesmallscreens=no</code>, <code>CheckBiosesAtLaunch=false</code>.</li>
+  </ol>
+</section>
+
+<nav class="pager" aria-label="Previous page"><a href="tv.html">← Live TV channels</a><span></span></nav>
+</main>
+</div>
+</body>
+</html>

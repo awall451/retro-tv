@@ -1,0 +1,24 @@
+# Snapshot of /boot/config.txt (comments dropped), taken 2026-11-05 with the Pi in the Trinitron (crt) profile.
+# Anything named like a password, key, token, user or SSID was filtered out.
+arm_64bit=1
+arm_boost=1
+kernel=boot/linux
+initramfs boot/initrd.lz4
+start_file=start4.elf
+fixup_file=fixup4.dat
+cec_osd_name=batocera
+disable_overscan=1
+boot_delay=3
+disable_splash=1
+display_auto_detect=1
+dtparam=audio=on
+camera_auto_detect=1
+display_auto_detect=1
+dtoverlay=vc4-kms-v3d
+max_framebuffers=2
+arm_boost=1
+[DPI]
+[all]
+dtparam=i2c_arm=on
+dtparam=i2c-1=on
+enable_uart=1

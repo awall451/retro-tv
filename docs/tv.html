@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live TV channels: Batocera Pi 4 Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="shell">
+<nav class="nav" aria-label="Guide pages">
+  <p class="brand">Batocera Pi 4 Guide<small>Retro games and Plex on a Trinitron</small></p>
+  <div class="grille" aria-hidden="true"></div>
+  <ol>
+    <li><a href="index.html">Overview</a></li>
+    <li><a href="setup.html">Base setup</a></li>
+    <li><a href="library.html">Game library</a></li>
+    <li><a href="shaders.html">Shaders</a></li>
+    <li><a href="display.html">HDMI and Trinitron</a></li>
+    <li><a href="tv.html" aria-current="page">Live TV channels</a></li>
+    <li><a href="reference.html">Reference</a></li>
+  </ol>
+  <p class="meta">Batocera 43.1 on a Raspberry Pi 4. Last updated 2026-11-05.</p>
+</nav>
+
+<main>
+<header class="page">
+  <h1>Live TV channels with ErsatzTV</h1>
+  <p class="lead">Sixteen round-the-clock channels with a guide and period commercials, built from a Plex library and flipped through in Kodi like 90s cable. This page covers the server side and the one Kodi add-on that tunes in.</p>
+</header>
+
+<section>
+  <h2>How it works</h2>
+  <div class="flow">
+    <div>A Plex server holds the movies and shows (here a server shared with this Plex account)</div>
+    <div class="arrow">ErsatzTV signs in with my Plex account and pulls a file only while someone watches</div>
+    <div>ErsatzTV on a home server: keeps a schedule for each channel and re-encodes to 640×480 for the CRT</div>
+    <div class="arrow">Two URLs over the home network: a channel list (M3U) and a guide (XMLTV)</div>
+    <div>Kodi on the Pi, IPTV Simple Client: TV guide, channel up and down</div>
+  </div>
+  <ul>
+    <li>Every channel follows a clock, so tuning in drops you into the middle of whatever is on, like broadcast TV.</li>
+    <li>Nothing is transcoded until a channel is watched. With nobody watching there is no load on the server or on the Plex owner's upload.</li>
+    <li>ErsatzTV runs on a server, not on the Pi, because it re-encodes everything it plays. A desktop GPU does that easily; the Pi does not, and Batocera is not a place to run services.</li>
+    <li>Kodi's Plex add-on (PM4K) and the live channels are independent. One browses Plex directly; the other only knows ErsatzTV's two URLs.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>What you need</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Item</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>A machine that is always on</td><td>Anything that runs containers. Here: a Linux server with an NVIDIA GPU, running k3s (single-node Kubernetes). Docker Compose works too.</td></tr>
+      <tr><td>A GPU, ideally</td><td>NVIDIA (NVENC), Intel (QSV) or VAAPI. One 640×480 stream is light enough for a CPU, but channel changes are slower.</td></tr>
+      <tr><td>A Plex library you can sign in to</td><td>Your own, or one shared with your account. A shared server needs one extra setting, below. If the owner has Plex Pass, remote streaming to a shared user is not limited.</td></tr>
+      <tr><td>Wired network between the server and the Pi</td><td>The Pi reaches the server by its LAN address. Nothing is exposed to the internet.</td></tr>
+      <tr><td>About 5 GB of disk</td><td>ErsatzTV's database, plus the commercials if you add them.</td></tr>
+    </tbody>
+  </table></div>
+  <p>Below, <code>&lt;server-ip&gt;</code> is the server's address on your home network and <code>8409</code> is ErsatzTV's port.</p>
+</section>
+
+<section>
+  <h2>1. Run ErsatzTV</h2>
+  <p>The image is <code>ghcr.io/ersatztv/legacy</code>. Releases moved there; <code>ghcr.io/ersatztv/ersatztv</code> stopped at v26.2.0. One image covers NVIDIA, QSV and VAAPI. This setup runs <code>v26.11.6</code>; pin a version rather than using <code>latest</code>.</p>
+  <h3>Docker Compose</h3>
+  <p>The same settings as the Kubernetes deployment below, in Compose form. This guide's server runs the Kubernetes version; the Compose file follows upstream's NVIDIA example and has not been run here.</p>
+<pre><code>services:
+  ersatztv:
+    image: ghcr.io/ersatztv/legacy:v26.11.6
+    restart: unless-stopped
+    runtime: nvidia                      # needs nvidia-container-toolkit
+    environment:
+      ETV_ALLOW_SHARED_PLEX_SERVERS: "1" # only for a Plex server you don't own
+      TZ: Your/Timezone                  # e.g. Europe/London: guide times follow it
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility,video
+    ports:
+      - "8409:8409"
+    volumes:
+      - ./config:/config                 # database, settings, Plex token
+      - ./media:/media                   # commercials (optional)
+    tmpfs:
+      - /transcode                       # short-lived stream segments</code></pre>
+  <h3>Kubernetes</h3>
+  <p>What runs here, minus probes and resource limits. Two PersistentVolumeClaims sit beside it: <code>ersatztv-config</code> for the database and <code>ersatztv-media</code> for the commercials (about 4 GB used).</p>
+<pre><code>apiVersion: apps/v1
+kind: Deployment
+metadata: { name: ersatztv, namespace: ersatztv }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }        # SQLite on one volume; one pod owns the port
+  selector: { matchLabels: { app: ersatztv } }
+  template:
+    metadata: { labels: { app: ersatztv } }
+    spec:
+      enableServiceLinks: false       # a Service named ersatztv would inject ERSATZTV_PORT
+      runtimeClassName: nvidia
+      containers:
+        - name: ersatztv
+          image: ghcr.io/ersatztv/legacy:v26.11.6
+          env:
+            - { name: ETV_ALLOW_SHARED_PLEX_SERVERS, value: "1" }
+            - { name: TZ, value: "Your/Timezone" }
+            - { name: NVIDIA_DRIVER_CAPABILITIES, value: "compute,utility,video" }
+          ports:
+            - { name: http, containerPort: 8409, hostPort: 8409 }
+          resources:
+            limits: { nvidia.com/gpu: 1 }
+          volumeMounts:
+            - { name: config, mountPath: /config }
+            - { name: media, mountPath: /media }
+            - { name: transcode, mountPath: /transcode }
+      volumes:
+        - { name: config, persistentVolumeClaim: { claimName: ersatztv-config } }
+        - { name: media, persistentVolumeClaim: { claimName: ersatztv-media } }
+        - { name: transcode, emptyDir: { medium: Memory, sizeLimit: 2Gi } }</code></pre>
+  <ul>
+    <li><code>hostPort</code> puts ErsatzTV on the server's own LAN address without a load balancer. A NodePort would land on a port between 30000 and 32767.</li>
+    <li><code>NVIDIA_DRIVER_CAPABILITIES</code> must include <code>video</code>. The default (<code>compute,utility</code>) leaves the encoder libraries out of the container and NVENC fails.</li>
+    <li>The container runs as root and writes <code>/config</code>. Upstream's NVIDIA example sets <code>privileged: true</code>; it was not needed.</li>
+  </ul>
+  <h3>Check it</h3>
+<pre><code>curl -s -o /dev/null -w '%{http_code}\n' http://&lt;server-ip&gt;:8409/iptv/channels.m3u   # 200
+# inside the container:
+nvidia-smi                                  # lists the GPU
+ffmpeg -hide_banner -encoders | grep nvenc  # lists h264_nvenc</code></pre>
+  <div class="warn"><strong>Keep it off the internet</strong><p>ErsatzTV's web page has no login, and its config folder holds a token with full access to the Plex account. Anyone on the home network can open it. Never forward a port to it or publish it through a tunnel.</p></div>
+</section>
+
+<section>
+  <h2>2. Connect Plex</h2>
+  <ol class="steps">
+    <li><div><strong>Open <code>http://&lt;server-ip&gt;:8409</code></strong><p>Media Sources → Plex → Sign in, and approve the link on plex.tv.</p></div></li>
+    <li><div><strong>A server you don't own is hidden by default</strong><p>Setting the environment variable <code>ETV_ALLOW_SHARED_PLEX_SERVERS</code> to any value makes shared servers appear. Restart the container after adding it.</p></div></li>
+    <li><div><strong>Switch on the libraries to use</strong><p>Media Sources → Plex → Edit Libraries. Here: Movies and TV Shows. ErsatzTV copies titles, genres, artwork and chapter marks into its own database; the video stays on Plex.</p></div></li>
+    <li><div><strong>Wait for the scan</strong><p>It scans one library at a time: about 30 minutes for 3,400 movies and an hour for 280 shows (12,000 episodes). A restart queues the scans again.</p></div></li>
+  </ol>
+</section>
+
+<section>
+  <h2>3. A video profile for the CRT</h2>
+  <p>Settings → FFmpeg Profiles → add one, and use it on every channel. A new channel starts on the default 1080p profile, so pick this one in the channel form each time.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Setting</th><th>Value</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>Resolution</td><td>640×480</td><td>What the Pi sends to the Trinitron, so nothing is rescaled on the way</td></tr>
+      <tr><td>Scaling</td><td>Scale and pad</td><td>Widescreen sources are letterboxed, never stretched or cropped</td></tr>
+      <tr><td>Video</td><td>H.264 high, 1500 kbps, buffer 3000, B-frames off</td><td>The Pi 4 decodes H.264 (not AV1); plenty for 480 lines</td></tr>
+      <tr><td>Hardware acceleration</td><td>NVIDIA (or QSV, VAAPI, none)</td><td>Fast channel changes</td></tr>
+      <tr><td>Audio</td><td>AAC, 128 kbps, stereo, 48 kHz</td><td>The TV is stereo</td></tr>
+      <tr><td>Loudness</td><td>Normalize (LoudNorm), target -16</td><td>Commercials and programs come out at the same volume</td></tr>
+      <tr><td>Deinterlace</td><td>On</td><td>Old commercial captures are interlaced</td></tr>
+      <tr><td>Frame rate</td><td>Not normalized</td><td>Film stays 23.976 fps, ads 29.97; Kodi handled the switch cleanly</td></tr>
+    </tbody>
+  </table></div>
+  <p>Channels use streaming mode MPEG-TS. Kodi tuned in 0.4 to 0.7 seconds after a channel change and decoded in software at about 13% of a core.</p>
+</section>
+
+<section>
+  <h2>4. Commercials</h2>
+  <p>The commercials are not on Plex. They are short clips from the Internet Archive, kept in a folder ErsatzTV reads as a local library.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Folder</th><th class="num">Clips</th><th>Archive.org item</th><th>What</th></tr></thead>
+    <tbody>
+      <tr><td><code>/media/filler/80s</code></td><td class="num">122</td><td><code>commercialpack1</code></td><td>Late 80s and early 90s ads and station bumpers</td></tr>
+      <tr><td><code>/media/filler/90s</code></td><td class="num">118</td><td><code>Collectionof90sCommercials</code></td><td>90s ads, about 30 seconds each</td></tr>
+      <tr><td><code>/media/filler/toonami</code></td><td class="num">92</td><td><code>Toonami-Bumpers</code>, <code>toonami-promos</code></td><td>Toonami show intros and promos</td></tr>
+    </tbody>
+  </table></div>
+  <ol class="steps">
+    <li><div><strong>Download the clips into those folders</strong><p>Each item's file list is at <code>https://archive.org/download/&lt;item&gt;/</code>. Skip anything over a few minutes long: hour-long "commercial tape" uploads make poor filler.</p></div></li>
+    <li><div><strong>Add the folder as a library</strong><p>Media Sources → Local → Other Videos → add the path <code>/media/filler</code>, then scan. ErsatzTV turns each sub-folder name into a <strong>tag</strong> (<code>80s</code>, <code>90s</code>, <code>toonami</code>), which is how the collections below pick the right ads for a channel.</p></div></li>
+    <li><div><strong>Check the shape of every clip</strong><p>Old uploads are often the wrong shape for a 4:3 screen, and a few files are reels of several promos glued together, so one show's promo plays four times in a row. Both were fixed with ffmpeg:</p>
+<pre><code># 4:3 picture boxed inside a 16:9 frame: crop the bars off
+ffmpeg -i in.mp4 -vf "crop=960:720:160:0,scale=640:480,setsar=1" -c:a aac out.mp4
+# 4:3 picture stretched to 16:9 ("1080p HD" uploads): squeeze it back
+ffmpeg -i in.mp4 -vf "scale=640:480,setsar=1" -c:a aac out.mp4
+# a reel: find the cuts (black frame + silence), then split with -ss / -to
+ffmpeg -i reel.mp4 -vf blackdetect=d=0.1 -af silencedetect=d=0.2 -f null -</code></pre>
+      <p>To look at a hundred clips quickly, have ffmpeg tile a few frames of each into one image (<code>-vf "fps=1/5,scale=160:-1,tile=6x1"</code>) and read the contact sheets. Clips that are widescreen by design, such as movie trailers, were left alone.</p></div></li>
+  </ol>
+  <div class="note"><strong>Move a clip, then empty the Trash</strong><p>A file moved out of the folder is marked "file not found" but stays in its collections and keeps being scheduled. Add <code>AND NOT state:FileNotFound</code> to the collection, or empty the Trash in ErsatzTV.</p></div>
+</section>
+
+<section>
+  <h2>5. Smart collections: what each channel may play</h2>
+  <p>Lists → Smart Collections. A smart collection is a saved search, so it follows the Plex library as it grows. Each channel has one for its programs, and each ad pool has one.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Collection</th><th>Query</th></tr></thead>
+    <tbody>
+      <tr><td>90s commercials</td><td><code>type:other_video AND tag:90s</code></td></tr>
+      <tr><td>One show, in order</td><td><code>type:episode AND show_title:"Star Trek: The Next Generation"</code></td></tr>
+      <tr><td>A block of shows</td><td><code>type:episode AND NOT season_number:0 AND (show_title:futurama OR show_title:daria OR (show_title:king AND show_title:hill))</code></td></tr>
+      <tr><td>80s action movies</td><td><code>type:movie AND genre:action AND release_date:[19800101 TO 19891231] AND NOT genre:animation AND NOT genre:family</code></td></tr>
+      <tr><td>Family movies</td><td><code>type:movie AND (genre:family OR genre:children) AND release_date:[19370101 TO 20041231] AND minutes:[45 TO 400] AND NOT content_rating:R</code></td></tr>
+    </tbody>
+  </table></div>
+  <h3>Query rules learned the hard way</h3>
+  <ul>
+    <li><strong>Test before saving.</strong> Open <code>http://&lt;server-ip&gt;:8409/search?query=…</code> with the query and compare the count with what you expect. A query that quietly matches nothing is the usual reason a show never airs.</li>
+    <li><strong>A quoted phrase with "in", "the" or "of" in it matches nothing.</strong> <code>show_title:"Ghost in the Shell"</code> returned zero. Use a part without those words (<code>"Stand Alone Complex"</code>), single words joined by AND (<code>king AND hill</code>), or the complete title with its punctuation (<code>"You're Under Arrest!"</code>, <code>"Married... with Children"</code>).</li>
+    <li><code>NOT season_number:0</code> keeps specials out.</li>
+    <li>A genre guard keeps out a live-action remake that shares a title with a cartoon.</li>
+    <li>To drop one episode: <code>AND NOT (show_title:"Fighting Spirit" AND season_number:2 AND episode_number:1)</code>.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>6. Ad breaks</h2>
+  <p>Programs start on the hour or half hour. The gap between the end of a program and the next start is filled with commercials; ErsatzTV calls this <strong>padding</strong>. A 44-minute episode is padded to 60 minutes with 16 minutes of ads. Lists → Filler Presets holds the rules.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Preset</th><th>Kind</th><th>Mode</th><th>Expression</th></tr></thead>
+    <tbody>
+      <tr><td>Ads, shows</td><td>Mid-Roll</td><td>Pad to nearest 30 minutes</td><td><code>point &gt; 240 and remaining_duration &gt; 180 and last_mid_filler &gt; 300</code></td></tr>
+      <tr><td>Ads, movies</td><td>Mid-Roll</td><td>Pad to nearest 30 minutes</td><td><code>point &gt; 600 and remaining_duration &gt; 600 and last_mid_filler &gt; 900</code></td></tr>
+      <tr><td>Ads, tail</td><td>Tail</td><td>(none)</td><td></td></tr>
+      <tr><td>Ads, fallback</td><td>Fallback</td><td>(none)</td><td></td></tr>
+    </tbody>
+  </table></div>
+  <p>Make one set per ad pool (80s, 90s, Toonami), each pointing at that pool's smart collection.</p>
+  <ul>
+    <li><strong>Breaks can only go where the file has a chapter mark.</strong> The expression picks which marks become breaks: <code>point</code> is seconds into the program, <code>remaining_duration</code> seconds left, <code>last_mid_filler</code> seconds since the last break. Shows get no break in the first 4 minutes or last 3 and at most one every 5 minutes; movies none in the first or last 10 and at most one every 15.</li>
+    <li>Pad mode works out the total ad time to the next :00 or :30 and splits it evenly across the chosen breaks.</li>
+    <li><strong>A file with no chapter marks gets all its ads in one block after it.</strong> One mid-roll preset covers both cases. For a movie that block can reach 30 minutes.</li>
+    <li>A schedule item takes only one pad preset, so leave Post-Roll empty when Mid-Roll is set.</li>
+    <li>Fallback fills any seconds left over.</li>
+  </ul>
+  <div class="warn"><strong>Chapter marks in the wrong place drop the program</strong><p>If a file has chapter marks but none passes the expression (for example, marks only at the opening and closing credits), ErsatzTV schedules the ads and leaves the program out: 30 minutes of commercials and no show. Check a show before adding it and exclude the episodes that fail. A file with no chapters at all is safe.</p></div>
+  <p>The check, run against ErsatzTV's SQLite database (<code>/config/ersatztv.sqlite3</code>, opened read-only):</p>
+<pre><code>import sqlite3
+db = sqlite3.connect("file:/config/ersatztv.sqlite3?mode=ro", uri=True)
+
+def secs(t):                       # "00:23:05.1230000" to seconds
+    h, m, s = t.split(":")[-3:]
+    return int(h.split(".")[-1]) * 3600 + int(m) * 60 + float(s)
+
+rows = db.execute("""
+  select s.SeasonNumber, em.EpisodeNumber, mv.Id, mv.Duration
+    from ShowMetadata sm
+    join Season s on s.ShowId = sm.ShowId
+    join Episode e on e.SeasonId = s.Id
+    join EpisodeMetadata em on em.EpisodeId = e.Id
+    join MediaVersion mv on mv.EpisodeId = e.Id
+   where sm.Title = ? and s.SeasonNumber &gt; 0""", ("Record of Lodoss War",))
+for season, episode, version, duration in rows:
+    length = secs(duration)
+    ends = [secs(r[0]) for r in db.execute(
+        "select EndTime from MediaChapter where MediaVersionId = ? order by StartTime", (version,))]
+    points = ends[:-1]             # the last chapter ends with the file
+    if ends and not any(p &gt; 240 and length - p &gt; 180 for p in points):
+        print("would be dropped: S%sE%s" % (season, episode), [round(p) for p in ends])</code></pre>
+</section>
+
+<section>
+  <h2>7. Schedules, channels and playouts</h2>
+  <p>Three things per channel, made in this order in the web page. ErsatzTV's API does not cover them.</p>
+  <ol class="steps">
+    <li><div><strong>Schedule</strong> (Scheduling → Schedules)
+      <p>One item is enough: Start Type Dynamic, Collection Type Smart Collection, Playout Mode One, then Mid-Roll Filler and Fallback Filler from the presets above.</p>
+      <ul>
+        <li><strong>Chronological</strong> for a single show in order.</li>
+        <li><strong>Shuffle In Order</strong> for a block of shows: shows rotate at random, each show's episodes stay in order. A show with more episodes airs more often.</li>
+        <li><strong>Shuffle</strong> for movies.</li>
+      </ul></div></li>
+    <li><div><strong>Channel</strong> (Channels → Add Channel)
+      <p>Number, name, streaming mode MPEG-TS, and the CRT profile from step 3.</p></div></li>
+    <li><div><strong>Playout</strong> (Scheduling → Playouts → Add → Classic Schedule)
+      <p>Joins the channel to its schedule. ErsatzTV builds about two and a half days ahead, starting from local midnight, and extends it every day.</p></div></li>
+  </ol>
+  <h3>Channels without commercials</h3>
+  <p>Leave every filler box empty on the schedule item. Movies then run back to back and start at odd times, like a premium movie channel. This is the better home for movies whose files have no chapter marks: on a channel with ads they would end with one block of up to 30 minutes. For a film series, set Playback Order to Chronological, which for movies means release order.</p>
+  <h3>Programs much shorter than half an hour</h3>
+  <p>A six-minute cartoon padded to 30 minutes would carry 24 minutes of ads. For those, use <strong>Playout Mode: Duration</strong> instead of a pad preset: duration 30 minutes, Tail Mode Filler, Tail Filler set to the tail preset. ErsatzTV plays items until the next one will not fit, then fills the rest of the half hour with ads. That gives about four Looney Tunes shorts and three minutes of commercials.</p>
+  <p>To mix one short-format show into a block of half-hour shows, give the schedule two items: the block with Playout Mode Multiple (count 11), then the short show with Duration 30 minutes. The short show then gets one half hour in every twelve.</p>
+</section>
+
+<section>
+  <h2>8. The channels</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Ch</th><th>Name</th><th>Plays</th><th>Commercials</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Star Trek TNG</td><td>All 176 episodes in order, one an hour</td><td>Late 80s</td></tr>
+      <tr><td>2</td><td>Toonami</td><td>12 anime series in 4:3: Dragon Ball Z, Yu Yu Hakusho, Cowboy Bebop, Trigun, Berserk and more</td><td>Toonami intros and promos</td></tr>
+      <tr><td>3</td><td>Sitcoms</td><td>9 newer sitcoms: 30 Rock, The Office, Community and more</td><td>90s</td></tr>
+      <tr><td>4</td><td>80s Action</td><td>71 action movies from 1980 to 1989, all with chapter marks</td><td>Late 80s</td></tr>
+      <tr><td>5</td><td>Cartoon Network</td><td>12 American cartoons: Batman Beyond, Samurai Jack, Scooby-Doo, The Flintstones and more</td><td>90s</td></tr>
+      <tr><td>6</td><td>Looney Tunes</td><td>436 classic shorts around the clock</td><td>90s</td></tr>
+      <tr><td>7</td><td>Family Channel</td><td>134 family movies from 1937 to 2004</td><td>90s</td></tr>
+      <tr><td>8</td><td>Adult Swim</td><td>Futurama, King of the Hill, Daria, Home Movies</td><td>90s</td></tr>
+      <tr><td>9</td><td>Toonami HD</td><td>Widescreen anime, kept apart so channel 2 stays 4:3: Hellsing Ultimate, Black Lagoon, Dragon Ball Super, Samurai Champloo</td><td>Toonami intros and promos</td></tr>
+      <tr><td>10</td><td>Classic Sitcoms</td><td>Seinfeld, Married... with Children, Home Improvement, Fresh Prince, That '70s Show, Trailer Park Boys</td><td>90s</td></tr>
+      <tr><td>11</td><td>Star Trek Films</td><td>12 films in release order</td><td>None</td></tr>
+      <tr><td>12</td><td>Non-Stop Action</td><td>31 80s action movies whose files have no chapter marks</td><td>None</td></tr>
+      <tr><td>13</td><td>Platform 9¾</td><td>The eight Harry Potter films in order</td><td>None</td></tr>
+      <tr><td>14</td><td>Midnight Society</td><td>16 spooky but not scary movies</td><td>None</td></tr>
+      <tr><td>15</td><td>Christmas Spirit</td><td>15 Christmas movies</td><td>Christmas ads from the 70s to the 90s (Internet Archive item <code>yt-PL059E38785A0BB5F6</code>)</td></tr>
+      <tr><td>16</td><td>Studio Ghibli</td><td>23 films</td><td>None</td></tr>
+    </tbody>
+  </table></div>
+  <p>Quick check from any computer on the network: <code>mpv --playlist=http://&lt;server-ip&gt;:8409/iptv/channels.m3u</code>, then <code>&gt;</code> and <code>&lt;</code> to flip.</p>
+</section>
+
+<section>
+  <h2>9. Tune in from Kodi</h2>
+  <p>Batocera 43's Kodi already contains the add-on (<code>pvr.iptvsimple</code> 21.10.1 and its three <code>inputstream</code> helpers). It ships switched off, and it cannot be installed from Kodi's repository on Batocera, so if it is missing the image is the wrong version.</p>
+  <ol class="steps">
+    <li><div><strong>Enable it</strong><p>Kodi → Settings → Add-ons → My add-ons → PVR clients → IPTV Simple Client → Enable.</p></div></li>
+    <li><div><strong>Point it at ErsatzTV</strong><p>Configure → add a configuration:</p>
+      <ul>
+        <li>General: Location = Remote path, M3U URL = <code>http://&lt;server-ip&gt;:8409/iptv/channels.m3u</code></li>
+        <li>EPG: Location = Remote path, XMLTV URL = <code>http://&lt;server-ip&gt;:8409/iptv/xmltv.xml</code></li>
+      </ul></div></li>
+    <li><div><strong>Restart Kodi</strong><p>A TV entry appears on the home menu with Channels and Guide. The guide fills in within a minute.</p></div></li>
+    <li><div><strong>Make it behave like a TV</strong><p>Settings → Interface → Startup → Startup window = TV. Settings → PVR &amp; Live TV → Playback → continue the last channel on startup.</p></div></li>
+  </ol>
+  <div class="note"><strong>After adding or renaming channels</strong><p>Kodi keeps its old list. Settings → PVR &amp; Live TV → General → Clear data, or restart Kodi.</p></div>
+  <p>On the Trinitron the 640×480 picture fills the tube. On a 16:9 TV it shows bars on all four sides for widescreen sources, which is expected. How the Pi's two display profiles treat Kodi is on <a href="display.html">HDMI and Trinitron</a>.</p>
+</section>
+
+<section>
+  <h2>Changing a lineup later</h2>
+  <p>Edit the smart collection's query, then reset that channel's playout so the new lineup takes effect. Both can be done in the web page, or over the API. The key is in <code>/config/api-secrets.json</code>.</p>
+<pre><code>KEY=...   # from /config/api-secrets.json
+curl -H "X-Etv-Api-Key: $KEY" http://&lt;server-ip&gt;:8409/api/collections/smart
+curl -X PUT -H "X-Etv-Api-Key: $KEY" -H "Content-Type: application/json" \
+     -d '{"id": 6, "name": "Toonami Shows", "query": "type:episode AND ..."}' \
+     http://&lt;server-ip&gt;:8409/api/collections/smart/update
+curl -X POST -H "X-Etv-Api-Key: $KEY" http://&lt;server-ip&gt;:8409/api/channels/2/playout/reset
+curl -X POST -H "X-Etv-Api-Key: $KEY" http://&lt;server-ip&gt;:8409/api/libraries/4/scan   # rescan a library</code></pre>
+  <ul>
+    <li>A reset rebuilds the schedule from midnight, so a shuffled channel changes what it is showing right now.</li>
+    <li>The full list of API calls is at <code>http://&lt;server-ip&gt;:8409/openapi/v1.json</code>. It covers video profiles, smart collections, library scans and playout resets, and nothing else.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Limits and gotchas</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>What</th><th>Detail</th></tr></thead>
+    <tbody>
+      <tr><td>No mid-program breaks without chapter marks</td><td>Most sitcom and older cartoon files have none, so their ads come in one block at the end. Adding marks means editing the files on the Plex side.</td></tr>
+      <tr><td>Long ad block after an unchaptered movie</td><td>Up to 30 minutes. Padding movies to the nearest 15 minutes would halve it.</td></tr>
+      <tr><td>Bad chapter marks drop the program</td><td>See the warning in step 6. A schedule only shows two and a half days, so a clean-looking guide does not prove a show is safe; run the check on every episode.</td></tr>
+      <tr><td>Phrases with stop words match nothing</td><td>See the query rules in step 5.</td></tr>
+      <tr><td>Bigger shows dominate a shuffled block</td><td>Shuffle In Order weights by episode count. A 265-episode show is half of a 500-episode channel.</td></tr>
+      <tr><td>Two promos for the same show can land together</td><td>The shuffle has no rule against it; about 2% of neighbours.</td></tr>
+      <tr><td>Widescreen sources</td><td>Letterboxed inside the 4:3 frame. Many "remastered" files of 4:3 shows are cropped to widescreen; check the file, not the air date.</td></tr>
+      <tr><td>Two-file rips play only the first file</td><td>Old rips split into <code>cd1</code> and <code>cd2</code> show their combined length, but ErsatzTV streams only the first file. Once the schedule passes its end the channel shows a "failed to transcode" card until the slot is over. Keep such movies out of lineups until the files are joined.</td></tr>
+      <tr><td>4:3 shows inside widescreen files</td><td>Some files hold a 4:3 picture with black side bars baked in. Scaled and padded to 4:3 they show small, with bars on all four sides. A second video profile with scaling set to Crop fills the frame, but it also cuts the sides off true widescreen sources, so use it only on a channel that has none.</td></tr>
+      <tr><td>Checking what a file really looks like</td><td>ErsatzTV can play 30 seconds of any one item through a chosen profile: <code>/api/troubleshoot/playback.m3u8?mediaItem=&lt;id&gt;&amp;ffmpegProfile=&lt;id&gt;&amp;streamingMode=4&amp;seekSeconds=420</code> with the API key header, then read <code>/iptv/session/.troubleshooting/live.m3u8</code> with ffmpeg and <code>-vf cropdetect</code>. At 640×480, an active area of 640×360 is true widescreen and 480×360 is baked-in bars.</td></tr>
+      <tr><td>Shared GPU memory</td><td>If other jobs use the same GPU, a channel can fail to start while one of them holds most of the memory.</td></tr>
+      <tr><td>No backup by default</td><td>Channels, schedules and presets live in ErsatzTV's database in <code>/config</code>, not in any file you wrote. Back that folder up, or keep notes good enough to rebuild from.</td></tr>
+      <tr><td>VLC on some Linux distributions</td><td>Needs its full plugin set to play MPEG-TS; mpv plays it as is.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>Sources</h2>
+  <ul>
+    <li><a href="https://github.com/ErsatzTV/legacy">ErsatzTV (legacy repository, the released line)</a>: Dockerfile for <code>/config</code> and <code>/transcode</code>, <code>docker/docker-compose.nvidia.yml</code>, <code>ErsatzTV.Core/SystemEnvironment.cs</code> for the shared-server variable</li>
+    <li><a href="https://github.com/kodi-pvr/pvr.iptvsimple">IPTV Simple Client</a></li>
+    <li><a href="https://archive.org/details/commercialpack1">commercialpack1</a>, <a href="https://archive.org/details/Collectionof90sCommercials">Collectionof90sCommercials</a>, <a href="https://archive.org/details/Toonami-Bumpers">Toonami-Bumpers</a> and <a href="https://archive.org/details/toonami-promos">toonami-promos</a> on the Internet Archive</li>
+  </ul>
+</section>
+
+<nav class="pager" aria-label="Previous and next page"><a href="display.html">← HDMI and Trinitron</a><a href="reference.html">Reference →</a></nav>
+</main>
+</div>
+</body>
+</html>

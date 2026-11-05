@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Controller mapping for live TV, installed to /userdata/system/.kodi/userdata/keymaps/.
+  Applies in both display profiles. Button names are Kodi's default game controller:
+  a = Cross (PS) / A (Xbox), b = Circle / B, x = Square / X, y = Triangle / Y.
+  Kodi's stock map has Circle = Stop while watching live TV, which ended the show
+  whenever you went to the guide.
+-->
+<keymap>
+  <FullscreenLiveTV>
+    <joystick profile="game.controller.default">
+      <b>ActivateWindow(TVGuide)</b>
+      <b holdtime="500">Stop</b>
+    </joystick>
+  </FullscreenLiveTV>
+  <TVGuide>
+    <joystick profile="game.controller.default">
+      <x>Info</x>
+    </joystick>
+  </TVGuide>
+</keymap>

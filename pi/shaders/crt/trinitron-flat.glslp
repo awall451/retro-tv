@@ -1,0 +1,12 @@
+# Trinitron look for 1080p HDMI on a Pi 4: crt-pi with its aperture-grille style mask, no curvature.
+shaders = "1"
+shader0 = "/usr/share/batocera/shaders/crt/shaders/crt-pi.glsl"
+filter_linear0 = "true"
+wrap_mode0 = "clamp_to_border"
+parameters = "MASK_BRIGHTNESS;SCANLINE_WEIGHT;SCANLINE_GAP_BRIGHTNESS;BLOOM_FACTOR;INPUT_GAMMA;OUTPUT_GAMMA"
+MASK_BRIGHTNESS = "0.80"
+SCANLINE_WEIGHT = "6.0"
+SCANLINE_GAP_BRIGHTNESS = "0.15"
+BLOOM_FACTOR = "1.5"
+INPUT_GAMMA = "2.4"
+OUTPUT_GAMMA = "2.2"

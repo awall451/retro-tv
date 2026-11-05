@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gameList>
+  <game>
+    <path>./Display - Trinitron CRT (4x3).sh</path>
+    <name>Display: Sony Trinitron (4:3 CRT)</name>
+    <desc>Switches to the Trinitron setup and reboots. 640x480 output for the HDMI-to-composite converter, no CRT shaders (the tube does that), color correction for handhelds. Works on either TV, so picking the wrong one is harmless.</desc>
+    <genre>Settings</genre>
+  </game>
+  <game>
+    <path>./Display - HDMI TV (16x9).sh</path>
+    <name>Display: HDMI TV (16:9 flat panel)</name>
+    <desc>Switches to the flat-panel setup and reboots. 1080p output with the Trinitron-simulating CRT shader for consoles and LCD shaders for handhelds.</desc>
+    <genre>Settings</genre>
+  </game>
+</gameList>

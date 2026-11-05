@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HDMI and Trinitron</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="shell">
+<nav class="nav" aria-label="Guide pages">
+  <p class="brand">Batocera Pi 4 Guide<small>Retro games and Plex on a Trinitron</small></p>
+  <div class="grille" aria-hidden="true"></div>
+  <ol>
+    <li><a href="index.html">Overview</a></li>
+    <li><a href="setup.html">Base setup</a></li>
+    <li><a href="library.html">Game library</a></li>
+    <li><a href="shaders.html">Shaders</a></li>
+    <li><a href="display.html" aria-current="page">HDMI and Trinitron</a></li>
+    <li><a href="tv.html">Live TV channels</a></li>
+    <li><a href="reference.html">Reference</a></li>
+  </ol>
+  <p class="meta">Batocera 43.1 on a Raspberry Pi 4. Last updated 2026-11-05.</p>
+</nav>
+
+<main>
+<header class="page">
+  <h1>HDMI TV and Sony Trinitron</h1>
+  <p class="lead">Two display profiles, switched from the menu with the controller. Each applies a complete set of video, theme, Control Center and Plex settings, then reboots.</p>
+</header>
+
+<section>
+  <h2>Switching</h2>
+  <p>Open <strong>Ports</strong> and pick one. It applies the profile and reboots in about 30 seconds.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Ports entry</th><th>Use it for</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Display: HDMI TV (16:9 flat panel)</strong></td><td>Any flat TV over HDMI, 4K sets included</td></tr>
+      <tr><td><strong>Display: Sony Trinitron (4:3 CRT)</strong></td><td>The Trinitron, through the Dingsun converter</td></tr>
+    </tbody>
+  </table></div>
+  <p>Both profiles produce a picture on either TV, so picking the wrong one is harmless: select the other entry.</p>
+  <h3>Moving to the Trinitron</h3>
+  <ol class="steps">
+    <li><div><p>On the flat TV, choose <strong>Display: Sony Trinitron</strong>. The Pi reboots at 640×480.</p></div></li>
+    <li><div><p>Shut down (Quit → Shut down, or one press of the case button), then unplug.</p></div></li>
+    <li><div><p>Pi <strong>HDMI 0</strong> (next to USB-C power) → converter HDMI in. Yellow → Trinitron Video in, white/red → Audio. Power the converter over USB and set it to <strong>NTSC</strong>.</p></div></li>
+    <li><div><p>Turn on the converter and TV first, then the Pi, so it sees the converter at boot.</p></div></li>
+  </ol>
+  <p>Going back: choose <strong>Display: HDMI TV</strong>, shut down, connect HDMI straight to the flat TV.</p>
+</section>
+
+<section>
+  <h2>What each profile sets</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Setting</th><th>HDMI TV</th><th>Trinitron</th></tr></thead>
+    <tbody>
+      <tr><td>Output (<code>es.resolution</code>)</td><td>Default: best mode up to 1920×1080</td><td><code>max-640x480</code>, 60 Hz</td></tr>
+      <tr><td>Overscan margins (kernel <code>video=</code>)</td><td>None</td><td>left 13, right 27, top 0, bottom 20 px</td></tr>
+      <tr><td>Shader set</td><td><code>trinitron-hdmi</code></td><td><code>trinitron-crt</code></td></tr>
+      <tr><td>Integer scaling</td><td>On</td><td>On, except GBA (<code>gba.integerscale=0</code>; 3× doesn't fit 640)</td></tr>
+      <tr><td>Menu theme</td><td>Stock <code>es-theme-carbon</code></td><td><code>es-theme-carbon-crt</code>: bold, white, bigger game titles</td></tr>
+      <tr><td>Control Center</td><td>Stock style</td><td>Compact style, 12 px bold, bright values</td></tr>
+      <tr><td>Control Center Plane Mode toggle</td><td>Removed</td><td>Removed</td></tr>
+      <tr><td>Plex (PM4K) quality</td><td>Default: original</td><td>480p, 1.5 Mbps</td></tr>
+      <tr><td>Kodi skin</td><td>Stock Estuary</td><td>Estuary CRT: retro TV guide and big-text show details</td></tr>
+      <tr><td>Smoothing, bezels</td><td>Off, off</td><td>Off, off</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>The converter and why 640×480</h2>
+  <ul>
+    <li>The Trinitron is fed by a <strong>Dingsun HDMI-to-composite converter</strong>: HDMI in up to 1080p, composite plus stereo RCA out, USB powered, NTSC/PAL switch. It outputs <strong>480i</strong>.</li>
+    <li>The Pi's own composite port isn't an option: Batocera's CRT guide says it stopped working when Batocera moved to Wayland (around v33), and this Pi runs 43.1.</li>
+    <li>640×480 has square pixels on a 4:3 screen, and 480 lines is exactly 2× a 240-line game, so every game line maps to two output lines. Feeding the converter its native line count also avoids a blurry 1080p-to-480i downscale.</li>
+    <li>Kodi needs nothing extra: it runs as a full-screen window (<code>videoscreen.screenmode=DESKTOP</code>) and follows the output mode. Keep its "Adjust display refresh rate" <strong>off</strong>; switching to 24 Hz could lose the converter.</li>
+  </ul>
+  <div class="note"><strong>What you trade</strong><p>480i, not the true 240p a console sends: you get the tube's glow, color and aperture grille, but not the dark gaps between scanlines, and fine detail can shimmer. The converter adds some lag (not measured). The CRT profile uses no scanline or LCD-grid shaders because those patterns would flicker in an interlaced signal.</p></div>
+</section>
+
+<section>
+  <h2>Overscan</h2>
+  <p>A CRT hides a margin on every edge, and through the converter the picture also sat low and right, which cut off the bottom of the menu. The Pi's HDMI output has hardware margins (DRM properties <code>left/right/top/bottom margin</code>, 0–100 px) that shrink the whole picture inside the frame. Apps still render 640×480, so integer scaling is unaffected. They can only be set at boot, through the kernel command line:</p>
+<pre><code>video=HDMI-A-1:640x480@60,margin_left=13,margin_right=27,margin_top=0,margin_bottom=20</code></pre>
+  <p>The profile appends that to <code>/boot/cmdline.txt</code>, from <code>/userdata/system/display-profiles/crt-margins.conf</code>. Ours comes after the firmware's own <code>video=</code>, so it wins. Check after boot with <code>modetest -M vc4 -c | grep -A3 margin</code>.</p>
+  <h3>Measuring with the test pattern</h3>
+  <p>Show <code>overscan-test.png</code> full screen (the display environment variables are needed over SSH):</p>
+<pre><code>export XDG_RUNTIME_DIR=/var/run WAYLAND_DISPLAY=wayland-1
+mpv --fs --osd-level=0 --image-display-duration=inf /userdata/system/display-profiles/overscan-test.png</code></pre>
+  <p>The bands are 8 px apart. Photograph the screen straight on, set the numbers in <code>crt-margins.conf</code>, and run the Trinitron Ports entry again (it reboots). Aim for the white outer band sitting right at the bezel on every edge: no black glass between picture and bezel, and nothing important cut. Two things learned tuning this Trinitron (KV-19TR20):</p>
+  <ul>
+    <li><strong>A bigger margin pushes the picture away from that edge.</strong> If the right edge is cut, raise <code>right</code> and lower <code>left</code> by the same amount; that moves the picture left without changing its width. When two tries overshoot in opposite directions, split the difference.</li>
+    <li><strong>Leave a little room at the bottom.</strong> The menu's button hints sit near the bottom edge; <code>bottom=16</code> cut them, <code>bottom=20</code> keeps the white band visible. Top is at 0, the most the Pi can do; any gap left there is the TV's own vertical position (service menu).</li>
+  </ul>
+  <p>Tuning history: 16/24/16/32 (left/right/top/bottom) showed the full frame but left thin black bars top and bottom; 4 and 20 at top/bottom filled them; the sides took three tries (22/18 the wrong way, 10/30 too far, 13/27 centered).</p>
+  <div class="note"><strong>Why not a curve shader for the whole screen?</strong><p>The tube already curves the picture; every real console sent it a flat rectangle. A shader curve would double it and blacken the corners, and pre-warping the image to fit the curve would blur 480i text and needs a different compositor than Batocera's sway. Instead the picture fills the glass and only the outer band or two rounds off at the corners, which games were designed for. Kodi has its own Video calibration screen if its interface ever needs pulling in.</p></div>
+  <figure><img src="img/overscan-test.png" alt="Test pattern: nested colored frames 8 pixels apart, white outermost, labeled white 0 px through magenta 56 px" style="max-width: 24rem"><figcaption>Overscan test pattern, 640×480.</figcaption></figure>
+</section>
+
+<section>
+  <h2>Making the menu readable on a CRT</h2>
+  <p>Over 480i composite, 1-pixel horizontal strokes flicker between the two interlaced fields, and saturated colored text smears. Thicker, brighter text fixes both; size alone doesn't.</p>
+  <h3>Game titles: a theme copy</h3>
+  <p>Carbon's default "Icons" view draws titles with an element called <code>textOfGame</code> in <code>views/icons.xml</code>: 2.2% of screen height (about 10 px at 480) in Cabin Regular. <code>make_crt_theme.sh</code> builds <code>/userdata/themes/es-theme-carbon-crt</code> with those titles at 3.0% in Cabin Bold with a darker outline (and the grid view's titles likewise). The copy is 1.9 MB: the 179 MB of artwork is a link to the stock theme. It's rebuilt on every switch to the Trinitron, so Batocera updates carry over.</p>
+  <figure><img src="img/title-font-compare.png" alt="Two crops of the SNES game grid, top with thin small titles, bottom with bold larger titles"><figcaption>Stock titles (top) and the CRT theme (bottom), as the Pi renders them at 640×480.</figcaption></figure>
+  <ul>
+    <li>Batocera's <code>FontScale</code> setting does not change theme text: screenshots with it at 1.0 and 1.15 were identical.</li>
+    <li>At 640×480 carbon treats the screen as "tiny" and switches to a layout for the 320×240 GPi Case, with one cover per page. Turned off with <code>subset.optimizesmallscreens=no</code> in <code>es_settings.cfg</code>; it only applies at small resolutions.</li>
+  </ul>
+  <figure><img src="img/game-grid-640.png" alt="SNES game list as a three-column grid of box art at 640x480" style="max-width: 32rem"><figcaption>The SNES grid at 640×480 with the small-screen layout turned off.</figcaption></figure>
+  <h3>Control Center (Hotkey + A)</h3>
+  <p>At 640×480 the Control Center still picks its full-size layout and ran off the right edge. It reads <code>style.css</code> and <code>controlcenter.xml</code> from <code>/userdata/system/configs/controlcenter/</code> before its own:</p>
+  <ul>
+    <li><code>make_bcc_compact_css.py</code> (Trinitron only): the stock stylesheet plus its own small-screen rules applied to the full layout, 12 px bold, white labels, light-yellow values, tighter spacing, and a 32 px right margin on the content box so its border stays on screen.</li>
+    <li><code>make_bcc_layout.py</code> (both profiles): the stock layout without the Plane Mode toggle.</li>
+  </ul>
+  <figure><img src="img/control-center-640.png" alt="Batocera Control Center at 640x480: System panel with volume, network, storage, kill and power mode, all inside the screen" style="max-width: 32rem"><figcaption>The compact Control Center at 640×480.</figcaption></figure>
+</section>
+
+<section>
+  <h2>Kodi, live TV and Plex</h2>
+  <ul>
+    <li><strong>Live TV</strong> comes from ErsatzTV on a home server through Kodi's IPTV Simple Client. Channels are 640×480 4:3, so on the Trinitron they fill the screen 1:1; on the flat TV they show bars on all four sides, which is expected. The server side and the Kodi add-on setup are on <a href="tv.html">Live TV channels</a>.</li>
+    <li><strong>Plex</strong> is PM4K. Kodi decodes in software on Batocera (no hardware decoding under Wayland), and the tube shows 480 lines, so the Trinitron profile sets PM4K's <code>local_quality2</code>, <code>remote_quality2</code> and <code>online_quality2</code> to index 5 (720×480, 1.5 Mbps) in <code>addon_data/script.plexmod/settings.xml</code>. The HDMI profile removes them. Kodi rewrites that file when it exits, so the script closes Kodi first.</li>
+    <li>The converter doesn't pass HDMI-CEC, so a TV remote won't drive Kodi on the Trinitron; the PS5 controller does.</li>
+    <li>PM4K's own menus at 640×480 haven't been checked on the tube yet.</li>
+  </ul>
+  <h3>The retro TV guide (Trinitron)</h3>
+  <p>Stock Estuary lays out a 4:3 screen on a 1920×1440 canvas, so at 640×480 everything is drawn at a third of its size: list text came out 8–10 px tall. The Trinitron profile switches Kodi to <strong>Estuary CRT</strong>, a copy of Estuary built by <code>make_kodi_crt_skin.sh</code> with two screens of our own (in <code>pi/kodi-skin/</code>):</p>
+  <ul>
+    <li><strong>TV guide</strong> (<code>MyPVRGuide.xml</code>): a late-90s cable-style grid, navy and yellow, 8 channels by 90 minutes, with the show you're watching in a framed box and the highlighted show's details beside it. The video zooms from full screen into the box.</li>
+    <li><strong>Show details</strong> (<code>DialogPVRInfo.xml</code>): big bold text and a Watch now button.</li>
+    <li>Coordinates are the 1920×1440 canvas, exactly 3× the real pixels. Fonts are Cabin Bold, the same as the CRT menu titles. Keep lines and gaps at least 2 real pixels; 1-pixel lines flicker on 480i.</li>
+    <li>Kodi only enables a hand-installed add-on once it's in its add-on database; the script adds it to the <code>installed</code> table in <code>Addons33.db</code>.</li>
+  </ul>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Controller (PS / Xbox)</th><th>Watching live TV</th><th>In the guide</th></tr></thead>
+    <tbody>
+      <tr><td>Cross / A</td><td>Pause</td><td>Switch to that channel, full screen</td></tr>
+      <tr><td>Circle / B</td><td>Open the guide (show keeps playing); hold to stop</td><td>Back to the show</td></tr>
+      <tr><td>Square / X</td><td>On-screen controls</td><td>Show details</td></tr>
+    </tbody>
+  </table></div>
+  <p>Both profiles also get: <code>epg.selectaction=1</code> (Select switches channel instead of opening details), <code>epg.epgupdate=15</code>, and IPTV Simple reloading channels and guide every 15 minutes (<code>kodi_tv_settings.py</code>), plus the controller map <code>keymaps/livetv-controller.xml</code>. Stock Kodi maps Circle to Stop during live TV, which ended the show whenever you went to the guide.</p>
+  <h3>Problems found and fixed</h3>
+  <ul>
+    <li><strong>Guide out of step with what airs:</strong> the server rebuilt its schedules and Kodi only re-read the guide every 2 hours. Now every 15 minutes.</li>
+    <li><strong>New channels with an empty guide:</strong> Kodi's guide database (<code>Epg16.db</code>) kept data from before the channels existed. Fix: close Kodi, move <code>Database/Epg16.db</code> and IPTV Simple's <code>xmltv.xml.cache-1</code> and <code>iptv.m3u.cache-1</code> aside, start Kodi. It rebuilds them from the server.</li>
+    <li><strong>Picture 19 px low (black band on top, bottom rows cut):</strong> Kodi's own frame is fine; sway places it wrong when Kodi first goes full screen. <code>/userdata/system/scripts/kodi-fullscreen-fix.sh</code> (from <code>pi/scripts/</code>) runs on every Kodi launch and switches full screen off and on once the window exists.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>Sources</h2>
+  <ul>
+    <li><a href="https://wiki.batocera.org/batocera-and-crt-rpi">Batocera wiki: CRT output on Raspberry Pi</a> (composite port unsupported since the Wayland switch)</li>
+    <li><a href="https://wiki.batocera.org/_export/xhtml/display_issues">Batocera wiki: display issues</a> (<code>es.resolution</code>, <code>batocera-resolution listModes</code>)</li>
+    <li><a href="https://specpicks.com/product/B07FTN5NN7">Dingsun converter listing</a></li>
+    <li><a href="https://forums.libretro.com/t/crtswitchres-lakka-rpi-4-composite-av/42935">libretro forum: HDMI-to-composite adapters output 480i</a></li>
+  </ul>
+</section>
+
+<nav class="pager" aria-label="Previous and next page"><a href="shaders.html">← Shaders</a><a href="tv.html">Live TV channels →</a></nav>
+</main>
+</div>
+</body>
+</html>

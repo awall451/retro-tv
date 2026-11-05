@@ -1,0 +1,20 @@
+# Shader set for playing on the real Sony Trinitron, through the Dingsun HDMI-to-composite
+# converter. The Pi outputs 640x480 over HDMI and the converter turns it into 480i composite.
+# The tube draws the picture and has a real aperture grille, so consoles get no shader.
+# Fine LCD grids and scanline patterns would flicker in an interlaced 480i signal, so
+# handhelds get color correction only.
+# Installed at /userdata/shaders/configs/trinitron-crt/.
+# Selected by the "Display - Trinitron CRT" entry under Ports (display-profiles/apply.sh crt).
+
+default:
+  shader:
+  scanline: false
+
+# Game Boy: Gambatte's classic green palette only.
+gb:
+  shader:
+# Game Boy Color / Advance: the original screens' color response, no grid.
+gbc:
+  shader: handheld/gbc-color
+gba:
+  shader: handheld/gba-color

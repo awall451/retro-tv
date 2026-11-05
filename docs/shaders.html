@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shaders</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="shell">
+<nav class="nav" aria-label="Guide pages">
+  <p class="brand">Batocera Pi 4 Guide<small>Retro games and Plex on a Trinitron</small></p>
+  <div class="grille" aria-hidden="true"></div>
+  <ol>
+    <li><a href="index.html">Overview</a></li>
+    <li><a href="setup.html">Base setup</a></li>
+    <li><a href="library.html">Game library</a></li>
+    <li><a href="shaders.html" aria-current="page">Shaders</a></li>
+    <li><a href="display.html">HDMI and Trinitron</a></li>
+    <li><a href="tv.html">Live TV channels</a></li>
+    <li><a href="reference.html">Reference</a></li>
+  </ol>
+  <p class="meta">Batocera 43.1 on a Raspberry Pi 4. Last updated 2026-11-05.</p>
+</nav>
+
+<main>
+<header class="page">
+  <h1>Shaders</h1>
+  <p class="lead">On a flat TV, consoles get a Trinitron-style CRT shader and handhelds get their own LCD look. Every shader was measured on this Pi at 1080p; only ones that hold 60 fps made the cut.</p>
+</header>
+
+<section>
+  <h2>The picks</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Systems</th><th>HDMI TV (<code>trinitron-hdmi</code>)</th><th>Trinitron (<code>trinitron-crt</code>)</th></tr></thead>
+    <tbody>
+      <tr><td>NES, SNES, Mega Drive, PS1, PC Engine, arcade and other consoles</td><td><code>crt/trinitron</code>: crt-pi with its vertical-stripe aperture-grille mask, horizontal-only curvature (Trinitron tubes are cylindrical), brighter mask</td><td>None. The tube draws the real thing.</td></tr>
+      <tr><td>Game Boy</td><td><code>handheld/simpletex_lcd</code>: paper-textured LCD with the grid on dark pixels, like the non-backlit DMG</td><td>None. Gambatte's green DMG palette.</td></tr>
+      <tr><td>Game Boy Color</td><td><code>handheld/simpletex_lcd+gbc-color</code>: same texture plus GBC color correction</td><td><code>handheld/gbc-color</code></td></tr>
+      <tr><td>GBA</td><td><code>handheld/agb001</code>: endrift's (mGBA author) recreation of the original GBA screen with RGB subpixels</td><td><code>handheld/gba-color</code></td></tr>
+      <tr><td>Game Gear, Neo Geo Pocket, WonderSwan, Lynx</td><td><code>handheld/zfast-lcd</code> (Batocera's pick, not benchmarked)</td><td>None</td></tr>
+      <tr><td>Virtual Boy, DS, 3DS, PSP, Dreamcast</td><td>None</td><td>None</td></tr>
+    </tbody>
+  </table></div>
+  <p>Video settings that go with them: integer scaling on (even scanlines and LCD grids), smoothing off, bezels off, aspect ratio auto (each system's real shape: 4:3 for consoles, 10:9 GB, 3:2 GBA).</p>
+  <div class="figrow">
+    <figure><img src="img/trinitron-shader-zoom.png" alt="SNES title screen at 3x zoom with the trinitron shader: horizontal scanlines over vertical red, green and blue stripes"><figcaption>Trinitron preset at 3× zoom: scanlines and vertical RGB stripes.</figcaption></figure>
+    <figure><img src="img/agb001-zoom.png" alt="GBA screen at 4x zoom with agb001: each pixel split into red, green and blue columns"><figcaption><code>agb001</code> on GBA: RGB subpixels per pixel.</figcaption></figure>
+    <figure><img src="img/simpletex-gb-zoom.png" alt="Game Boy text at 4x zoom with simpletex_lcd: grid on dark pixels over a paper texture"><figcaption><code>simpletex_lcd</code> on Game Boy (grey here; real launches use the green palette).</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <h2>How Batocera applies them</h2>
+  <ul>
+    <li>A <strong>shader set</strong> is a folder with <code>rendering-defaults.yml</code>, mapping systems to shaders; <code>default:</code> covers every system not listed. User sets live in <code>/userdata/shaders/configs/&lt;name&gt;/</code> and are chosen with <code>global.shaderset=&lt;name&gt;</code>.</li>
+    <li>A shader named <code>crt/trinitron</code> is looked up as <code>/userdata/shaders/crt/trinitron.glslp</code> first, then in Batocera's own folder. On the Pi 4 the video driver is <code>gl</code>, so <code>.glslp</code> presets are used.</li>
+    <li>The custom presets reference Batocera's shader code by absolute path and only override its parameters. <code>trinitron.glslp</code>: <code>CURVATURE_X 0.08</code>, <code>CURVATURE_Y 0.0</code>, <code>MASK_BRIGHTNESS 0.80</code>, <code>SCANLINE_WEIGHT 6.0</code>, <code>SCANLINE_GAP_BRIGHTNESS 0.15</code>, <code>BLOOM_FACTOR 1.5</code>. <code>trinitron-flat.glslp</code> is the same without curvature.</li>
+  </ul>
+</section>
+
+<section>
+  <h2>How they were measured</h2>
+  <p><code>tools/shader_bench.sh</code> runs RetroArch on the TV twice per shader, a short run of 120 frames and a long one of 120 + <code>LONG</code> frames, with vsync on and audio sync off. <code>fps = LONG / (long time − short time)</code> cancels out loading and shader compile time. RetroArch's <code>--max-frames-ss</code> saves a GPU screenshot (after the shader) for checking the look.</p>
+<pre><code>S=/usr/share/batocera/shaders/crt
+/tmp/shader_bench.sh snes9x "/userdata/roms/snes/Super Mario World (USA).sfc" /tmp/bench/snes none $S/crt-pi.glslp
+LONG=2400 EXTRA_CFG=/tmp/bench-int.cfg /tmp/shader_bench.sh mgba &lt;gba rom&gt; /tmp/bench/gba none ...</code></pre>
+  <ul>
+    <li><strong>Full speed</strong> means within about ±0.7 fps of the no-shader baseline, which itself reads 59.1–60.7 at 60 Hz.</li>
+    <li>Vsync-off "uncapped" numbers are useless here: the Wayland compositor still paces frames (no-shader SNES came out at only 87).</li>
+    <li>Handheld runs need <code>EXTRA_CFG</code> with integer scaling, <code>aspect_ratio_index = "22"</code> and viewport bias 0.5. The benchmark reuses the config of the last game launched from the menu, and a bezel game leaves a custom 4:3 viewport pinned top-left.</li>
+    <li>Nobody should play during a run: a game played in parallel produced a bogus 55 fps.</li>
+  </ul>
+  <p><code>tools/verify_launch.sh</code> then launches games through Batocera's real launcher, captures the screen with <code>grim</code> and prints the shader and settings RetroArch actually got.</p>
+</section>
+
+<section>
+  <h2>CRT shader results (SNES, 1080p)</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Shader</th><th class="num">fps</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td>none (baseline)</td><td class="num">59.7–59.9</td><td>—</td></tr>
+      <tr><td><code>crt-pi</code></td><td class="num">59.8–60.2</td><td><span class="pill ok">Full speed</span></td></tr>
+      <tr><td><code>trinitron</code> (custom)</td><td class="num">59.1–59.6</td><td><span class="pill ok">Full speed</span> chosen</td></tr>
+      <tr><td><code>zfast-crt</code></td><td class="num">59.4–60.1</td><td><span class="pill ok">Full speed</span></td></tr>
+      <tr><td><code>fakelottes</code></td><td class="num">57.8</td><td><span class="pill warn">Drops frames</span></td></tr>
+      <tr><td><code>crt-yo6-KV-M1420B-fast</code></td><td class="num">56.9</td><td><span class="pill warn">Drops frames</span></td></tr>
+      <tr><td><code>crt-geom-mini</code></td><td class="num">47.9</td><td><span class="pill warn">Too slow</span></td></tr>
+      <tr><td><code>crt-gdv-mini</code></td><td class="num">31.4</td><td><span class="pill warn">Too slow</span></td></tr>
+      <tr><td><code>crt-easymode</code></td><td class="num">27.4</td><td><span class="pill warn">Too slow</span></td></tr>
+      <tr><td><code>crt-lottes-fast</code></td><td class="num">20.9</td><td><span class="pill warn">Too slow</span></td></tr>
+      <tr><td><code>crt-guest-dr-venom-fast</code></td><td class="num">15.1</td><td><span class="pill warn">Too slow</span></td></tr>
+      <tr><td><code>crt-yo6-KV-M1420B</code> (a real Trinitron model)</td><td class="num">14.0</td><td><span class="pill warn">Too slow</span></td></tr>
+      <tr><td><code>crt-consumer</code></td><td class="num">14.0</td><td><span class="pill warn">Too slow</span></td></tr>
+      <tr><td><code>crt-yo6-KV-M1420B-sharp</code></td><td class="num">13.5</td><td><span class="pill warn">Too slow</span></td></tr>
+      <tr><td><code>crt-aperture</code></td><td class="num">11.8</td><td><span class="pill warn">Too slow</span></td></tr>
+    </tbody>
+  </table></div>
+  <p>With integer scaling, the Trinitron preset held 59.6 (SNES, 1196×896), 60.2 (NES), 59.6 (Mega Drive) and 59.5–60.0 (PS1, 1280×960; baseline 60.0).</p>
+</section>
+
+<section>
+  <h2>Handheld shader results (integer scaling: GBA 6×, GB/GBC 7×)</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Shader</th><th class="num">GBA</th><th class="num">GBC</th><th class="num">GB</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td>none (baseline)</td><td class="num">59.1–60.3</td><td class="num">60.0–60.7</td><td class="num">60.1–60.5</td><td>—</td></tr>
+      <tr><td><code>agb001</code></td><td class="num">58.5–59.7</td><td></td><td></td><td><span class="pill ok">Full speed</span> GBA pick</td></tr>
+      <tr><td><code>gba-color</code></td><td class="num">58.5–60.0</td><td></td><td></td><td><span class="pill ok">Full speed</span> color only</td></tr>
+      <tr><td><code>simpletex_lcd+gba-color</code></td><td class="num">54.8–58.3</td><td></td><td></td><td><span class="pill warn">Drops frames</span></td></tr>
+      <tr><td><code>ags001</code></td><td class="num">54.2</td><td></td><td></td><td><span class="pill warn">Drops frames</span></td></tr>
+      <tr><td><code>zfast-lcd</code></td><td class="num">55.8–57.3</td><td class="num">59.4–60.4</td><td class="num">60.3–61.2</td><td>GB/GBC only</td></tr>
+      <tr><td><code>simpletex_lcd+gbc-color</code></td><td></td><td class="num">60.5–61.0</td><td></td><td><span class="pill ok">Full speed</span> GBC pick</td></tr>
+      <tr><td><code>simpletex_lcd</code></td><td></td><td></td><td class="num">59.5–60.3</td><td><span class="pill ok">Full speed</span> GB pick</td></tr>
+      <tr><td><code>sameboy-lcd</code></td><td></td><td></td><td class="num">40.0</td><td><span class="pill warn">Too slow</span></td></tr>
+      <tr><td><code>gb-dot-matrix-DMG</code></td><td></td><td></td><td class="num">24.6</td><td><span class="pill warn">Too slow</span></td></tr>
+      <tr><td><code>lcd-grid-v2</code> (all variants)</td><td class="num">16.3–16.4</td><td class="num">16.7</td><td class="num">19.2</td><td><span class="pill warn">Too slow</span></td></tr>
+      <tr><td><code>gameboy</code>, <code>gameboy-pocket</code></td><td></td><td></td><td class="num">16.8–17.1</td><td><span class="pill warn">Too slow</span></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<nav class="pager" aria-label="Previous and next page"><a href="library.html">← Game library</a><a href="display.html">HDMI and Trinitron →</a></nav>
+</main>
+</div>
+</body>
+</html>
