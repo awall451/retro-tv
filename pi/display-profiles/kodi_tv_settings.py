@@ -8,11 +8,21 @@
 - IPTV Simple reloads the channel list and guide from ErsatzTV every 15 minutes
   (m3uRefreshMode 1 = repeated), so a rebuilt schedule shows up within 15 minutes.
 - installs the live-TV controller keymap.
+- hides the server's HD twins (channels 101+, group "HD", made for the browser viewer): IPTV
+  Simple loads only the channel groups named in a custom groups file, and this script writes
+  that file as "every group in ErsatzTV's channel list except HD". A normal channel put in a
+  new group is therefore still shown; only the HD group is left out.
+
+With --groups it only refreshes the groups file. /userdata/system/scripts/kodi-channel-groups.sh
+runs it that way at every Kodi launch, so a new group on the server shows at the next launch.
 """
-import os, re, shutil, sys
+import html, os, re, shutil, sys, urllib.request
 
 KODI = "/userdata/system/.kodi/userdata"
 HERE = "/userdata/system/display-profiles"
+IPTV = os.path.join(KODI, "addon_data/pvr.iptvsimple/instance-settings-1.xml")
+GROUPS_FILE = os.path.join(KODI, "addon_data/pvr.iptvsimple/channelGroups/customTVGroups-retro-tv.xml")
+HIDDEN_GROUPS = {"HD"}
 
 
 def set_settings(path, values):
@@ -30,10 +40,57 @@ def set_settings(path, values):
     print("set %s in %s" % (", ".join("%s=%s" % kv for kv in values.items()), path))
 
 
+def server_groups():
+    """Group names in ErsatzTV's channel list, or None if the server can't be read."""
+    m = re.search(r'<setting id="m3uUrl"[^>]*>([^<]+)<', open(IPTV, encoding="utf-8").read())
+    if not m:
+        return None
+    try:
+        with urllib.request.urlopen(html.unescape(m.group(1)), timeout=5) as r:
+            m3u = r.read().decode("utf-8", "replace")
+    except Exception as e:
+        print("channel list not readable (%s)" % e)
+        return None
+    groups = set()
+    for value in re.findall(r'group-title="([^"]*)"', m3u):
+        groups.update(g.strip() for g in value.split(";") if g.strip())  # IPTV Simple splits on ;
+    return groups
+
+
+def write_groups():
+    """Custom groups file = every server group except HIDDEN_GROUPS; mode = custom groups."""
+    if not os.path.exists(IPTV):
+        print("skip (missing): %s" % IPTV)
+        return
+    groups = server_groups()
+    if groups is None:
+        if os.path.exists(GROUPS_FILE):
+            print("kept %s" % GROUPS_FILE)
+            return
+        groups = {"ErsatzTV"}  # first run with the server down: ErsatzTV's default group
+    keep = sorted(groups - HIDDEN_GROUPS)
+    os.makedirs(os.path.dirname(GROUPS_FILE), exist_ok=True)
+    with open(GROUPS_FILE, "w", encoding="utf-8") as f:
+        f.write("<!-- Written by display-profiles/kodi_tv_settings.py: every group in ErsatzTV's\n"
+                "     channel list except %s. Rewritten at every Kodi launch. -->\n"
+                "<customChannelGroups>\n" % ", ".join(sorted(HIDDEN_GROUPS)))
+        for g in keep:
+            f.write("  <channelGroupName>%s</channelGroupName>\n" % html.escape(g))
+        f.write("</customChannelGroups>\n")
+    print("channel groups shown: %s" % ", ".join(keep))
+    set_settings(IPTV, {
+        "tvGroupMode": "2",  # custom groups
+        "customTvGroupsFile": "special://userdata/addon_data/pvr.iptvsimple/channelGroups/"
+                              + os.path.basename(GROUPS_FILE)})
+
+
+write_groups()
+if "--groups" in sys.argv:
+    sys.exit(0)
+
 set_settings(os.path.join(KODI, "guisettings.xml"),
              {"epg.selectaction": "1", "epg.epgupdate": "15"})
-set_settings(os.path.join(KODI, "addon_data/pvr.iptvsimple/instance-settings-1.xml"),
-             {"m3uRefreshMode": "1", "m3uRefreshIntervalMins": "15"})
+set_settings(IPTV, {"m3uRefreshMode": "1", "m3uRefreshIntervalMins": "15"})
 
 os.makedirs(os.path.join(KODI, "keymaps"), exist_ok=True)
 shutil.copy(os.path.join(HERE, "kodi-skin/livetv-controller.xml"),
