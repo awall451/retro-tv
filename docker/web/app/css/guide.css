@@ -249,7 +249,7 @@ body.full #screen { overflow: visible; }
 
 /* Touch screens: buttons a finger can hit. */
 @media (pointer: coarse) {
-  #banner .btn { height: max(calc(27 * var(--b)), 44px); line-height: max(calc(27 * var(--b)), 44px); }
+  #banner .btn { height: max(calc(27 * var(--b)), 40px); line-height: max(calc(27 * var(--b)), 40px); }
   #details .btn, #settings .btn { height: 40px; line-height: 40px; padding: 0 16px; }
   #setRows > div { height: 40px; line-height: 40px; }
 }

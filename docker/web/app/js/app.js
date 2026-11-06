@@ -108,12 +108,13 @@ function computeLayout() {
   L.u = L.bh / 480;
   L.vw = vw; L.vh = vh;
 
-  // The banner and messages are never smaller than their design size, and
-  // on a touch screen their buttons are finger-sized (as far as the
-  // window's width allows), but the banner never takes over a short window
-  // (a phone held sideways).
-  const finger = window.matchMedia('(pointer: coarse)').matches ? 1.6 : 1;
-  L.b = Math.max(L.u, Math.min(finger, vw / 330, vh / 420));
+  // The banner and messages grow with the picture only up to 1.25x their
+  // design size, so on a big screen they stay a lower third, not a wall.
+  // On a touch screen they grow a little more for fingers, as far as the
+  // window's width allows, but never take over a short window (a phone
+  // held sideways). The buttons' 40 px floor on touch is in the CSS.
+  const finger = window.matchMedia('(pointer: coarse)').matches ? 1.25 : 1;
+  L.b = Math.max(Math.min(L.u, 1.25), Math.min(finger, vw / 400, vh / 420));
   return L;
 }
 
@@ -143,7 +144,9 @@ function applyLayout() {
   const margin = Math.min(24 * L.b, L.bw * 0.04);
   const below = L.vh - L.by - L.bh;
   const roomBelow = below >= 190 * L.b;
-  px(el.banner, { left: L.bx + margin, width: L.bw - 2 * margin });
+  // At most 560 design pixels wide, centred under or over the picture.
+  const bannerW = Math.min(L.bw - 2 * margin, 560 * L.b);
+  px(el.banner, { left: L.bx + (L.bw - bannerW) / 2, width: bannerW });
   el.banner.style.top = roomBelow ? `${L.by + L.bh + margin}px` : 'auto';
   el.banner.style.bottom = roomBelow ? 'auto' : `${below + margin}px`;
   px(el.osd, { top: L.by + margin, right: L.vw - L.bx - L.bw + margin });
