@@ -120,8 +120,9 @@ channel only plays with Streaming Engine **Legacy**; the newer engine shows an e
 A channel without a twin simply plays in Standard.
 
 Other players that read ErsatzTV's channel list directly (Kodi) will see the twins as extra
-channels unless they skip the `HD` group. What the Pi's Kodi needs for that is written up in
-[`notes/for-the-pi-side-hd-twins.md`](notes/for-the-pi-side-hd-twins.md).
+channels unless they skip the `HD` group (filter the M3U, or show only the channel group the
+normal channels are in). More on twins: [`../ersatztv/README.md`](../ersatztv/README.md), "HD
+copies of every channel".
 
 ## Good to know
 

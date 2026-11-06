@@ -19,6 +19,7 @@ Kodi's retro guide, the live-TV server, and troubleshooting.
 | `pi/shaders/` | Shader sets and the Trinitron CRT presets |
 | `pi/snapshots/` | Sanitized copies of the Pi's config files |
 | `docker/` | The browser TV guide viewer (Docker Compose): start with `docker/README.md` |
+| `ersatztv/` | How the channels are built in ErsatzTV, and the commercials between programmes (catalog of 1,120 clips + a script to rebuild them): start with `ersatztv/README.md` |
 
 Addresses are placeholders: `<pi-ip>` is the Pi on the home network and `<server-ip>` the
 server running ErsatzTV (port 8409). Fill them in locally.

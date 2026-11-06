@@ -1,0 +1,119 @@
+{
+  "_about": "Example lineups: one entry per channel. build-queries.py turns each into an ErsatzTV smart collection query. kind: films or shows. order: the playback order to pick in the schedule. ads: which commercial set(s) the channel uses (commercials/README.md). movies: [title, release year], the year as Plex/Jellyfin has it (null if the file has none). shows: show titles exactly as ErsatzTV lists them.",
+  "channels": [
+    {
+      "number": "24",
+      "name": "Alien",
+      "kind": "movies",
+      "order": "In release order, then around again",
+      "ads": "mix80s",
+      "movies": [
+        [
+          "Alien",
+          1979
+        ],
+        [
+          "Aliens",
+          1986
+        ],
+        [
+          "Alien³",
+          1992
+        ],
+        [
+          "Alien: Resurrection",
+          1997
+        ],
+        [
+          "Alien vs. Predator",
+          2004
+        ],
+        [
+          "Aliens vs. Predator: Requiem",
+          2007
+        ],
+        [
+          "Alien: Covenant",
+          2017
+        ],
+        [
+          "Alien: Romulus",
+          2024
+        ]
+      ]
+    },
+    {
+      "number": "29",
+      "name": "Vincent Price",
+      "kind": "movies",
+      "order": "Shuffled",
+      "ads": "horror",
+      "movies": [
+        [
+          "House of Usher",
+          1960
+        ],
+        [
+          "House of Wax",
+          1953
+        ],
+        [
+          "House on Haunted Hill",
+          1959
+        ],
+        [
+          "Laura",
+          1944
+        ],
+        [
+          "The Great Mouse Detective",
+          1986
+        ],
+        [
+          "The Haunted Palace",
+          1963
+        ],
+        [
+          "The Last Man on Earth",
+          1964
+        ],
+        [
+          "The Masque of the Red Death",
+          1964
+        ],
+        [
+          "The Pit and the Pendulum",
+          1961
+        ],
+        [
+          "The Raven",
+          1963
+        ],
+        [
+          "The Tomb of Ligeia",
+          1964
+        ]
+      ]
+    },
+    {
+      "number": "33",
+      "name": "The Twilight Zone",
+      "kind": "shows",
+      "order": "Shuffled",
+      "ads": "fifties",
+      "shows": [
+        "The Twilight Zone"
+      ]
+    },
+    {
+      "number": "34",
+      "name": "Stranger Things",
+      "kind": "shows",
+      "order": "In episode order",
+      "ads": "stranger",
+      "shows": [
+        "Stranger Things"
+      ]
+    }
+  ]
+}
