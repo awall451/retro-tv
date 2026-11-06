@@ -212,33 +212,62 @@ body.full #screen { overflow: visible; }
   font-size: calc(32 * var(--u)); font-weight: 400; color: var(--soft);
 }
 
-/* ---- Channel banner (full window) ---------------------------------- */
+/* ---- Channel bar (full window) -------------------------------------- */
 
+/* Wide: the progress line across the top, programme on the left, clock
+   and buttons on the right. */
 #banner {
   position: fixed; box-sizing: border-box; background: var(--navy);
-  border: calc(2 * var(--b)) solid var(--yellow);
-  padding: calc(8 * var(--b)) calc(12 * var(--b)) calc(10 * var(--b));
+  border-top: calc(2 * var(--b)) solid var(--yellow);
+  display: grid; grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "bar bar" "info clock" "info btns";
+  column-gap: calc(24 * var(--b));
+  padding: 0 calc(20 * var(--b)) calc(14 * var(--b));
 }
-#banner .bannerTop { display: flex; justify-content: space-between; gap: calc(12 * var(--b)); font-size: calc(15 * var(--b)); }
-#banner .title { font-size: calc(21 * var(--b)); margin: calc(2 * var(--b)) 0; }
-#banner .ep { font-size: calc(16 * var(--b)); }
-#banner .ep:empty { display: none; }
-#banner .time { font-size: calc(16 * var(--b)); margin: calc(4 * var(--b)) 0 calc(6 * var(--b)); }
-#banBar { height: calc(6 * var(--b)); background: var(--program); }
+#banBar {
+  grid-area: bar; height: calc(4 * var(--b)); background: var(--program);
+  margin: 0 calc(-20 * var(--b)) calc(12 * var(--b));
+}
 #banFill { height: 100%; width: 0; background: var(--yellow); }
+#banner .banInfo { grid-area: info; align-self: center; min-width: 0; display: flex; flex-direction: column; gap: calc(2 * var(--b)); }
+#banner .ch { font-size: calc(14 * var(--b)); font-weight: 700; }
+#banner .title { font-size: calc(22 * var(--b)); font-weight: 700; }
+#banner .banSub { font-size: calc(15 * var(--b)); color: var(--soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#banEp:not(:empty)::after { content: " · "; }
+#banClock { grid-area: clock; justify-self: end; align-self: end; font-size: calc(15 * var(--b)); font-weight: 700; }
+#banButtons { grid-area: btns; justify-self: end; display: flex; margin-top: calc(8 * var(--b)); }
 /* Each button carries its own 2 px black line and overlaps its
-   neighbors by it, so the row still looks right when it wraps. */
-#banButtons {
-  display: flex; flex-wrap: wrap; margin-top: calc(10 * var(--b));
-  padding: 0 calc(2 * var(--b)) calc(2 * var(--b)) 0;
-}
+   neighbour's by it. */
 #banner .btn {
-  box-sizing: content-box;
-  font-size: calc(15 * var(--b)); height: calc(27 * var(--b)); line-height: calc(27 * var(--b));
-  padding: 0 calc(12 * var(--b));
+  box-sizing: content-box; white-space: nowrap;
+  font-size: calc(15 * var(--b)); font-weight: 700;
+  height: calc(28 * var(--b)); line-height: calc(28 * var(--b));
+  padding: 0 calc(14 * var(--b));
   border: calc(2 * var(--b)) solid var(--gap);
-  margin: 0 calc(-2 * var(--b)) calc(-2 * var(--b)) 0;
 }
+#banner .btn + .btn { margin-left: calc(-2 * var(--b)); }
+
+/* Narrow: clock beside the channel name, buttons a full-width row of
+   equal cells along the bottom. */
+#banner.narrow {
+  grid-template-areas: "bar bar" "info clock" "btns btns";
+  column-gap: calc(12 * var(--b));
+  padding: 0 calc(14 * var(--b));
+}
+#banner.narrow #banBar { margin: 0 calc(-14 * var(--b)) calc(10 * var(--b)); }
+#banner.narrow .banInfo { padding-bottom: calc(12 * var(--b)); }
+#banner.narrow #banClock { align-self: start; font-size: calc(14 * var(--b)); }
+#banner.narrow #banButtons {
+  justify-self: stretch; margin: 0 calc(-14 * var(--b));
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+  border-top: calc(2 * var(--b)) solid var(--gap);
+}
+#banner.narrow .btn {
+  box-sizing: border-box; min-width: 0; padding: 0; margin: 0; overflow: hidden;
+  border: 0; border-right: calc(2 * var(--b)) solid var(--gap);
+  height: calc(36 * var(--b)); line-height: calc(36 * var(--b)); font-size: calc(14 * var(--b));
+}
+#banner.narrow .btn:last-child { border-right: 0; }
 
 #osd {
   position: fixed; box-sizing: border-box; background: var(--navy); color: var(--yellow);
@@ -249,7 +278,8 @@ body.full #screen { overflow: visible; }
 
 /* Touch screens: buttons a finger can hit. */
 @media (pointer: coarse) {
-  #banner .btn { height: max(calc(27 * var(--b)), 40px); line-height: max(calc(27 * var(--b)), 40px); }
+  #banner .btn { height: max(calc(28 * var(--b)), 40px); line-height: max(calc(28 * var(--b)), 40px); }
+  #banner.narrow .btn { height: 44px; line-height: 44px; }
   #details .btn, #settings .btn { height: 40px; line-height: 40px; padding: 0 16px; }
   #setRows > div { height: 40px; line-height: 40px; }
 }

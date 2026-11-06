@@ -78,16 +78,17 @@
   <div id="tuning" hidden></div>
 </div>
 
-<!-- Channel banner, shown over the full-window picture. -->
+<!-- Channel bar, locked to the bottom edge of the full-window picture: over
+     it, or just under it when the window has room. A narrow picture (a
+     phone held upright) gets the stacked layout, class "narrow". -->
 <div id="banner" hidden>
-  <div class="bannerTop">
-    <span id="banCh" class="ch"></span>
-    <span id="banClock"></span>
-  </div>
-  <div id="banTitle" class="title"></div>
-  <div id="banEp" class="ep"></div>
-  <div id="banTime" class="time"></div>
   <div id="banBar"><div id="banFill"></div></div>
+  <div class="banInfo">
+    <div id="banCh" class="ch"></div>
+    <div id="banTitle" class="title"></div>
+    <div class="banSub"><span id="banEp"></span><span id="banTime"></span></div>
+  </div>
+  <span id="banClock"></span>
   <div id="banButtons">
     <button id="banGuide" type="button" class="btn sel">Guide</button>
     <button id="banDown" type="button" class="btn">Ch &minus;</button>

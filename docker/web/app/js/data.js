@@ -66,7 +66,8 @@ export function parseXmltv(text, keepFrom, keepTo) {
         case 'sub-title': p.sub = value; break;
         case 'desc': p.desc = value; break;
         case 'category': p.cats.push(value); break;
-        case 'date': p.year = value.slice(0, 4); break;
+        // ErsatzTV writes <date>0</date> for a film with no year.
+        case 'date': p.year = /^[1-9]\d{3}/.test(value) ? value.slice(0, 4) : ''; break;
         case 'rating': p.rating = value; break;
         case 'episode-num':
           if (c.getAttribute('system') === 'onscreen') p.ep = value;

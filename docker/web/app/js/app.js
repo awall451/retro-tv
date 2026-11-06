@@ -108,13 +108,15 @@ function computeLayout() {
   L.u = L.bh / 480;
   L.vw = vw; L.vh = vh;
 
-  // The banner and messages grow with the picture only up to 1.25x their
-  // design size, so on a big screen they stay a lower third, not a wall.
-  // On a touch screen they grow a little more for fingers, as far as the
-  // window's width allows, but never take over a short window (a phone
-  // held sideways). The buttons' 40 px floor on touch is in the CSS.
+  // The channel bar and messages never grow past their design size with
+  // the picture, so on a big screen they stay a slim strip. On a touch
+  // screen they grow a little for fingers, as far as the window's width
+  // allows, but never take over a short window (a phone held sideways).
+  // The buttons' floor on touch is in the CSS.
   const finger = window.matchMedia('(pointer: coarse)').matches ? 1.25 : 1;
-  L.b = Math.max(Math.min(L.u, 1.25), Math.min(finger, vw / 400, vh / 420));
+  L.b = Math.max(Math.min(L.u, 1), Math.min(finger, vw / 400, vh / 420));
+  // Too narrow for programme, clock and buttons side by side: stack them.
+  L.narrow = L.bw < 720 * L.b;
   return L;
 }
 
@@ -139,16 +141,16 @@ function applyLayout() {
   px(el.gridMsg, { top: 2 + ROW });
 
   px(el.screen, { left: L.bx, top: L.by, width: L.bw, height: L.bh });
-  // The banner sits over the bottom of the picture, or in the black
-  // below it when the window is tall enough to have room there.
+  // The channel bar spans the picture and is locked to its bottom edge:
+  // over the picture, or just under it when the window has room there.
   const margin = Math.min(24 * L.b, L.bw * 0.04);
   const below = L.vh - L.by - L.bh;
-  const roomBelow = below >= 190 * L.b;
-  // At most 560 design pixels wide, centred under or over the picture.
-  const bannerW = Math.min(L.bw - 2 * margin, 560 * L.b);
-  px(el.banner, { left: L.bx + (L.bw - bannerW) / 2, width: bannerW });
-  el.banner.style.top = roomBelow ? `${L.by + L.bh + margin}px` : 'auto';
-  el.banner.style.bottom = roomBelow ? 'auto' : `${below + margin}px`;
+  const roomBelow = below >= (L.narrow ? 150 : 100) * L.b;
+  el.banner.classList.toggle('narrow', L.narrow);
+  px(el.banner, { left: L.bx, width: L.bw });
+  el.banner.style.top = roomBelow ? `${L.by + L.bh}px` : 'auto';
+  el.banner.style.bottom = roomBelow ? 'auto' : `${below}px`;
+  fullLabel();
   px(el.osd, { top: L.by + margin, right: L.vw - L.bx - L.bw + margin });
   placeScreen(false);
 }
@@ -613,10 +615,15 @@ async function toggleFullscreen() {
   } catch { /* refused, or the screen cannot be turned: stay as we are */ }
 }
 
+// Short labels when the bar's buttons share a phone's width.
+function fullLabel() {
+  const narrow = S.L && S.L.narrow;
+  el.banFull.textContent = inFullscreen()
+    ? (narrow ? 'Exit' : 'Exit full screen')
+    : (narrow ? 'Full' : 'Full screen');
+}
 for (const name of ['fullscreenchange', 'webkitfullscreenchange']) {
-  document.addEventListener(name, () => {
-    el.banFull.textContent = inFullscreen() ? 'Exit full screen' : 'Full screen';
-  });
+  document.addEventListener(name, fullLabel);
 }
 
 // ---- Moving around the guide ---------------------------------------------
