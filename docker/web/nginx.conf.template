@@ -1,0 +1,102 @@
+# Retro TV guide viewer: the static app plus a read-only door to ErsatzTV.
+#
+# The nginx image fills in ${ERSATZTV_URL} when the container starts (see
+# NGINX_ENVSUBST_FILTER in the Dockerfile). Nothing else in this file is
+# substituted.
+#
+# ErsatzTV writes absolute URLs into its channel list, playlists and
+# guide, built from the Host header of the request. The proxy always
+# asks as "retro-tv-viewer.invalid" and then cuts that origin out of the
+# text it passes on, so every URL the browser sees is a path on this
+# viewer, whatever name or scheme the viewer was opened with.
+
+server {
+  listen 8080;
+  server_name _;
+  server_tokens off;
+  absolute_redirect off;
+
+  root /usr/share/nginx/html;
+  index index.html;
+
+  gzip on;
+  gzip_min_length 1024;
+  gzip_proxied any;
+  gzip_types text/css text/xml application/javascript application/vnd.apple.mpegurl application/x-mpegurl audio/x-mpegurl;
+
+  add_header X-Content-Type-Options "nosniff" always;
+  add_header Referrer-Policy "no-referrer" always;
+  add_header Content-Security-Policy "default-src 'self'; img-src 'self' data:; media-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'" always;
+
+  proxy_http_version 1.1;
+  proxy_set_header Connection "";
+  proxy_set_header Host retro-tv-viewer.invalid;
+  proxy_set_header X-Forwarded-Host retro-tv-viewer.invalid;
+  proxy_set_header X-Forwarded-Proto http;
+  proxy_set_header Cookie "";
+  proxy_set_header Authorization "";
+  proxy_set_header X-Etv-Api-Key "";
+  # Uncompressed from ErsatzTV so the text can be rewritten (gzip above
+  # compresses it again for the browser).
+  proxy_set_header Accept-Encoding "";
+  # Keep every proxy_set_header here: one inside a location would switch
+  # off all of these for that location.
+  proxy_connect_timeout 5s;
+  proxy_read_timeout 60s;
+  proxy_intercept_errors off;
+
+  location = /healthz {
+    access_log off;
+    default_type text/plain;
+    return 200 "ok\n";
+  }
+
+  # The app. Small files, so "always ask if it changed" costs nothing and
+  # a rebuilt image shows up on the next page load.
+  location / {
+    try_files $uri $uri/ =404;
+    add_header Cache-Control "no-cache" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "no-referrer" always;
+    add_header Content-Security-Policy "default-src 'self'; img-src 'self' data:; media-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'" always;
+  }
+  location /vendor/ { expires 30d; }
+  location /fonts/  { expires 30d; }
+
+  # ---- ErsatzTV, read only -------------------------------------------
+  # Only the paths listed here are passed on, and only GET and HEAD.
+  # Everything else under /iptv/ and all of /api/ answers 404 below.
+
+  # Channel list, guide data and the per-channel HLS entry playlist:
+  # text, rewritten on the way through.
+  location ~ ^/iptv/(channels\.m3u|xmltv\.xml|channel/[0-9]+(\.[0-9]+)?\.m3u8)$ {
+    limit_except GET { deny all; }
+    proxy_pass ${ERSATZTV_URL};
+    sub_filter_types application/vnd.apple.mpegurl application/x-mpegurl audio/x-mpegurl text/xml;
+    sub_filter 'http://retro-tv-viewer.invalid/' '/';
+    sub_filter_once off;
+    add_header Cache-Control "no-store" always;
+    add_header X-Content-Type-Options "nosniff" always;
+  }
+
+  # The live stream behind a channel: its playlist and video segments.
+  location ~ ^/iptv/session/[0-9]+(\.[0-9]+)?/[A-Za-z0-9_-]+\.(m3u8|ts|m4s|mp4)$ {
+    limit_except GET { deny all; }
+    proxy_pass ${ERSATZTV_URL};
+    proxy_buffering off;
+    sub_filter_types application/vnd.apple.mpegurl;
+    sub_filter 'http://retro-tv-viewer.invalid/' '/';
+    sub_filter_once off;
+    add_header X-Content-Type-Options "nosniff" always;
+  }
+
+  # Posters, episode stills and generated channel logos.
+  location ~ ^/iptv/(logos/|artwork/(posters|thumbnails|fanart)/) {
+    limit_except GET { deny all; }
+    proxy_pass ${ERSATZTV_URL};
+    expires 1d;
+  }
+
+  location /iptv/ { return 404; }
+  location /api/  { return 404; }
+}

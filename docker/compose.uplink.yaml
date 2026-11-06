@@ -1,0 +1,42 @@
+# Add-on for machines where containers on Docker's bridge networks cannot
+# reach other machines (IP forwarding switched off on the host, as some
+# distributions ship it). The sign: the guide says "Can't reach the TV
+# server" although `curl $ERSATZTV_URL/iptv/channels.m3u` works on the host.
+#
+# Use it by putting this line in .env:
+#   COMPOSE_FILE=compose.yaml:compose.uplink.yaml
+#
+# The viewer then sends its ErsatzTV requests to "uplink", a second small
+# container on the host's network, which passes them on. The uplink
+# listens on the Docker bridge address only: other machines cannot reach it.
+
+services:
+  web:
+    environment:
+      ERSATZTV_URL: http://host.docker.internal:${UPLINK_PORT:-8411}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - uplink
+
+  uplink:
+    container_name: retro-tv-uplink
+    build: ./web
+    image: retro-tv-viewer:local
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      NGINX_ENVSUBST_TEMPLATE_DIR: /etc/nginx/uplink-templates
+      ERSATZTV_URL: ${ERSATZTV_URL:?copy .env.example to .env and set ERSATZTV_URL}
+      # The host's address on Docker's default bridge (ip addr show docker0).
+      UPLINK_BIND: ${UPLINK_BIND:-172.17.0.1}
+      UPLINK_PORT: ${UPLINK_PORT:-8411}
+      HEALTH_URL: http://${UPLINK_BIND:-172.17.0.1}:${UPLINK_PORT:-8411}/healthz
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /etc/nginx/conf.d:uid=101,gid=101
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true

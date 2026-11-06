@@ -1,0 +1,26 @@
+# Retro TV guide viewer. See README.md in this folder.
+name: retro-tv
+
+services:
+  web:
+    # Gantry names the route after the container: retro-tv.<its domains>.
+    container_name: retro-tv
+    build: ./web
+    image: retro-tv-viewer:local
+    restart: unless-stopped
+    environment:
+      ERSATZTV_URL: ${ERSATZTV_URL:?copy .env.example to .env and set ERSATZTV_URL}
+    # Published on loopback only: a proxy on this machine (Gantry) is the
+    # way in from other devices, and finds the container by this port.
+    ports:
+      - "127.0.0.1:${VIEWER_PORT:-8410}:8080"
+    # Docker's built-in bridge: one container needs no network of its own.
+    network_mode: bridge
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /etc/nginx/conf.d:uid=101,gid=101
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true

@@ -3,8 +3,21 @@
 **For:** the agent on the user's Linux laptop (Garuda, on the tailnet).
 **From:** the Pi 4 / Batocera session that built the Kodi version of this guide.
 **Date:** 2026-11-05.
-**Status:** designed, not started. Nothing in `docker/` exists yet except this file and
-`design/mockup.html`.
+**Status:** built 2026-11-05. How to run and use it: [`README.md`](README.md). This file is the
+original brief, kept for the reasoning. Where the build differs from it:
+
+- The laptop's Docker bridge networks cannot route out (IP forwarding is off there), so it runs
+  the `compose.uplink.yaml` add-on: a second container on the host's network carries the
+  ErsatzTV requests. The viewer itself is a normal bridged container with its port published on
+  loopback, which is how Gantry finds it.
+- ErsatzTV **does** build its URLs from the `Host` header (§3, question 4). The proxy asks under a
+  fixed made-up host and cuts that origin out, so every URL the browser sees is a path.
+- Layout (§4.3): the 640×480 design scaled to the window; wider windows get more time columns,
+  taller ones more rows, upright phones a stacked version. `?tv` forces plain 640×480.
+- The channel list is `application/x-mpegurl`, not `audio/x-mpegurl`.
+- "Never preload other channels" (§5.2) was relaxed by the owner: while flipping channels, the
+  next one in the same direction is kept warm on the server (`web/app/js/warm.js`), for up to
+  30 s after the last flip. Flips then take about a quarter of a second.
 
 ---
 
