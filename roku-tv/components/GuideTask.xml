@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Fetches ErsatzTV's XMLTV guide and keeps the programmes from two hours
+     ago to eight hours ahead. -->
+<component name="GuideTask" extends="Task">
+  <interface>
+    <field id="server" type="string" />
+    <!-- out: { "<tvg-id>": [ cell, ... ] }; cell = { start, ends, title, gap, items: [ programme ] },
+         programme = { start, ends, title, sub, desc, ep, year, movie, genres, icon, rating }
+         start/ends in seconds since 1970 (UTC) -->
+    <field id="guide" type="assocarray" />
+    <field id="error" type="string" />
+  </interface>
+  <script type="text/brightscript" uri="GuideTask.brs" />
+</component>

@@ -26,19 +26,23 @@ sub fetch()
     end if
 
     numRe = CreateObject("roRegex", "channel-number=" + Chr(34) + "([^" + Chr(34) + "]*)" + Chr(34), "")
+    idRe = CreateObject("roRegex", "tvg-id=" + Chr(34) + "([^" + Chr(34) + "]*)" + Chr(34), "")
     groupRe = CreateObject("roRegex", "group-title=" + Chr(34) + "([^" + Chr(34) + "]*)" + Chr(34), "")
     channels = []
     for each line in msg.GetString().Split(Chr(10))
         if Left(line, 8) = "#EXTINF:" then
             num = numRe.Match(line)
             group = groupRe.Match(line)
+            tvg = idRe.Match(line)
             comma = line.InStr(Chr(34) + ",")
             name = ""
             if comma >= 0 then name = line.Mid(comma + 2).Trim()
             if num.Count() > 1 then
                 g = ""
                 if group.Count() > 1 then g = group[1]
-                channels.Push({ num: num[1], name: name, group: g })
+                id = ""
+                if tvg.Count() > 1 then id = tvg[1]
+                channels.Push({ num: num[1], name: name, group: g, id: id })
             end if
         end if
     end for

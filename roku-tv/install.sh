@@ -14,7 +14,7 @@ if [[ -f .env ]]; then set -a; . ./.env; set +a; fi
 
 mkdir -p out
 rm -f out/retro-tv.zip
-zip -qr out/retro-tv.zip manifest source components images
+zip -qr out/retro-tv.zip manifest source components images fonts -x "fonts/*.txt"
 echo "Built out/retro-tv.zip ($(du -h out/retro-tv.zip | cut -f1))"
 
 reply=$(curl -sS --digest -u "rokudev:${ROKU_DEV_PASSWORD}" \

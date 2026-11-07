@@ -4,7 +4,7 @@
   <interface>
     <!-- in: "http://<server-ip>:8409" -->
     <field id="server" type="string" />
-    <!-- out: array of { num, name, group } sorted by number -->
+    <!-- out: array of { num, n, name, group, id (the XMLTV channel id) } sorted by number -->
     <field id="channels" type="array" />
     <!-- out: set when the fetch failed -->
     <field id="error" type="string" />

@@ -1,38 +1,24 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<!-- The whole app: full-screen live video, a channel bar locked to the
-     bottom (same look as the browser viewer), and short messages. -->
+<!-- The whole app, a port of the browser viewer (../docker/web/app): the
+     guide (picture in the corner box, programme info, grid), show details,
+     settings, and the channel bar over the full-screen picture. The guide
+     is drawn in the viewer's 853x480 design units, scaled by 2.25 to fill
+     1920x1080; MainScene.brs builds the nodes. -->
 <component name="MainScene" extends="Scene">
   <script type="text/brightscript" uri="MainScene.brs" />
   <children>
     <Rectangle id="black" width="1920" height="1080" color="0x000000FF" />
+    <!-- The guide screen (stage), drawn by MainScene.brs. -->
+    <Group id="stage" />
+    <!-- The one picture: in the corner box in the guide, full screen while watching. -->
+    <Video id="video" width="1920" height="1080" enableUI="false" enableTrickPlay="false" />
+    <!-- "Tuning to ..." over the picture, the channel bar, short messages. -->
+    <Group id="overlay" />
 
-    <Video id="video" width="1920" height="1080" enableUI="false"
-           enableTrickPlay="false" />
-
-    <!-- Channel bar: yellow top line, navy body. -->
-    <Group id="bar" visible="false">
-      <Rectangle translation="[0,904]" width="1920" height="4" color="0xF2C200FF" />
-      <Rectangle translation="[0,908]" width="1920" height="172" color="0x0A1240FF" />
-      <Label id="barCh" translation="[60,926]" width="1200" height="40"
-             font="font:MediumBoldSystemFont" color="0xF2C200FF" />
-      <Label id="barTitle" translation="[60,968]" width="1300" height="56"
-             font="font:LargeBoldSystemFont" color="0xFFFFFFFF" />
-      <Label id="barHint" translation="[60,1026]" width="1300" height="36"
-             font="font:SmallSystemFont" color="0xCFE0FFFF" />
-      <Label id="barClock" translation="[1460,926]" width="400" height="40"
-             horizAlign="right" font="font:MediumBoldSystemFont" color="0xFFFFFFFF" />
-      <Label id="barQuality" translation="[1460,1026]" width="400" height="36"
-             horizAlign="right" font="font:SmallBoldSystemFont" color="0xF2C200FF" />
-    </Group>
-
-    <!-- Loading and error messages, centred. -->
-    <Rectangle id="msgBox" translation="[360,440]" width="1200" height="200"
-               color="0x0A1240FF" visible="false">
-      <Label id="msgText" translation="[40,40]" width="1120" height="120"
-             horizAlign="center" vertAlign="center" wrap="true"
-             font="font:MediumBoldSystemFont" color="0xFFFFFFFF" />
-    </Rectangle>
-
-    <Timer id="barTimer" duration="5" repeat="false" />
+    <Timer id="bannerTimer" duration="4" repeat="false" />
+    <Timer id="osdTimer" duration="1.5" repeat="false" />
+    <Timer id="tickTimer" duration="15" repeat="true" />
+    <Timer id="refreshTimer" duration="900" repeat="true" />
+    <Timer id="retryTimer" duration="5" repeat="false" />
   </children>
 </component>
