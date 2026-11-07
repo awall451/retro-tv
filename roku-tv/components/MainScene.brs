@@ -142,7 +142,7 @@ sub tune()
     showBar()
 end sub
 
-sub step(delta as integer)
+sub changeChannel(delta as integer)
     n = m.channels.Count()
     if n = 0 then return
     m.at = ((m.at + delta) mod n + n) mod n
@@ -219,10 +219,10 @@ function onKeyEvent(key as string, press as boolean) as boolean
         return false
     end if
     if key = "up" or key = "fastforward" then
-        step(1)
+        changeChannel(1)
         return true
     else if key = "down" or key = "rewind" then
-        step(-1)
+        changeChannel(-1)
         return true
     else if key = "OK" then
         if m.bar.visible then
