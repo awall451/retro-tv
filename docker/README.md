@@ -91,6 +91,10 @@ Keep it on the tailnet. Do not publish it to the internet (no Funnel, no port fo
 - Times are shown in the viewing device's own time zone.
 - The page remembers the last channel and highlights it next time. It does not start playing by
   itself.
+- **The splash.** Opening or reloading the page shows the theme's splash for about 2½ seconds
+  while the listings load: a little television for Cable, a sunset over a scrolling grid for
+  Vaporwave. The scenes are drawn in `js/splash.js`; the grid is a true perspective projection,
+  so the same code can draw it on a Pi's boot screen.
 - Add `?tv` to the address for the plain 640×480 layout, whatever the window's shape.
 - **Full screen** on a phone or tablet also turns the screen on its side. (iPhones cannot put a
   page in full screen; there the button hands the picture to the phone's own video player.)
@@ -101,6 +105,7 @@ The cog opens settings. They are kept by the browser they were set in, so each d
 
 | Setting | Choices |
 |---|---|
+| Theme | **Cable**: the late-90s guide, navy and yellow, flat cells. **Vaporwave**: purple cells, pink highlights, cyan text, chrome titles. Each theme has its own splash (below); changing the theme replays it. |
 | Quality | **Standard**: the 4:3 picture made for the old TV. **HD**: the same channels in widescreen 1080p. The guide, names and numbers do not change. Only shown when the server has HD twins (below). |
 | Picture | **Original**: the whole 4:3 picture, as on the TV. **Fill the screen**: while watching, zooms in until the black bars around a widescreen show are off the screen; a true 4:3 show is left as it is. For wide monitors. The zoom follows the picture, so it can change when a 4:3 commercial follows a widescreen film. |
 | Fast flipping | **On**: the next channel is warmed up while you flip (see below). **Off**: channels start only when tuned. |
@@ -195,8 +200,11 @@ docker/
 │       ├── js/warm.js        keeps the next channel running while flipping
 │       ├── js/bars.js        finds black bars in the picture (for "Fill the screen")
 │       ├── js/settings.js    the settings and where they are kept
+│       ├── js/themes.js      the themes (Cable, Vaporwave): names, splash, browser tint
+│       ├── js/theme-boot.js  puts the saved theme on <html> before the first paint
+│       ├── js/splash.js      the splash scenes and the perspective floor grid
 │       ├── js/app.js         the guide, the three screens, every input
-│       ├── fonts/            Cabin (SIL Open Font License)
+│       ├── fonts/            Cabin, Audiowide, Mr Dafoe (SIL Open Font License)
 │       └── vendor/           hls.js 1.7.3 (Apache-2.0), served from here, not a CDN
 ├── notes/                    hand-over notes to the Pi side
 ├── design/mockup.html        the approved design

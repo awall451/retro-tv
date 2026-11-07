@@ -47,7 +47,7 @@ Only one sideloaded app can be on a Roku at a time; installing replaces it.
 | `source/main.brs` | Opens the screen |
 | `components/MainScene.*` | Video, channel bar, remote keys, settings in the registry |
 | `components/ChannelsTask.*` | Reads `/iptv/channels.m3u` from ErsatzTV |
-| `images/` | Icons and splash screen (navy and yellow, like the viewer) |
+| `images/` | Icons and splash screen: the viewer's Cable splash (the little television), rendered from `../docker/web/app/js/splash.js` |
 | `install.sh` | Zip and sideload |
 
 Streams are ErsatzTV's HLS (`/iptv/channel/<n>.m3u8?mode=segmenter`), the same ones the

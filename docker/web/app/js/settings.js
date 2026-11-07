@@ -1,10 +1,16 @@
 // Viewer settings. They belong to the browser they were set in (kept in
 // its localStorage), so a phone, a laptop and a TV can each have their own.
 
-const KEY = 'retro-tv.settings';
+import { THEMES } from './themes.js';
+
+const KEY = 'retro-tv.settings';   // js/theme-boot.js reads the same key before the first paint
 
 // id, label, the choices as [value, label, what it means], and the default.
 export const SETTINGS = [
+  {
+    id: 'theme', label: 'Theme', default: 'cable',
+    options: THEMES.map(t => [t.id, t.label, t.help]),
+  },
   {
     // Only offered when the server has HD twins (see data.js).
     id: 'quality', label: 'Quality', default: 'sd',

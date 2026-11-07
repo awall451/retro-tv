@@ -9,6 +9,8 @@ import { Player } from './player.js';
 import { Warmer } from './warm.js';
 import { BarWatcher } from './bars.js';
 import { SETTINGS, getSetting, cycleSetting } from './settings.js';
+import { applyTheme } from './themes.js';
+import { showSplash } from './splash.js';
 
 const $ = id => document.getElementById(id);
 const el = {
@@ -447,6 +449,11 @@ function openSettings() {
 function changeSetting(step) {
   const id = shownSettings()[S.setRow].id;
   cycleSetting(id, step);
+  if (id === 'theme') {
+    // Reskin at once, and replay the new theme's splash so the change is seen.
+    applyTheme(getSetting('theme'));
+    showSplash(getSetting('theme'), { min: 2000 });
+  }
   if (id === 'picture') syncZoom();
   if (id === 'quality') {
     // Switch the channel being watched to its other stream right away.
@@ -986,5 +993,9 @@ document.addEventListener('visibilitychange', () => {
 
 window.addEventListener('resize', () => { applyLayout(); applyZoom(); render(); });
 
+// Start: the theme, then the splash over the loading guide. The guide is
+// read in the meantime and is usually ready by the time the splash fades.
+applyTheme(getSetting('theme'));
 applyLayout();
+showSplash(getSetting('theme'));
 refresh();
