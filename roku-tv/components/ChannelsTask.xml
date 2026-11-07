@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Fetches the channel list from ErsatzTV (network calls must run in a Task). -->
+<component name="ChannelsTask" extends="Task">
+  <interface>
+    <!-- in: "http://<server-ip>:8409" -->
+    <field id="server" type="string" />
+    <!-- out: array of { num, n, name, group, id (the XMLTV channel id) } sorted by number -->
+    <field id="channels" type="array" />
+    <!-- out: set when the fetch failed -->
+    <field id="error" type="string" />
+  </interface>
+  <script type="text/brightscript" uri="ChannelsTask.brs" />
+</component>
