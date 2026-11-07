@@ -29,7 +29,8 @@ Then open <http://localhost:8410>.
 | Setting | Meaning |
 |---|---|
 | `ERSATZTV_URL` | Where ErsatzTV answers, as seen from this machine: `http://<server-ip>:8409`. No trailing slash. If the server is also on your tailnet, use its tailnet address and the viewer works at home and away. |
-| `VIEWER_PORT` | Port the viewer is published on, on `127.0.0.1` only. Default `8410`. |
+| `VIEWER_PORT` | Port the viewer is published on. Default `8410`. |
+| `VIEWER_BIND` | Where that port is open. Default `127.0.0.1` (this machine only; other devices use Gantry). `0.0.0.0` also opens it to every device on the local network, with no login. |
 | `COMPOSE_FILE`, `UPLINK_PORT`, `UPLINK_BIND` | Only for the uplink add-on, below. |
 
 After changing a file under `web/`, run `docker compose up -d --build` again. After changing only

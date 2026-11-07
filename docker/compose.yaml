@@ -10,10 +10,11 @@ services:
     restart: unless-stopped
     environment:
       ERSATZTV_URL: ${ERSATZTV_URL:?copy .env.example to .env and set ERSATZTV_URL}
-    # Published on loopback only: a proxy on this machine (Gantry) is the
-    # way in from other devices, and finds the container by this port.
+    # Published on loopback by default: a proxy on this machine (Gantry) is
+    # the way in from other devices, and finds the container by this port.
+    # VIEWER_BIND=0.0.0.0 also opens it to the local network.
     ports:
-      - "127.0.0.1:${VIEWER_PORT:-8410}:8080"
+      - "${VIEWER_BIND:-127.0.0.1}:${VIEWER_PORT:-8410}:8080"
     # Docker's built-in bridge: one container needs no network of its own.
     network_mode: bridge
     read_only: true
