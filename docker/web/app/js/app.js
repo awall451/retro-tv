@@ -10,7 +10,7 @@ import { Warmer } from './warm.js';
 import { BarWatcher } from './bars.js';
 import { SETTINGS, getSetting, cycleSetting } from './settings.js';
 import { applyTheme } from './themes.js';
-import { showSplash } from './splash.js';
+import { showSplash, isSplashShowing } from './splash.js';
 
 const $ = id => document.getElementById(id);
 const el = {
@@ -695,6 +695,7 @@ function commitDigits() {
 // ---- One place where every input ends up ---------------------------------
 
 function act(action) {
+  if (isSplashShowing()) return;       // nothing moves under the splash
   if (!S.channels.length) {
     if (action === 'refresh') refresh(true);
     return;
@@ -835,6 +836,7 @@ el.grid.addEventListener('contextmenu', e => {
 let wheelRest = 0;
 window.addEventListener('wheel', e => {
   e.preventDefault();
+  if (isSplashShowing()) return;
   if (S.mode === 'details') { el.detText.scrollTop += e.deltaY; return; }
   if (S.mode !== 'guide' || !S.channels.length) return;
   const sideways = e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY);

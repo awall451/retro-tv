@@ -69,6 +69,7 @@
   --splash-bg: #0a1240;          /* behind the splash scene before it is drawn */
   --font: "Cabin", Arial, Helvetica, sans-serif;
   --font-display: var(--font);   /* show titles */
+  --display-weight: 700;         /* titles in a face with no bold are set at their one weight */
   --u: 1px;
   --b: 1px;
 }
@@ -85,6 +86,7 @@
   --ink-accent: #19e6ff;
   --splash-bg: #05020f;
   --font-display: "Audiowide", "Cabin", Arial, sans-serif;
+  --display-weight: 400;         /* Audiowide has one weight; no faux bold */
 }
 
 html, body {
@@ -120,7 +122,7 @@ body {
 #info { position: absolute; display: flex; flex-direction: column; overflow: hidden; }
 #info > * { flex: none; }
 #info .ch { font-size: 15px; padding-right: 34px; }
-#info .title { font-size: 21px; margin: 2px 0; font-family: var(--font-display); }
+#info .title { font-size: 21px; margin: 2px 0; font-family: var(--font-display); font-weight: var(--display-weight); }
 #info .ep { font-size: 16px; }
 #info .time { font-size: 16px; margin: 4px 0; }
 #info .ep:empty, #info .time:empty { display: none; }
@@ -276,7 +278,7 @@ body.full #screen { overflow: visible; }
 #banFill { height: 100%; width: 0; background: var(--yellow); }
 #banner .banInfo { grid-area: info; align-self: center; min-width: 0; display: flex; flex-direction: column; gap: calc(2 * var(--b)); }
 #banner .ch { font-size: calc(14 * var(--b)); font-weight: 700; }
-#banner .title { font-size: calc(22 * var(--b)); font-weight: 700; font-family: var(--font-display); }
+#banner .title { font-size: calc(22 * var(--b)); font-weight: var(--display-weight); font-family: var(--font-display); }
 #banner .banSub { font-size: calc(15 * var(--b)); color: var(--soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #banEp:not(:empty)::after { content: " · "; }
 #banClock { grid-area: clock; justify-self: end; align-self: end; font-size: calc(15 * var(--b)); font-weight: 700; }
@@ -347,13 +349,18 @@ body.full #screen { overflow: visible; }
   transition: opacity 450ms ease-out;
 }
 #splash.fade { opacity: 0; pointer-events: none; }
+/* Safety net: the splash is on screen from the first paint, before any
+   script. If the script never arrives (a bad deploy, a dropped connection),
+   this fades it away after 6 s so the guide's own message can be seen.
+   The script claims the splash with the class "js", which cancels this. */
+#splash:not(.js) { animation: splashSafety 600ms ease-out 6s forwards; }
+@keyframes splashSafety { to { opacity: 0; visibility: hidden; } }
 #splash svg { display: block; width: 100%; height: 100%; overflow: visible; }
 #splash .cabin { font-family: "Cabin", Arial, Helvetica, sans-serif; font-weight: 700; }
 #splash .disp { font-family: "Audiowide", "Arial Black", Impact, sans-serif; }
 #splash .script { font-family: "Mr Dafoe", "Brush Script MT", cursive; }
 /* Lettering appears once its font is in (or after a short wait). */
-#splash text { opacity: 0; transition: opacity 250ms; }
-#splash.ready text { opacity: 1; }
+#splash:not(.ready) text { visibility: hidden; }
 @media (prefers-reduced-motion: no-preference) {
   #splash .blink { animation: splashBlink 1.6s steps(2, end) infinite; }
 }

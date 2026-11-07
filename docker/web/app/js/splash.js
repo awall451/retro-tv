@@ -59,7 +59,8 @@ function gridSvg(p, horizon, floor, color, bright, opts) {
       + `<filter id="${p}-soft" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="1.6"/></filter>`,
     body: `<g clip-path="url(#${p}-clip)">`
       + `<rect x="${x}" y="${horizon}" width="${w}" height="${h}" fill="${floor}"/>`
-      + `<g fill="none" stroke="${color}" stroke-width="4" opacity=".5" filter="url(#${p}-soft)"><path class="gridRows" d="${rows}"/><path d="${cols}"/></g>`
+      // glow pass: the columns are blurred once; the rows, which move, get a plain wide stroke (cheap to redraw)
+      + `<g fill="none" stroke="${color}" stroke-width="4" opacity=".5"><path class="gridRows" d="${rows}"/><path d="${cols}" filter="url(#${p}-soft)"/></g>`
       + `<g fill="none" stroke="${bright}" stroke-width="1.5"><path class="gridRows" d="${rows}"/><path d="${cols}"/></g>`
       + `<rect x="${x}" y="${horizon}" width="${w}" height="${(fadeTo - horizon).toFixed(1)}" fill="url(#${p}-veil)"/>`
       + `<rect x="${x}" y="${horizon - 2}" width="${w}" height="4" fill="${color}" filter="url(#${p}-soft)"/>`
@@ -110,26 +111,32 @@ function sunCuts() {
   return out;
 }
 
+// Every gradient is measured in scene units (userSpaceOnUse), never against
+// an element's own box: browsers size a text's box differently, which would
+// move the chrome's horizon line. The sun's bands are strips of sky painted
+// over it through a clip, not a mask, for the same reason.
 function vaporSvg(phase = 0) {
   const g = gridSvg('vg', HORIZON, '#0c0426', '#19e6ff', '#8ff2ff', { phase });
+  const capTop = 322 - 63;   // the lettering's cap height at 88 px, above its baseline
   return open
     + '<defs>'
-    + '<linearGradient id="v-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#05020f"/><stop offset=".55" stop-color="#2a0a4e"/><stop offset="1" stop-color="#7a1a6e"/></linearGradient>'
-    + '<linearGradient id="v-sun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe26a"/><stop offset=".5" stop-color="#ff6f9c"/><stop offset="1" stop-color="#c0109a"/></linearGradient>'
-    + '<linearGradient id="v-chrome" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4fbff"/><stop offset=".3" stop-color="#9fd3ff"/><stop offset=".49" stop-color="#3f6ea6"/><stop offset=".51" stop-color="#160a2c"/><stop offset=".72" stop-color="#6a3aa6"/><stop offset="1" stop-color="#f6e8ff"/></linearGradient>'
+    + `<linearGradient id="v-sky" gradientUnits="userSpaceOnUse" x1="0" y1="${-PAD}" x2="0" y2="${HORIZON}"><stop offset="0" stop-color="#05020f"/><stop offset=".55" stop-color="#2a0a4e"/><stop offset="1" stop-color="#7a1a6e"/></linearGradient>`
+    + `<linearGradient id="v-sun" gradientUnits="userSpaceOnUse" x1="0" y1="${SUN.cy - SUN.r}" x2="0" y2="${SUN.cy + SUN.r}"><stop offset="0" stop-color="#ffe26a"/><stop offset=".5" stop-color="#ff6f9c"/><stop offset="1" stop-color="#c0109a"/></linearGradient>`
+    + `<linearGradient id="v-chrome" gradientUnits="userSpaceOnUse" x1="0" y1="${capTop}" x2="0" y2="322"><stop offset="0" stop-color="#f4fbff"/><stop offset=".3" stop-color="#9fd3ff"/><stop offset=".49" stop-color="#3f6ea6"/><stop offset=".51" stop-color="#160a2c"/><stop offset=".72" stop-color="#6a3aa6"/><stop offset="1" stop-color="#f6e8ff"/></linearGradient>`
     + '<filter id="v-glow" x="-20%" y="-60%" width="140%" height="220%"><feGaussianBlur stdDeviation="7"/></filter>'
-    + `<mask id="v-cut"><circle cx="${SUN.cx}" cy="${SUN.cy}" r="${SUN.r}" fill="#fff"/><g fill="#000">${sunCuts()}</g></mask>`
+    + `<clipPath id="v-sunclip"><circle cx="${SUN.cx}" cy="${SUN.cy}" r="${SUN.r}"/></clipPath>`
     + g.defs
     + '</defs>'
     // sky, from far above the frame down to the horizon
     + `<rect x="${-PAD}" y="${-PAD}" width="${W + 2 * PAD}" height="${HORIZON + PAD}" fill="url(#v-sky)"/>`
     + STARS
-    + `<circle cx="${SUN.cx}" cy="${SUN.cy}" r="${SUN.r + 10}" fill="#ff5fa0" opacity=".35" filter="url(#v-glow)"/>`
-    + `<circle cx="${SUN.cx}" cy="${SUN.cy}" r="${SUN.r}" fill="url(#v-sun)" mask="url(#v-cut)"/>`
+    + `<circle cx="${SUN.cx}" cy="${SUN.cy}" r="${SUN.r + 10}" fill="#ff5fa0" fill-opacity=".35" filter="url(#v-glow)"/>`
+    + `<circle cx="${SUN.cx}" cy="${SUN.cy}" r="${SUN.r}" fill="url(#v-sun)"/>`
+    + `<g clip-path="url(#v-sunclip)" fill="url(#v-sky)">${sunCuts()}</g>`
     // floor
     + g.body
     // lettering
-    + '<text class="disp" x="320" y="322" font-size="88" text-anchor="middle" fill="#ff3fa4" filter="url(#v-glow)" opacity=".7">RETRO TV</text>'
+    + '<text class="disp" x="320" y="322" font-size="88" text-anchor="middle" fill="#ff3fa4" fill-opacity=".7" filter="url(#v-glow)">RETRO TV</text>'
     + '<text class="disp" x="320" y="322" font-size="88" text-anchor="middle" fill="url(#v-chrome)" stroke="#fff" stroke-width="1.5">RETRO TV</text>'
     + '<g class="blink"><text class="script" x="320" y="408" font-size="58" text-anchor="middle" fill="#8ff2ff" stroke="#e9fcff" stroke-width=".8">please stand by</text></g>'
     + '</svg>';
@@ -140,8 +147,11 @@ export const SCENES = {
   vapor: {
     svg: vaporSvg,
     fonts: ['88px Audiowide', '58px "Mr Dafoe"'],
-    // One square per 1.2 s toward the viewer: only the rows move.
+    // One square per 1.2 s toward the viewer: only the rows move, at 30 fps.
     animate(rowPaths, elapsed) {
+      const step = Math.floor(elapsed / 33);
+      if (step === this.lastStep) return;
+      this.lastStep = step;
       const { rows } = gridPaths(HORIZON, { phase: (elapsed / 1200) % 1 });
       for (const path of rowPaths) path.setAttribute('d', rows);
     },
@@ -154,10 +164,14 @@ export function sceneFor(themeId) {
 
 // ---- Showing it ---------------------------------------------------------------
 
-let fadeTimer = 0, raf = 0;
+let fadeTimer = 0, raf = 0, showing = false;
+
+// True while a splash covers the page; input is ignored meanwhile (app.js).
+export const isSplashShowing = () => showing;
 
 // Draw the theme's scene over the page and take it down again after `min`
-// ms (longer if the fonts are slow). Resolves once it is gone.
+// ms. The lettering waits for its fonts first, up to 0.9 s, so it never
+// flashes in a fallback face. Resolves once the splash is gone.
 export function showSplash(themeId, { min = MIN_MS } = {}) {
   const node = document.getElementById('splash');
   if (!node) return Promise.resolve();
@@ -165,13 +179,14 @@ export function showSplash(themeId, { min = MIN_MS } = {}) {
   clearTimeout(fadeTimer);
   cancelAnimationFrame(raf);
 
+  showing = true;
   node.hidden = false;
+  node.classList.add('js');             // this script is in charge now: no CSS safety fade
   node.classList.remove('fade', 'ready');
   node.innerHTML = scene.svg();
   void node.offsetWidth;                // the fade starts from fully shown
   const shown = performance.now();
 
-  // Lettering waits for its fonts, so it never flashes in a fallback face.
   const fonts = scene.fonts.map(f => document.fonts.load(f).catch(() => {}));
   Promise.race([Promise.all(fonts), new Promise(r => setTimeout(r, 900))])
     .then(() => node.classList.add('ready'));
@@ -189,6 +204,7 @@ export function showSplash(themeId, { min = MIN_MS } = {}) {
         cancelAnimationFrame(raf);
         node.hidden = true;
         node.innerHTML = '';
+        showing = false;
         resolve();
       }, FADE_MS);
     }, min);
