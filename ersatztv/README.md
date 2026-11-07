@@ -1,5 +1,14 @@
 # Building retro cable channels in ErsatzTV
 
+<p align="center">
+  <a href="../README.md">Home</a> &nbsp;·&nbsp;
+  <a href="../docker/README.md">Browser app</a> &nbsp;·&nbsp;
+  <a href="../pi/README.md">Batocera Pi</a> &nbsp;·&nbsp;
+  <a href="../pi-image/README.md">Retro TV box</a> &nbsp;·&nbsp;
+  <a href="../roku-tv/README.md">Roku</a> &nbsp;·&nbsp;
+  <b>ErsatzTV channels</b>
+</p>
+
 How we run 36 round-the-clock "cable" channels on [ErsatzTV](https://ersatztv.org), with
 commercials between and inside programmes, a TV guide, and an HD copy of every channel for
 modern screens. It is written so you can do the same with your own library. Kodi on the Pi

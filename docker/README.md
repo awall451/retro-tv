@@ -1,5 +1,14 @@
 # Retro TV guide viewer
 
+<p align="center">
+  <a href="../README.md">Home</a> &nbsp;·&nbsp;
+  <b>Browser app</b> &nbsp;·&nbsp;
+  <a href="../pi/README.md">Batocera Pi</a> &nbsp;·&nbsp;
+  <a href="../pi-image/README.md">Retro TV box</a> &nbsp;·&nbsp;
+  <a href="../roku-tv/README.md">Roku</a> &nbsp;·&nbsp;
+  <a href="../ersatztv/README.md">ErsatzTV channels</a>
+</p>
+
 The late-90s cable guide from the Trinitron, in a web browser: open the page, the guide appears,
 pick a show, it plays. The show keeps playing in the corner box while you browse.
 

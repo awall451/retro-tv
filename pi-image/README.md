@@ -1,5 +1,14 @@
 # Retro TV box: the Pi image
 
+<p align="center">
+  <a href="../README.md">Home</a> &nbsp;·&nbsp;
+  <a href="../docker/README.md">Browser app</a> &nbsp;·&nbsp;
+  <a href="../pi/README.md">Batocera Pi</a> &nbsp;·&nbsp;
+  <b>Retro TV box</b> &nbsp;·&nbsp;
+  <a href="../roku-tv/README.md">Roku</a> &nbsp;·&nbsp;
+  <a href="../ersatztv/README.md">ErsatzTV channels</a>
+</p>
+
 A Raspberry Pi 4 that boots straight into the Retro TV guide on a CRT, with an IR remote. No
 Batocera, no Kodi: the box runs the browser viewer from `../docker/web/app` full screen, served by
 its own web server, with a boot splash in the chosen theme. This folder holds everything about
