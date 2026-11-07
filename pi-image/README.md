@@ -177,11 +177,19 @@ box, just not a one-file one.
 - **Imager's user has no passwordless `sudo` on this image.** A line in `/etc/sudoers.d/` gives
   it, as every stock Pi OS has; `setup.sh` needs root.
 - **Boot to SSH is about 25 s.**
+- **Margins on the 12-inch Sylvania through the converter: left 19, right 21, top 10,
+  bottom 6** (the Trinitron's were 13/27/0/20). Tuned with the test pattern: `PAGE=overscan` in
+  `/etc/retro-tv.env`, `sudo pi-image/setup.sh`, reboot, and adjust until the white 0 px frame
+  is just visible on every side; then `PAGE=guide`. The margins take a reboot; the page only a
+  `systemctl restart retro-tv`.
+- **Sound defaulted to the headphone jack.** PipeWire picks the 3.5 mm jack as the default
+  output, so the converter got silence. The kiosk script now makes the HDMI output the default
+  at full volume (the jack in composite mode, where it carries the sound).
 
 ## Open items
 
-- Margins on the Sylvania (start: the Trinitron's 13/27/0/20), the boot splash, sound through
-  the converter, the IR receiver when it arrives.
+- Confirm sound through the converter while a channel plays; the boot splash; the IR receiver
+  when it arrives.
 - Whether Plymouth on Pi OS runs from the initramfs (then a theme change also regenerates it in
   the background, which the theme service already does if it finds one).
 - A "standby" action for the remote's power button: blank the picture and stop the stream, in

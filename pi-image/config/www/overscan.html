@@ -1,0 +1,8 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Overscan test</title>
+<!-- The CRT test pattern: nested frames 8 px apart, labelled with their distance from the edge.
+     Shown by the kiosk when PAGE=overscan in /etc/retro-tv.env; tune the MARGIN_* values until
+     the white 0 px frame is just visible on all four sides. -->
+<style>html,body{margin:0;background:#000;overflow:hidden;cursor:none}img{display:block;width:640px;height:480px}</style>
+<img src="/overscan-test.png" alt="overscan test pattern">

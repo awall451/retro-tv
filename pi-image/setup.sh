@@ -59,6 +59,7 @@ loginctl enable-linger tv
 log "viewer -> $APP, nginx on 127.0.0.1:8410"
 mkdir -p "$APP"
 rsync -a --delete "$REPO/docker/web/app/" "$APP/"
+cp "$HERE"/config/www/* "$APP/"          # the box's own pages (the overscan test pattern)
 sed -e 's|listen 8080;|listen 127.0.0.1:8410;|' \
     -e "s|root /usr/share/nginx/html;|root $APP;|" \
     -e "s|\${ERSATZTV_URL}|$ERSATZTV_URL|g" \

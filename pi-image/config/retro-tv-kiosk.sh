@@ -4,14 +4,19 @@
 #
 # The viewer is served by this box's own nginx; ?tv asks for the plain
 # 640x480 layout, which the CRT shows at 4:3.
-URL="http://127.0.0.1:8410/?tv"
 PROFILE=/data/chromium            # writable: the viewer's settings (theme, quality) live here
+
+DISPLAY_MODE=hdmi480
+PAGE=guide
+[ -r /etc/retro-tv.env ] && . /etc/retro-tv.env
+case "$PAGE" in
+    overscan) URL="http://127.0.0.1:8410/overscan.html" ;;   # the margin test pattern
+    *)        URL="http://127.0.0.1:8410/?tv" ;;
+esac
 
 # cage starts every output at the display's own preferred mode (the
 # HDMI-to-composite converter claims 1280x720), whatever the kernel command
 # line says. Ask for the box's mode from inside the session instead.
-DISPLAY_MODE=hdmi480
-[ -r /etc/retro-tv.env ] && . /etc/retro-tv.env
 case "$DISPLAY_MODE" in
     composite) MODE=720x480@60 ;;
     *)         MODE=640x480@60 ;;
@@ -22,6 +27,26 @@ if command -v wlr-randr >/dev/null 2>&1; then
             || wlr-randr --output "$out" --custom-mode "$MODE" >/dev/null 2>&1 \
             || true
     done
+fi
+
+# Sound goes where the picture goes: the HDMI port in use (the converter takes
+# its audio from HDMI), or the 3.5 mm jack in composite mode (the same jack
+# carries the video). PipeWire's own default is the jack. Full volume here;
+# the TV's remote sets the loudness.
+if command -v wpctl >/dev/null 2>&1; then
+    case "$DISPLAY_MODE" in
+        composite) want="Headphones" ;;
+        *)         want="HDMI" ;;
+    esac
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
+        sink=$(wpctl status 2>/dev/null | sed -n '/Sinks:/,/Sources:/p' | grep -i "$want" | grep -oE '[0-9]+\.' | head -1 | tr -d .)
+        [ -n "$sink" ] && break
+        sleep 1
+    done
+    if [ -n "$sink" ]; then
+        wpctl set-default "$sink"
+        wpctl set-volume "$sink" 1.0
+    fi
 fi
 
 BROWSER=$(command -v chromium || command -v chromium-browser)
