@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- The whole app: full-screen live video, a channel bar locked to the
+     bottom (same look as the browser viewer), and short messages. -->
+<component name="MainScene" extends="Scene">
+  <script type="text/brightscript" uri="MainScene.brs" />
+  <children>
+    <Rectangle id="black" width="1920" height="1080" color="0x000000FF" />
+
+    <Video id="video" width="1920" height="1080" enableUI="false"
+           enableTrickPlay="false" />
+
+    <!-- Channel bar: yellow top line, navy body. -->
+    <Group id="bar" visible="false">
+      <Rectangle translation="[0,904]" width="1920" height="4" color="0xF2C200FF" />
+      <Rectangle translation="[0,908]" width="1920" height="172" color="0x0A1240FF" />
+      <Label id="barCh" translation="[60,926]" width="1200" height="40"
+             font="font:MediumBoldSystemFont" color="0xF2C200FF" />
+      <Label id="barTitle" translation="[60,968]" width="1300" height="56"
+             font="font:LargeBoldSystemFont" color="0xFFFFFFFF" />
+      <Label id="barHint" translation="[60,1026]" width="1300" height="36"
+             font="font:SmallSystemFont" color="0xCFE0FFFF" />
+      <Label id="barClock" translation="[1460,926]" width="400" height="40"
+             horizAlign="right" font="font:MediumBoldSystemFont" color="0xFFFFFFFF" />
+      <Label id="barQuality" translation="[1460,1026]" width="400" height="36"
+             horizAlign="right" font="font:SmallBoldSystemFont" color="0xF2C200FF" />
+    </Group>
+
+    <!-- Loading and error messages, centred. -->
+    <Rectangle id="msgBox" translation="[360,440]" width="1200" height="200"
+               color="0x0A1240FF" visible="false">
+      <Label id="msgText" translation="[40,40]" width="1120" height="120"
+             horizAlign="center" vertAlign="center" wrap="true"
+             font="font:MediumBoldSystemFont" color="0xFFFFFFFF" />
+    </Rectangle>
+
+    <Timer id="barTimer" duration="5" repeat="false" />
+  </children>
+</component>
