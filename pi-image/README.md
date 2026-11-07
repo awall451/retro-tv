@@ -19,6 +19,10 @@ guide at 640×480 on the Sylvania through the HDMI converter, with no cursor and
 display. Still to check on the tube: the margins, the boot splash, the remote (receiver not
 here yet), sound. Decisions below are settled unless marked open.
 
+<table><tr><td align="center"><img src="../docs/img/readme/sylvania-guide.jpg" width="600"><br><sub>First boot on the Sylvania, through the HDMI-to-composite converter</sub></td><td align="center"><img src="../docs/img/readme/poe-hat.jpg" width="600"><br><sub>The official PoE+ HAT: one cable for power and network</sub></td></tr></table>
+
+<table><tr><td align="center"><img src="config/plymouth/retro-tv/splash-cable-640.png" width="400"><br><sub>Boot splash, Cable theme (640×480)</sub></td><td align="center"><img src="config/plymouth/retro-tv/splash-vapor-640.png" width="400"><br><sub>Boot splash, Vaporwave theme</sub></td></tr></table>
+
 ## The box
 
 | Part | What we have |

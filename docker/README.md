@@ -21,6 +21,18 @@ browser ──► Gantry (this machine's proxy) ──► retro-tv container (ng
                                                 └─ /iptv/…  read-only pass-through ──► ErsatzTV
 ```
 
+## Screens
+
+<table><tr><td align="center"><img src="../docs/img/readme/guide-playing-cable.png" width="600"><br><sub>The guide, with the picture in the corner box</sub></td><td align="center"><img src="../docs/img/readme/watching-cable.png" width="600"><br><sub>Watching: the channel banner over the picture</sub></td></tr></table>
+
+<table><tr><td align="center"><img src="../docs/img/readme/details-cable.jpg" width="600"><br><sub>Show details</sub></td><td align="center"><img src="../docs/img/readme/settings-cable.png" width="600"><br><sub>Settings: theme, quality, picture, fast flipping</sub></td></tr></table>
+
+<table><tr><td align="center"><img src="../docs/img/readme/guide-playing-vapor.png" width="600"><br><sub>The Vaporwave theme</sub></td><td align="center"><img src="../docs/img/readme/details-vapor.png" width="600"><br><sub>Vaporwave details, Audiowide titles</sub></td></tr></table>
+
+<table><tr><td align="center"><img src="../docs/img/readme/splash-cable-1280.png" width="600"><br><sub>The Cable splash, shown on load</sub></td><td align="center"><img src="../docs/img/readme/splash-vapor-1280.png" width="600"><br><sub>The Vaporwave splash</sub></td></tr></table>
+
+<table><tr><td align="center"><img src="../docs/img/readme/tv-guide-playing-cable.png" width="400"><br><sub>The ?tv layout at the CRT's 640×480</sub></td><td align="center"><img src="../docs/img/readme/tv-details-cable.png" width="400"><br><sub>Details at 640×480</sub></td></tr></table>
+
 ## Run it
 
 Needs Docker with Compose, and an ErsatzTV server this machine can reach.

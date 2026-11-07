@@ -13,6 +13,9 @@ A 90s living room, rebuilt: round-the-clock "cable" channels with commercials, a
 TV guide, and retro games, on real CRTs and on whatever screen is nearest. One home server runs
 the channels; several small boxes and apps tune in.
 
+<p align="center"><img src="docs/img/readme/guide-playing-cable.png" alt="The TV guide: a show playing in the corner box, the navy-and-yellow grid below" width="100%"></p>
+<p align="center"><sub>The guide in a browser. Pick a show, it plays; it keeps playing in the corner while you browse.</sub></p>
+
 ## The pieces
 
 ```
@@ -42,6 +45,10 @@ the channels; several small boxes and apps tune in.
 Everything downstream of the server is a **viewer**: it reads ErsatzTV's channel list, listings and
 streams and changes nothing. The server's web page and API are never exposed; only the three
 read-only `/iptv/` paths get through.
+
+## On real CRTs
+
+<table><tr><td align="center"><img src="docs/img/readme/trinitron-snes.jpg" width="400"><br><sub>The Batocera Pi on the Sony Trinitron</sub></td><td align="center"><img src="docs/img/readme/sylvania-guide.jpg" width="400"><br><sub>The Retro TV box on the 12-inch Sylvania</sub></td><td align="center"><img src="docs/img/readme/splash-vapor-1280.png" width="400"><br><sub>The Vaporwave splash, one of two themes</sub></td></tr></table>
 
 ## Hardware
 

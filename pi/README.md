@@ -27,6 +27,8 @@ the whole setup can be rebuilt from a blank card.
 | [Live TV channels](../docs/tv.html) | ErsatzTV from the Pi's side: tuning in with IPTV Simple, the server in brief |
 | [Reference](../docs/reference.html) | Every file and script, the gotchas, troubleshooting, rebuilding in order |
 
+<table><tr><td align="center"><img src="../docs/img/readme/trinitron-snes.jpg" width="400"><br><sub>The SNES system view on the Trinitron</sub></td><td align="center"><img src="../docs/img/readme/trinitron-bcc.jpg" width="400"><br><sub>Batocera's Control Center, re-styled to fit 640 px</sub></td><td align="center"><img src="../docs/img/readme/trinitron-dkc2.jpg" width="400"><br><sub>A game on the tube: 480i through the converter</sub></td></tr></table>
+
 ## What the finished system does
 
 - 1,075 games across SNES, NES, Mega Drive, Game Boy, GBC, GBA and PlayStation, imported from a
@@ -93,6 +95,8 @@ changes, and reboots (about 30 s).
 | Kodi skin | Estuary | Estuary CRT: every font bold and 1.5×, the retro TV guide, channel banner, big show details |
 | Plex (PM4K) quality | Original | 480p, 1.5 Mbps (software decoding) |
 
+<table><tr><td align="center"><img src="../docs/img/game-grid-640.png" width="400"><br><sub>The SNES grid at 640×480 with the CRT theme</sub></td><td align="center"><img src="../docs/img/control-center-640.png" width="400"><br><sub>The compact Control Center</sub></td><td align="center"><img src="../docs/img/trinitron-shader-zoom.png" width="400"><br><sub>The Trinitron shader on a flat TV, 3× zoom</sub></td></tr></table>
+
 Why 640×480: square pixels on a 4:3 tube, 480 lines is exactly twice a 240-line game, and the
 converter gets its native line count instead of a blurry 1080p-to-480i downscale. The Pi's own
 composite port is not an option on Batocera (unsupported since the move to Wayland). Overscan
@@ -123,6 +127,8 @@ margins are hardware DRM properties set on the kernel command line from
   once after Kodi opens because sway first places the window 19 px low.
 - The converter does not pass HDMI-CEC, so the controller drives Kodi on the Trinitron, not a
   TV remote.
+
+<table><tr><td align="center"><img src="../docs/img/readme/kodi-guide.png" width="400"><br><sub>Kodi's retro guide, the show playing in the box</sub></td><td align="center"><img src="../docs/img/readme/kodi-details.png" width="400"><br><sub>Show details with Watch now</sub></td><td align="center"><img src="../docs/img/readme/kodi-banner.png" width="400"><br><sub>The channel banner on a channel change</sub></td></tr></table>
 
 ## What is in this folder
 

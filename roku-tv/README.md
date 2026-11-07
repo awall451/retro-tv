@@ -13,6 +13,8 @@ The ErsatzTV channels on a Roku, with the same look as the browser viewer (`../d
 full-screen live TV and a channel bar along the bottom. It talks to ErsatzTV directly, so it
 works on the home network only (a Roku cannot join a tailnet).
 
+<table><tr><td align="center"><img src="images/splash_fhd.png" width="400"><br><sub>Splash and channel icon, Cable theme</sub></td><td align="center"><img src="images/splash_vapor_fhd.png" width="400"><br><sub>Vaporwave theme</sub></td><td align="center"><img src="images/icon_focus_fhd.png" width="400"><br><sub>The home-screen tile</sub></td></tr></table>
+
 **What it has:** the guide grid with the picture in the corner box, show details, settings, the
 channel bar while watching, Standard/HD, and the two themes with their splash screens. Not here,
 on purpose: the viewer's fast-flipping warm-up, "Fill the screen" and typing a channel number (a
