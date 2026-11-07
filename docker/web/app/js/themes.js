@@ -26,5 +26,11 @@ export function applyTheme(id) {
   document.documentElement.dataset.theme = t.id;
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.content = t.color;
+  // On the Pi box, tell it the choice so its boot splash can match (its web
+  // server has /pi/theme, see pi-image/). Anywhere else this answers 404 and
+  // is ignored.
+  try {
+    fetch('/pi/theme', { method: 'POST', body: t.id, keepalive: true }).catch(() => {});
+  } catch { /* no fetch: nothing to tell */ }
   return t;
 }

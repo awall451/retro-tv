@@ -35,3 +35,5 @@ Thumbs.db
 
 # Viewer: real addresses live only here
 docker/.env
+# Pi box: a local copy of its settings, if kept
+pi-image/retro-tv.env

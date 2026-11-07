@@ -1,0 +1,12 @@
+{
+  "name": "retro-tv-render-splash",
+  "private": true,
+  "type": "module",
+  "description": "Renders the viewer's splash scenes to PNG: the Roku app's icons and splash, and the Pi box's Plymouth pictures.",
+  "scripts": {
+    "render": "node render.mjs"
+  },
+  "dependencies": {
+    "@resvg/resvg-js": "2.6.2"
+  }
+}

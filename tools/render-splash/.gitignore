@@ -1,0 +1,5 @@
+node_modules/
+package-lock.json
+# copies of the viewer's modules made at render time
+*.mjs
+!render.mjs

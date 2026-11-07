@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Retro TV
+Description=The Retro TV box's boot splash, in the viewer's current theme
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/retro-tv
+ScriptFile=/usr/share/plymouth/themes/retro-tv/retro-tv.script

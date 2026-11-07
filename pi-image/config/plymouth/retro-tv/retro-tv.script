@@ -1,0 +1,29 @@
+// Retro TV boot splash: the current theme's picture, centred, nothing else.
+// current-<size>.png are symlinks the theme service points at the theme's
+// splash (splash-cable-*.png or splash-vapor-*.png), rendered by
+// tools/render-splash from the viewer's own scene code.
+//
+// Three sizes: 640x480 (HDMI into the converter), 720x480 (the Pi's composite
+// output, non-square pixels), 1920x1080 (an HDMI TV, for testing).
+
+Window.SetBackgroundTopColor(0.0, 0.0, 0.0);
+Window.SetBackgroundBottomColor(0.0, 0.0, 0.0);
+
+width = Window.GetWidth();
+height = Window.GetHeight();
+
+if (width >= 1280)
+    image = Image("current-1080.png");
+else if (width == 720)
+    image = Image("current-720.png");
+else
+    image = Image("current-640.png");
+
+scale = Math.Min(width / image.GetWidth(), height / image.GetHeight());
+scaled = image.Scale(image.GetWidth() * scale, image.GetHeight() * scale);
+sprite = Sprite(scaled);
+sprite.SetPosition((width - scaled.GetWidth()) / 2, (height - scaled.GetHeight()) / 2, 0);
+
+// Boot messages stay hidden; a password prompt (there is none) would show as text.
+fun message_callback(text) { }
+Plymouth.SetMessageFunction(message_callback);

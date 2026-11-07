@@ -20,6 +20,8 @@ Kodi's retro guide, the live-TV server, and troubleshooting.
 | `pi/snapshots/` | Sanitized copies of the Pi's config files |
 | `docker/` | The browser TV guide viewer (Docker Compose): start with `docker/README.md` |
 | `roku-tv/` | A Roku app for the channels (home network): start with `roku-tv/README.md` |
+| `pi-image/` | The second Pi: a box that boots straight into the viewer on a CRT, with an IR remote. Design, config and build script: start with `pi-image/README.md` |
+| `tools/render-splash/` | Renders the viewer's splash scenes to PNG for the Roku app and the Pi's boot screen |
 | `ersatztv/` | How the channels are built in ErsatzTV, and the commercials between programmes (catalog of 1,120 clips + a script to rebuild them): start with `ersatztv/README.md` |
 
 Addresses are placeholders: `<pi-ip>` is the Pi on the home network and `<server-ip>` the

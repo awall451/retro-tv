@@ -1,0 +1,30 @@
+# Retro TV: the kiosk. cage (a one-window Wayland compositor) runs on the
+# console as user tv and starts Chromium on the viewer. Restarts if it dies.
+# Installed by setup.sh to /etc/systemd/system/retro-tv.service.
+[Unit]
+Description=Retro TV kiosk (cage + Chromium)
+After=systemd-user-sessions.service plymouth-quit-wait.service nginx.service
+Wants=nginx.service
+Conflicts=getty@tty1.service
+
+[Service]
+Type=simple
+User=tv
+PAMName=login
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+StandardInput=tty-fail
+StandardOutput=journal
+StandardError=journal
+UtmpIdentifier=tty1
+UtmpMode=user
+Environment=XDG_RUNTIME_DIR=/run/user/%U
+Environment=XDG_SESSION_TYPE=wayland
+ExecStart=/usr/bin/cage -- /usr/local/bin/retro-tv-kiosk.sh
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=graphical.target

@@ -1,0 +1,42 @@
+# Retro TV remote: a Windows Media Center (RC6) remote, as seen by an MCE USB
+# receiver (kernel driver mceusb), mapped to the plain keyboard keys the viewer
+# understands (docker/web/app/js/app.js, KEYS):
+#   arrows move · Enter select · Escape back (guide <-> picture) · Page Up/Down
+#   channel · digits tune · I details · S settings · M mute · R reload listings
+# Power and volume are not mapped: the universal remote sends those to the TV.
+# Loaded by ir-keytable through /etc/rc_maps.cfg (setup.sh). Scan codes are
+# the standard ones from the kernel's rc-rc6-mce map.
+[[protocols]]
+name = "retro-tv-mce"
+protocol = "rc6"
+variant = "rc6_mce"
+[protocols.scancodes]
+0x800f0400 = "KEY_0"
+0x800f0401 = "KEY_1"
+0x800f0402 = "KEY_2"
+0x800f0403 = "KEY_3"
+0x800f0404 = "KEY_4"
+0x800f0405 = "KEY_5"
+0x800f0406 = "KEY_6"
+0x800f0407 = "KEY_7"
+0x800f0408 = "KEY_8"
+0x800f0409 = "KEY_9"
+0x800f041e = "KEY_UP"
+0x800f041f = "KEY_DOWN"
+0x800f0420 = "KEY_LEFT"
+0x800f0421 = "KEY_RIGHT"
+0x800f0422 = "KEY_ENTER"       # OK
+0x800f0423 = "KEY_ESC"         # Back
+0x800f040a = "KEY_ESC"         # Clear
+0x800f0426 = "KEY_ESC"         # Guide: the viewer's Back toggles guide and picture
+0x800f0425 = "KEY_ESC"         # Live TV
+0x800f040f = "KEY_I"           # Info / More
+0x800f0412 = "KEY_PAGEUP"      # Channel +
+0x800f0413 = "KEY_PAGEDOWN"    # Channel -
+0x800f0414 = "KEY_PAGEUP"      # Fast forward
+0x800f0415 = "KEY_PAGEDOWN"    # Rewind
+0x800f040e = "KEY_M"           # Mute (the box's sound, not the TV's)
+0x800f040d = "KEY_S"           # The green Windows button: settings
+0x800f0417 = "KEY_R"           # Record: reload the listings
+0x800f0416 = "KEY_ENTER"       # Play
+0x800f0418 = "KEY_I"           # Pause: details, like the Roku's Play/Pause
