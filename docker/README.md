@@ -116,8 +116,8 @@ things:
 - its **number** is the channel's number plus 100 (channel 1 → 101)
 
 In ErsatzTV a twin is a channel with Playout Source **Mirror**, Mirror Source Channel set to the
-channel it copies, an HD FFmpeg profile, and **Show In EPG** off. On ErsatzTV v26.11 a mirror
-channel only plays with Streaming Engine **Legacy**; the newer engine shows an error card.
+channel it copies, an HD FFmpeg profile, Streaming Engine **Next**, and **Show In EPG** off.
+See `../ersatztv/README.md` ("HD copies of every channel") for why not Legacy.
 A channel without a twin simply plays in Standard.
 
 Other players that read ErsatzTV's channel list directly (Kodi) will see the twins as extra

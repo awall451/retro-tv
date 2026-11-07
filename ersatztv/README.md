@@ -17,9 +17,8 @@ Addresses are placeholders: `<server-ip>` is the machine running ErsatzTV (port 
 
 ## Our setup
 
-- **ErsatzTV 26.11** in a container, with an NVIDIA card for encoding (NVENC). Stay on 26.11 if
-  you want the HD twins below: they need the Legacy streaming engine, which ErsatzTV says goes
-  away in 26.12.
+- **ErsatzTV 26.11** in a container, with an NVIDIA card for encoding (NVENC). Every channel,
+  the HD twins included, runs on the Next streaming engine (26.12 removes the Legacy one).
 - **The library comes from a Plex server** (a friend's, shared with us). ErsatzTV reads Plex's
   catalogue and streams a file only while a channel showing it is watched; nothing is copied.
   Local folders and Jellyfin/Emby work the same way.
@@ -157,15 +156,23 @@ viewer's Quality setting switches to it.
   (12000 buffer), 192 kbps audio.
 - A twin (Channels → Add Channel): number = the channel's + 100, group `HD`, Playout Source
   **Mirror**, Mirror Source = the channel, offset 0, Show In EPG **off**, streaming engine
-  **Legacy**, the HD profile. Every new channel needs its twin made by hand.
-- **Mirrors only play on the Legacy engine** in 26.11 (on Next they show an error card,
-  "failed to resolve the playout folder"). Check before upgrading.
+  **Next**, streaming mode MPEG-TS, the HD profile. Every new channel needs its twin made by
+  hand.
+- **A new twin shows an error card ("failed to resolve the playout folder") until its playout
+  files exist.** ErsatzTV writes them at the next playout build (hourly, or after a change to
+  the source channel's playout). Wait for that, or reset the source channel's playout. We
+  first read this error as "mirrors need the Legacy engine"; they don't.
+- **Do not put twins on the Legacy engine.** There they froze every minute or two: Legacy
+  encodes in chunks, lets only one channel at a time work ahead of real time (setting
+  `work_ahead_limit`, default 1) and holds the rest to 1.05x, so each chunk's start-up put the
+  stream further behind until the player ran dry and the session timed out. On Next the same
+  channel stayed a steady 36 seconds ahead.
 - **A twin cannot be hidden from `channels.m3u` and still play.** Show In EPG off removes it from
   the guide only; disabling it makes the stream answer 404. Kodi therefore lists twins as extra
   channels unless it is told to skip group `HD` (we filter the list on the Pi).
-- HD is heavy on the CPU: the Legacy engine scales on the CPU, and some sources (10-bit H.264)
-  decode in software. **One HD stream used about 3.7 CPU cores** on our server, so give
-  ErsatzTV about 4 cores per HD stream you expect to run at once.
+- **HD is light on Next.** On Legacy one HD stream used about 3.7 CPU cores (it scaled on the
+  CPU); on Next an HD twin, an SD channel and a third channel together used about 0.7 cores.
+  The limit is the graphics card's encoder sessions (below), not the CPU.
 - To swap two channels' numbers, edit each channel's Number through a spare number (16 → 9916,
   1 → 16, 9916 → 1), then the same for their twins; a twin follows its channel by id, not by
   number. Channels → Edit Channel Numbers renumbers by drag order, which is not what you want.
