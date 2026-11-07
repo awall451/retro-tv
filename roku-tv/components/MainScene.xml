@@ -14,7 +14,15 @@
     <Video id="video" width="1920" height="1080" enableUI="false" enableTrickPlay="false" />
     <!-- "Tuning to ..." over the picture, the channel bar, short messages. -->
     <Group id="overlay" />
+    <!-- The theme's splash, over everything on start and after a theme change. -->
+    <Group id="splash" visible="false">
+      <Poster id="splashImg" width="1920" height="1080" />
+    </Group>
+    <Animation id="splashFade" duration="0.45" repeat="false" easeFunction="linear">
+      <FloatFieldInterpolator key="[0.0, 1.0]" keyValue="[1.0, 0.0]" fieldToInterp="splash.opacity" />
+    </Animation>
 
+    <Timer id="splashTimer" duration="2" repeat="false" />
     <Timer id="bannerTimer" duration="4" repeat="false" />
     <Timer id="osdTimer" duration="1.5" repeat="false" />
     <Timer id="tickTimer" duration="15" repeat="true" />

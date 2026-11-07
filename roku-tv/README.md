@@ -4,19 +4,34 @@ The ErsatzTV channels on a Roku, with the same look as the browser viewer (`../d
 full-screen live TV and a channel bar along the bottom. It talks to ErsatzTV directly, so it
 works on the home network only (a Roku cannot join a tailnet).
 
-**Status: first version.** Channel up/down, the channel bar, Standard/HD. Programme names, the
-TV guide grid, show details and settings come next.
+**What it has:** the guide grid with the picture in the corner box, show details, settings, the
+channel bar while watching, Standard/HD, and the two themes with their splash screens. Not here,
+on purpose: the viewer's fast-flipping warm-up, "Fill the screen" and typing a channel number (a
+Roku remote has no digits).
 
-| Remote | Does |
-|---|---|
-| Up / Down (or Fast-forward / Rewind) | Channel up / down |
-| OK | Show or hide the channel bar |
-| `*` | Switch between Standard and HD (HD needs the channel's twin, see `../ersatztv/README.md`) |
-| Back | Leave |
+| Remote | In the guide | Watching |
+|---|---|---|
+| Arrows | Move the highlight (Up from the top row reaches the settings cog) | Up / Down change channel; Left / Right pick a button on the channel bar |
+| OK | Watch the highlighted channel | Show the channel bar, or press its highlighted button |
+| Play / Pause | Show details | Sound on / off |
+| Replay or `*` | Settings | |
+| Rewind / Fast-forward | Page through channels | Channel down / up |
+| Back | Back to the picture (or leave the app) | Back to the guide |
 
-On first start it asks for the ErsatzTV address (`<server-ip>:8409`). It remembers that, the
-last channel and the quality on the Roku. To change the address later, enter an address that
-does not answer: the error message offers to change it. (A settings screen comes later.)
+**Settings** (Replay or `*`): **Theme** (Cable or Vaporwave: the whole guide recolours at once and
+the new theme's splash plays for two seconds), **Quality** (Standard or HD; HD needs the channel's
+twin, see `../ersatztv/README.md`), and the **TV server** address. They are kept on the Roku, so
+each Roku has its own.
+
+On first start it asks for the ErsatzTV address (`<server-ip>:8409`). It remembers that and the
+last channel watched. If the server stops answering, the guide's message says how to change the
+address (Replay).
+
+**The splash.** Roku shows the app's start-up picture itself, and that one is fixed at install:
+the Cable television. The app then shows the current theme's splash for two seconds over the
+loading guide (the Cable one continues the start-up picture without a cut; Vaporwave is the
+sunset over the grid). Both are stills of the scenes the browser viewer draws, rendered from
+`../docker/web/app/js/splash.js`.
 
 ## Installing it on your Roku (sideloading)
 

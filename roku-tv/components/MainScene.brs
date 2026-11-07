@@ -15,7 +15,8 @@
 '   Settings  Up / Down pick, Left / Right / OK change, Back closes.
 '
 ' Kept in the Roku's registry (section "RetroTV"): server, channel (the
-' last one watched, by number), quality ("sd" or "hd").
+' last one watched, by number), quality ("sd" or "hd"), theme ("cable" or
+' "vapor").
 
 ' ---- design units -------------------------------------------------------------
 
@@ -28,13 +29,57 @@ function px(v as dynamic) as integer
     return Int(v * 2.25 + 0.5)
 end function
 
-function col(name as string) as string
-    colors = {
-        navy: "0x0A1240FF", program: "0x0F2A7AFF", channel: "0x1C3FA8FF",
-        timebar: "0x5A7FE0FF", yellow: "0xF2C200FF", soft: "0xCFE0FFFF",
-        white: "0xFFFFFFFF", gap: "0x000000FF"
+' ---- themes (the viewer's js/themes.js and the [data-theme] blocks in guide.css) ----
+' Colour names keep the Cable theme's words whatever the colour is. "accent"
+' is the accent used as text (channel line, clock, messages): yellow in
+' Cable, cyan in Vaporwave, where pink text would smear on a composite CRT.
+
+function themes() as object
+    return {
+        cable: {
+            label: "Cable",
+            help: "The late-90s cable guide: navy and yellow, flat cells. The splash is the little television.",
+            colors: {
+                navy: "0x0A1240FF", program: "0x0F2A7AFF", channel: "0x1C3FA8FF",
+                timebar: "0x5A7FE0FF", yellow: "0xF2C200FF", soft: "0xCFE0FFFF",
+                white: "0xFFFFFFFF", gap: "0x000000FF", accent: "0xF2C200FF"
+            },
+            display: "pkg:/fonts/Cabin-Bold.ttf",
+            splash: "pkg:/images/splash_fhd.png",
+            cog: "pkg:/images/cog.png", cogSel: "pkg:/images/cog_sel.png",
+            playing: "pkg:/images/playing.png", playingSel: "pkg:/images/playing_sel.png"
+        },
+        vapor: {
+            label: "Vaporwave",
+            help: "Purple cells, pink highlights, cyan text. The splash is a sunset over a neon grid.",
+            colors: {
+                navy: "0x0D0624FF", program: "0x2A0A4EFF", channel: "0x4A1278FF",
+                timebar: "0x7B3FC4FF", yellow: "0xFF3FA4FF", soft: "0xD9C8FFFF",
+                white: "0xFFFFFFFF", gap: "0x000000FF", accent: "0x19E6FFFF"
+            },
+            display: "pkg:/fonts/Audiowide-Regular.ttf",
+            splash: "pkg:/images/splash_vapor_fhd.png",
+            cog: "pkg:/images/cog_vapor.png", cogSel: "pkg:/images/cog_sel_vapor.png",
+            playing: "pkg:/images/playing_vapor.png", playingSel: "pkg:/images/playing_sel_vapor.png"
+        }
     }
-    return colors[name]
+end function
+
+function theme() as object
+    return themes()[m.theme]
+end function
+
+' Make a theme current: its colours for col(), its display face, a fresh
+' font cache. The stage must be (re)built after this to show the change.
+sub applyTheme(id as string)
+    if themes()[id] = invalid then id = "cable"
+    m.theme = id
+    m.colors = themes()[id].colors
+    m.fonts = {}
+end sub
+
+function col(name as string) as string
+    return m.colors[name]
 end function
 
 function HALF() as integer
@@ -81,11 +126,16 @@ sub init()
         loading: false, retrySecs: 5, playState: "idle"
     }
     m.quality = regRead("quality", "sd")
+    applyTheme(regRead("theme", "cable"))
 
     buildStage()
     buildOverlay()
+    buildSplash()
     placeVideo()
     m.top.setFocus(true)
+    ' The theme's splash over the loading guide (the Cable one continues the
+    ' start-up splash from the manifest without a cut).
+    showSplash(2)
 
     m.server = regRead("server", "")
     if m.server = "" then
@@ -130,6 +180,17 @@ function font(size as float, bold as boolean) as object
     else
         f.uri = "pkg:/fonts/Cabin-Regular.ttf"
     end if
+    f.size = Int(size + 0.5)
+    m.fonts[key] = f
+    return f
+end function
+
+' The theme's face for show titles: Cabin Bold, or Audiowide (one weight) in Vaporwave.
+function displayFont(size as float) as object
+    key = "display" + size.ToStr()
+    if m.fonts.DoesExist(key) then return m.fonts[key]
+    f = CreateObject("roSGNode", "Font")
+    f.uri = theme().display
     f.size = Int(size + 0.5)
     m.fonts[key] = f
     return f
@@ -214,8 +275,9 @@ sub buildStage()
     m.previewMsg.text = "Pick a show to watch"
 
     ' Programme info beside the picture.
-    m.infoCh = label(s, 0, 0, 0, 0, 15 * KK(), true, col("yellow"))
+    m.infoCh = label(s, 0, 0, 0, 0, 15 * KK(), true, col("accent"))
     m.infoTitle = label(s, 0, 0, 0, 0, 21 * KK(), true, col("white"))
+    m.infoTitle.font = displayFont(21 * KK())
     m.infoEp = label(s, 0, 0, 0, 0, 16 * KK(), true, col("soft"))
     m.infoTime = label(s, 0, 0, 0, 0, 16 * KK(), true, col("white"))
     m.infoPlot = CreateObject("roSGNode", "Label")
@@ -227,7 +289,7 @@ sub buildStage()
 
     ' Settings cog, top right of the info area.
     m.cog = CreateObject("roSGNode", "Poster")
-    m.cog.uri = "pkg:/images/cog.png"
+    m.cog.uri = theme().cog
     m.cog.translation = [px(lay.info.x + lay.info.w - 28 + 3), px(lay.info.y - 3 + 3)]
     m.cog.width = px(24)
     m.cog.height = px(24)
@@ -249,6 +311,52 @@ sub buildStage()
     m.settings = CreateObject("roSGNode", "Group")
     m.settings.visible = false
     s.appendChild(m.settings)
+end sub
+
+' After a theme change: draw the stage again in the new colours and put the
+' current screen back as it was.
+sub rebuildStage()
+    m.stage.removeChildrenIndex(m.stage.getChildCount(), 0)
+    buildStage()
+    m.tuning.color = col("soft")
+    m.previewMsg.visible = m.S.tuned < 0
+    m.gridMsgBox.visible = m.S.channels.Count() = 0
+    m.details.visible = m.S.mode = "details"
+    m.settings.visible = m.S.mode = "settings"
+    if m.S.mode = "settings" then renderSettings()
+    placeVideo()
+    render()
+end sub
+
+' ---- splash: the theme's scene over everything for a moment --------------------
+' On start (2 s over the loading guide) and after a theme change. A still
+' picture of the same scene the browser viewer draws (js/splash.js).
+
+sub buildSplash()
+    m.splash = m.top.findNode("splash")
+    m.splashImg = m.top.findNode("splashImg")
+    m.splashFade = m.top.findNode("splashFade")
+    m.splashFade.observeField("state", "onSplashFade")
+    m.top.findNode("splashTimer").observeField("fire", "fadeSplash")
+end sub
+
+sub showSplash(secs as float)
+    m.splashFade.control = "stop"
+    m.splashImg.uri = theme().splash
+    m.splash.opacity = 1
+    m.splash.visible = true
+    t = m.top.findNode("splashTimer")
+    t.duration = secs
+    t.control = "stop"
+    t.control = "start"
+end sub
+
+sub fadeSplash()
+    m.splashFade.control = "start"
+end sub
+
+sub onSplashFade()
+    if m.splashFade.state = "stopped" then m.splash.visible = false
 end sub
 
 ' Lay out the info column (a flex column in the viewer: empty lines collapse).
@@ -593,15 +701,15 @@ sub renderGrid()
             bg = col("yellow")
             fg = col("navy")
         else if ci = S.tuned then
-            fg = col("yellow")
+            fg = col("accent")
         end if
         name = ch.num + " " + ch.name
         if ci = S.tuned then
             ' The channel being watched: a small flat triangle before its name.
             rr = rect(m.gridCells, 0, px(y), px(lay.chanW), px(27), bg)
             tri = CreateObject("roSGNode", "Poster")
-            tri.uri = "pkg:/images/playing.png"
-            if focused then tri.uri = "pkg:/images/playing_sel.png"
+            tri.uri = theme().playing
+            if focused then tri.uri = theme().playingSel
             tri.translation = [px(7), px(8.5)]
             tri.width = px(8)
             tri.height = px(10)
@@ -640,12 +748,10 @@ sub renderGrid()
         rect(m.gridCells, px(minI(gx(tnow), lay.W - 2)), px(2), px(2), px(27), col("yellow"))
     end if
 
-    if S.cog then
-        m.cog.uri = "pkg:/images/cog_sel.png"
-    else if S.mode = "settings" then
-        m.cog.uri = "pkg:/images/cog_sel.png"
+    if S.cog or S.mode = "settings" then
+        m.cog.uri = theme().cogSel
     else
-        m.cog.uri = "pkg:/images/cog.png"
+        m.cog.uri = theme().cog
     end if
 end sub
 
@@ -725,7 +831,7 @@ sub renderDetails()
         meta.Push(c.items.Count().ToStr() + " shorts")
         if first.rating <> "" then meta.Push(first.rating)
     end if
-    ml = label(g, px(x), px(innerTop), px(w), px(20), 16 * KK(), true, col("yellow"))
+    ml = label(g, px(x), px(innerTop), px(w), px(20), 16 * KK(), true, col("accent"))
     ml.text = meta.Join(" · ")
 
     body = ""
@@ -780,6 +886,7 @@ end sub
 
 function settingRows() as object
     rows = []
+    rows.Push({ id: "theme", label: "Theme", value: theme().label, help: theme().help })
     if m.S.hasHd then
         q = "Standard"
         help = "The 4:3 picture made for the old TV. Lightest on the connection."
@@ -816,7 +923,7 @@ sub renderSettings()
     rect(g, 0, px(top), 1920, 1080 - px(top), col("navy"))
     rect(g, 0, px(top), 1920, px(2), col("gap"))
     y = top + 2 + 10
-    t = label(g, px(8), px(y), px(400), px(20), 16 * KK(), true, col("yellow"))
+    t = label(g, px(8), px(y), px(400), px(20), 16 * KK(), true, col("accent"))
     t.text = "Settings for this device"
     y = y + 20 + 8
 
@@ -878,7 +985,18 @@ sub changeSetting()
         return
     end if
     id = rows[m.S.setRow].id
-    if id = "quality" then
+    if id = "theme" then
+        ' Reskin at once, and show the new theme's splash so the change is seen.
+        if m.theme = "cable" then
+            applyTheme("vapor")
+        else
+            applyTheme("cable")
+        end if
+        regWrite("theme", m.theme)
+        rebuildStage()
+        showSplash(2)
+        return
+    else if id = "quality" then
         if m.quality = "hd" then
             m.quality = "sd"
         else
@@ -1058,9 +1176,10 @@ sub fillBanner()
         parts.Push(t)
         sub1 = parts.Join(" · ")
     end if
-    l = label(g, x, y, infoW, Int(14 * 1.25 * b), 14 * b, true, col("yellow"))
+    l = label(g, x, y, infoW, Int(14 * 1.25 * b), 14 * b, true, col("accent"))
     l.text = "Ch " + ch.num + " · " + ch.name
     l = label(g, x, y + Int(14 * 1.25 * b) + Int(2 * b), infoW, Int(22 * 1.25 * b), 22 * b, true, col("white"))
+    l.font = displayFont(22 * b)
     l.text = title
     l = label(g, x, y + Int(36 * 1.25 * b) + Int(4 * b), infoW, Int(15 * 1.25 * b), 15 * b, true, col("soft"))
     l.text = sub1
@@ -1119,7 +1238,7 @@ sub showOsd(text as string)
     y = pbox.y + Int(24 * b)
     rect(g, x, y, w, h, col("yellow"))
     rect(g, x + Int(2 * b), y + Int(2 * b), w - Int(4 * b), h - Int(4 * b), col("navy"))
-    l = label(g, x + Int(12 * b), y, w - Int(24 * b), h, 21 * b, true, col("yellow"))
+    l = label(g, x + Int(12 * b), y, w - Int(24 * b), h, 21 * b, true, col("accent"))
     l.text = text
     g.visible = true
     t = m.top.findNode("osdTimer")
@@ -1169,6 +1288,7 @@ end sub
 
 function onKeyEvent(key as string, press as boolean) as boolean
     if not press then return false
+    if m.splash <> invalid and m.splash.visible then return true   ' nothing moves under the splash
     S = m.S
     if S.channels.Count() = 0 then
         if key = "replay" or key = "options" then
