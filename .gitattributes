@@ -19,3 +19,9 @@
 # Binary
 *.png   binary
 *.jpg   binary
+
+# The box and the render tool: files land on Linux machines as they are
+pi-image/** text eol=lf
+pi-image/**/*.png -text
+tools/render-splash/** text eol=lf
+tools/render-splash/**/*.ttf -text
