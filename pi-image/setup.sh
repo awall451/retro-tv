@@ -7,7 +7,8 @@
 # owns (marked as such) and nothing else. pi-gen will run this same script
 # when the image is built (README, step 2).
 #
-# Not yet run on hardware: first boot of the box is where this gets checked.
+# Run on the first box (Pi 4, Sylvania CRT through an HDMI-to-composite
+# converter); what that boot taught is in the README.
 set -euo pipefail
 
 HERE=$(cd "$(dirname "$0")" && pwd)
