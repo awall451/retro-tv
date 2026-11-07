@@ -100,6 +100,8 @@ body {
   -webkit-text-size-adjust: 100%; text-size-adjust: 100%;
 }
 [hidden] { display: none !important; }
+/* ?tv: a television, no mouse; never show a pointer over the guide. */
+body.tv, body.tv * { cursor: none !important; }
 
 .ch { color: var(--ink-accent); }
 .title, .ch, .ep, .time { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

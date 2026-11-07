@@ -29,8 +29,10 @@ const el = {
   osd: $('osd'),
 };
 
-// ?tv forces the plain 640x480 layout, whatever the window's shape.
+// ?tv forces the plain 640x480 layout, whatever the window's shape, and
+// hides the pointer (the Pi box: a television, no mouse).
 const TV_MODE = new URLSearchParams(location.search).has('tv');
+document.body.classList.toggle('tv', TV_MODE);
 const LAST_CHANNEL_KEY = 'retro-tv.last-channel';
 const REFRESH_MS = 15 * 60 * 1000;       // re-read the listings this often
 const HIDDEN_STOP_MS = 5 * 60 * 1000;    // stop streaming in a tab hidden this long

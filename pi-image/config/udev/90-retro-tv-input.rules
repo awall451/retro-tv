@@ -1,0 +1,9 @@
+# Retro TV box: what the compositor (cage, via libinput) may treat as input.
+#
+# The Pi's HDMI ports each expose a CEC "remote control" input device that
+# libinput sees as keyboard + pointer; the pointer makes cage draw a mouse
+# cursor in the middle of the screen. A CRT has no CEC, so ignore them.
+SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="vc4-hdmi*", ENV{LIBINPUT_IGNORE_DEVICE}="1"
+# Game controllers are read by the viewer itself (the browser's gamepad
+# support), never by the compositor.
+SUBSYSTEM=="input", ENV{ID_INPUT_JOYSTICK}=="1", ENV{LIBINPUT_IGNORE_DEVICE}="1"

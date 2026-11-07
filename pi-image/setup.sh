@@ -27,6 +27,7 @@ if [ ! -f "$CFG" ]; then
     echo "Wrote $CFG from the example. Set ERSATZTV_URL and DISPLAY_MODE there, then run this again."
     exit 2
 fi
+chmod 644 "$CFG"            # the kiosk script (user tv) reads the display mode from it; nothing secret in it
 set -a; . "$CFG"; set +a
 : "${ERSATZTV_URL:?set ERSATZTV_URL in $CFG}"
 case "$ERSATZTV_URL" in *'<'*) echo "ERSATZTV_URL in $CFG is still the placeholder" >&2; exit 2;; esac
@@ -40,7 +41,7 @@ case "$DISPLAY_MODE" in hdmi480|composite) ;; *) echo "DISPLAY_MODE must be hdmi
 log "packages"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -q
-pkgs=(cage nginx-light plymouth plymouth-themes ir-keytable python3 rsync bluez pipewire-audio)
+pkgs=(cage wlr-randr nginx-light plymouth plymouth-themes ir-keytable python3 rsync bluez pipewire-audio)
 if apt-cache show chromium >/dev/null 2>&1; then pkgs+=(chromium); else pkgs+=(chromium-browser); fi
 apt-get install -y -q --no-install-recommends "${pkgs[@]}"
 
@@ -88,11 +89,16 @@ install -m 644 "$HERE"/config/plymouth/retro-tv/* /usr/share/plymouth/themes/ret
 systemctl restart retro-tv-themed.service        # points current-*.png at the chosen theme
 plymouth-set-default-theme -R retro-tv           # -R: also rebuild the initramfs, if there is one
 
-# ---- IR remote ---------------------------------------------------------------------
-log "IR key map"
+# ---- IR remote and game controllers --------------------------------------------------
+log "IR key map, input rules"
 mkdir -p /etc/rc_keymaps
 install -m 644 "$HERE/config/rc_keymaps/retro-tv-mce.toml" /etc/rc_keymaps/
 grep -q retro-tv-mce /etc/rc_maps.cfg 2>/dev/null || printf '*\trc-rc6-mce\tretro-tv-mce.toml\n' >> /etc/rc_maps.cfg
+# Game controllers are read by the viewer itself (the browser's gamepad
+# support); the compositor must not treat them as pointers, or it draws a cursor.
+install -m 644 "$HERE/config/udev/90-retro-tv-input.rules" /etc/udev/rules.d/
+udevadm control --reload
+udevadm trigger --subsystem-match=input || true
 
 # ---- display --------------------------------------------------------------------------
 # Kernel command line: the video mode with the CRT margins, no boot text, no
@@ -103,8 +109,9 @@ CONF=$BOOT/config.txt
 cp -n "$CMD" "$CMD.before-retro-tv" 2>/dev/null || true
 cp -n "$CONF" "$CONF.before-retro-tv" 2>/dev/null || true
 margins="margin_left=$MARGIN_LEFT,margin_right=$MARGIN_RIGHT,margin_top=$MARGIN_TOP,margin_bottom=$MARGIN_BOTTOM"
+# Both HDMI ports get the mode, so the cable can be in either.
 case "$DISPLAY_MODE" in
-    hdmi480)   video="video=HDMI-A-1:640x480@60D,$margins" ;;
+    hdmi480)   video="video=HDMI-A-1:640x480@60,$margins video=HDMI-A-2:640x480@60,$margins" ;;   # no "D": that would force an empty port on
     composite) video="video=Composite-1:720x480@60ie,$margins" ;;
 esac
 line=$(tr -d '\n' < "$CMD" | sed -E 's/ ?(video=[^ ]+|quiet|splash|plymouth\.ignore-serial-consoles|logo\.nologo|consoleblank=[0-9]+|vt\.global_cursor_default=[0-9]+)//g')
@@ -121,8 +128,11 @@ if n == 0:
     text = text.rstrip("\n") + "\n" + want + "\n"
 # our own block, replaced whole
 text = re.sub(r"\n# >>> retro-tv.*?# <<< retro-tv\n", "\n", text, flags=re.S)
+# No hdmi_force_hotplug: it makes an empty HDMI port look connected, and the
+# compositor then spreads the screen across a phantom output and the real one.
 block = ["# >>> retro-tv (written by pi-image/setup.sh)", "disable_splash=1"]
-block.append("enable_tvout=1" if mode == "composite" else "hdmi_force_hotplug=1")
+if mode == "composite":
+    block.append("enable_tvout=1")
 block.append("# <<< retro-tv")
 open(path, "w", encoding="utf-8").write(text.rstrip("\n") + "\n" + "\n".join(block) + "\n")
 PY

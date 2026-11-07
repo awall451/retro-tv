@@ -5,8 +5,10 @@ Batocera, no Kodi: the box runs the browser viewer from `../docker/web/app` full
 its own web server, with a boot splash in the chosen theme. This folder holds everything about
 that box: the design, the configuration, the script that builds it, and later the image recipe.
 
-**Status:** designed; first build pending (the Pi is not flashed yet). Nothing here has run on
-hardware. Decisions below are settled unless marked open.
+**Status:** step 1 works. On 2026-11-07 a stock Pi OS Lite card plus `setup.sh` booted into the
+guide at 640×480 on the Sylvania through the HDMI converter, with no cursor and no phantom
+display. Still to check on the tube: the margins, the boot splash, the remote (receiver not
+here yet), sound. Decisions below are settled unless marked open.
 
 ## The box
 
@@ -154,11 +156,32 @@ box, just not a one-file one.
   "Media Center PC" (or learn the MCE remote's codes), with volume and power punched through to
   the TV.
 
+## Learned on the first boot
+
+- **Pi OS Lite is Debian 13 (Trixie)** here; the packages are `chromium` and `cage` (0.3.1, a
+  Raspberry Pi build), both in the standard repository. The whole install takes about 4 minutes.
+- **The compositor picks the display's preferred mode, not the kernel's.** `cage` (wlroots)
+  started the converter at its preferred 1280×720 whatever `video=` said. The kiosk script
+  now sets the mode from inside the session with `wlr-randr` before starting Chromium; the
+  kernel line still carries the mode and the margins (the margins are connector properties the
+  compositor leaves alone).
+- **Never write `@60D` in `video=`.** The `D` suffix means "force this connector on". With it,
+  the empty HDMI port 1 became a phantom 1024×768 display, and `cage` spread the screen across
+  both. Plain `@60`, and the mode is given for both HDMI ports so either one can be used. The
+  same goes for `hdmi_force_hotplug=1`, which is not needed: the converter presents an EDID.
+- **The CEC devices are the "mouse".** Each HDMI port has a CEC remote-control input that
+  libinput classes as keyboard + pointer, and a pointer makes `cage` draw a cursor in the middle
+  of the screen. A udev rule hides them (and game pads) from libinput; with no input devices
+  left, wlroots refuses to start unless `WLR_LIBINPUT_NO_DEVICES=1` is set, so the service sets
+  it. The viewer also hides the pointer in `?tv` mode.
+- **Imager's user has no passwordless `sudo` on this image.** A line in `/etc/sudoers.d/` gives
+  it, as every stock Pi OS has; `setup.sh` needs root.
+- **Boot to SSH is about 25 s.**
+
 ## Open items
 
-- Confirm Pi OS Lite's current package names on the first boot (`chromium` vs
-  `chromium-browser`; `cage` is in Debian's repository).
-- Measure boot time; trim services if it is over 30 s.
+- Margins on the Sylvania (start: the Trinitron's 13/27/0/20), the boot splash, sound through
+  the converter, the IR receiver when it arrives.
 - Whether Plymouth on Pi OS runs from the initramfs (then a theme change also regenerates it in
   the background, which the theme service already does if it finds one).
 - A "standby" action for the remote's power button: blank the picture and stop the stream, in
