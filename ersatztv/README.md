@@ -164,9 +164,14 @@ viewer's Quality setting switches to it.
 - FFmpeg profile `HD 1920x1080 NVENC`: the CRT profile's settings at 1920x1080, 6000 kbps video
   (12000 buffer), 192 kbps audio.
 - A twin (Channels → Add Channel): number = the channel's + 100, group `HD`, Playout Source
-  **Mirror**, Mirror Source = the channel, offset 0, Show In EPG **off**, streaming engine
-  **Next**, streaming mode MPEG-TS, the HD profile. Every new channel needs its twin made by
-  hand.
+  **Mirror**, Mirror Source = the channel, offset 0, Show In EPG **on**, streaming engine
+  **Next**, streaming mode MPEG-TS, the HD profile, name "<channel> HD". Every new channel
+  needs its twin made by hand.
+- **Show In EPG on gives the twin its own guide listing**: the source's programmes under the
+  twin's own XMLTV id. Kodi's IPTV Simple needs that, because it matches guide data to a channel
+  only by exact `tvg-id`; with Show In EPG off the HD channels play in Kodi but have an empty
+  grid. The browser viewer and the Roku app don't need it (they show the source channel's
+  listing) and ignore the extra entries.
 - **A new twin shows an error card ("failed to resolve the playout folder") until its playout
   files exist.** ErsatzTV writes them at the next playout build (hourly, or after a change to
   the source channel's playout). Wait for that, or reset the source channel's playout. We
@@ -176,9 +181,9 @@ viewer's Quality setting switches to it.
   `work_ahead_limit`, default 1) and holds the rest to 1.05x, so each chunk's start-up put the
   stream further behind until the player ran dry and the session timed out. On Next the same
   channel stayed a steady 36 seconds ahead.
-- **A twin cannot be hidden from `channels.m3u` and still play.** Show In EPG off removes it from
-  the guide only; disabling it makes the stream answer 404. Kodi therefore lists twins as extra
-  channels unless it is told to skip group `HD` (we filter the list on the Pi).
+- **A twin cannot be hidden from `channels.m3u` and still play.** Disabling it makes the stream
+  answer 404. So players see the twins as extra channels in group `HD`; the Kodi skin on the Pi
+  uses that group for its Quality setting (Standard shows group `ErsatzTV`, HD shows `HD`).
 - **HD is light on Next.** On Legacy one HD stream used about 3.7 CPU cores (it scaled on the
   CPU); on Next an HD twin, an SD channel and a third channel together used about 0.7 cores.
   The limit is the graphics card's encoder sessions (below), not the CPU.
