@@ -17,6 +17,18 @@ stays a description anyone can use. Newest first.
   HDMI.
 - Everything under "Things that bit" in the README was found on this boot.
 
+## 2026-11-08: "Channel unavailable" every minute
+
+- The box had been running on Wi-Fi (no Ethernet link). The 5 GHz link lost 26–40% of packets to
+  the gateway in ~30 s holes about once a minute; nginx returned 504 on `live.m3u8` (connect
+  timeout) and the viewer showed "Channel unavailable, retrying…". The server was fine (a probe
+  from the PC had zero failures).
+- Disabling Wi-Fi power saving (`802-11-wireless.powersave 2` on the NetworkManager connection)
+  did not change the loss. Pinning the connection to 2.4 GHz (`band bg`) and rebooting left the
+  box with no network at all; recovered by plugging Ethernet in, then the pin was removed.
+- Now on Ethernet (1 Gb/s, default route `eth0`), Wi-Fi left configured as a fallback with power
+  saving off.
+
 ## Hardware in this build
 
 - Pi 4 Model B, 2 GB, official PoE+ HAT, 16 GB card, wired through the PoE switch.

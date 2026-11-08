@@ -192,6 +192,13 @@ survive.
   of the screen. A udev rule hides them (and game pads) from libinput; with no input devices
   left, wlroots refuses to start unless `WLR_LIBINPUT_NO_DEVICES=1` is set, so the service sets
   it. The viewer also hides the pointer in `?tv` mode.
+- **No Ethernet link means Wi-Fi, silently.** If the cable is out or the switch port is off, the box
+  comes up on the Wi-Fi network from Imager's settings and nothing on screen says so. One box
+  did exactly that and its Wi-Fi link dropped about 40% of packets in 30-second holes every
+  minute: nginx's connects to the server timed out, and the guide showed "Channel unavailable,
+  retrying…" for a few seconds at a time. Plugging the cable in fixed it at once (NetworkManager
+  prefers Ethernet). To see which path is in use: `ip route | grep default`. Do not pin the Wi-Fi
+  band on a headless box over SSH: a pin that cannot associate leaves it unreachable.
 - **Sound defaulted to the headphone jack.** PipeWire picks the 3.5 mm jack as the default
   output, so HDMI got silence. The kiosk script makes the HDMI output the default at full volume
   (the jack in composite mode, where it carries the sound).
