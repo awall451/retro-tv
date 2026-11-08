@@ -21,6 +21,13 @@ browser ──► Gantry (this machine's proxy) ──► retro-tv container (ng
                                                 └─ /iptv/…  read-only pass-through ──► ErsatzTV
 ```
 
+The proxy in that picture is [Gantry](https://github.com/awall451/gantry), a companion project by the same author: a Docker
+dashboard with a Caddy reverse proxy built in. It watches the Docker socket and gives every
+container with a published port a name, `retro-tv.localhost` at the desk and
+`https://retro-tv.<your domain>` from a phone over Tailscale, with a real certificate and nothing
+open to the internet. It is optional: without it the viewer is at `http://localhost:8410` on the
+machine that runs it, and any other reverse proxy can stand in its place.
+
 ## Screens
 
 <table><tr><td align="center"><img src="../docs/img/readme/guide-playing-cable.png" width="600"><br><sub>The guide, with the picture in the corner box</sub></td><td align="center"><img src="../docs/img/readme/watching-cable.png" width="600"><br><sub>Watching: the channel banner over the picture</sub></td></tr></table>
@@ -51,7 +58,7 @@ Then open <http://localhost:8410>.
 |---|---|
 | `ERSATZTV_URL` | Where ErsatzTV answers, as seen from this machine: `http://<server-ip>:8409`. No trailing slash. If the server is also on your tailnet, use its tailnet address and the viewer works at home and away. |
 | `VIEWER_PORT` | Port the viewer is published on. Default `8410`. |
-| `VIEWER_BIND` | Where that port is open. Default `127.0.0.1` (this machine only; other devices use Gantry). `0.0.0.0` also opens it to every device on the local network, with no login. |
+| `VIEWER_BIND` | Where that port is open. Default `127.0.0.1` (this machine only; other devices come in through Gantry, see below). `0.0.0.0` also opens it to every device on the local network, with no login. |
 | `COMPOSE_FILE`, `UPLINK_PORT`, `UPLINK_BIND` | Only for the uplink add-on, below. |
 
 After changing a file under `web/`, run `docker compose up -d --build` again. After changing only
@@ -77,13 +84,16 @@ its ErsatzTV requests to it and it passes them on. It listens on the Docker brid
 ## Reach it from other devices (Gantry)
 
 The viewer's port is published on loopback, so by itself it is reachable from this machine only.
-Gantry, the reverse proxy this machine runs, is the way in from elsewhere. It finds the container
-by its published port and routes it under the container's name:
+[Gantry](https://github.com/awall451/gantry), the reverse proxy this machine runs, is the way in from elsewhere.
+It finds the container by its published port and routes it under the container's name:
 
 - `http://retro-tv.localhost` on this machine
 - `https://retro-tv.<your Gantry tailnet domain>` from any device on the tailnet
 
 For a shorter name, add a manual route in Gantry (for example hostname `tv`, port `8410`).
+
+Not running Gantry? Any reverse proxy that can reach `127.0.0.1:8410` does the same job, or set
+`VIEWER_BIND=0.0.0.0` in `.env` to open the port to the local network directly.
 
 Keep it on the tailnet. Do not publish it to the internet (no Funnel, no port forwarding).
 

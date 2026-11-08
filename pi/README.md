@@ -27,7 +27,12 @@ the whole setup can be rebuilt from a blank card.
 | [Live TV channels](../docs/tv.html) | ErsatzTV from the Pi's side: tuning in with IPTV Simple, the server in brief |
 | [Reference](../docs/reference.html) | Every file and script, the gotchas, troubleshooting, rebuilding in order |
 
-<table><tr><td align="center"><img src="../docs/img/readme/trinitron-snes.jpg" width="400"><br><sub>The SNES system view on the Trinitron</sub></td><td align="center"><img src="../docs/img/readme/trinitron-bcc.jpg" width="400"><br><sub>Batocera's Control Center, re-styled to fit 640 px</sub></td><td align="center"><img src="../docs/img/readme/trinitron-dkc2.jpg" width="400"><br><sub>A game on the tube: 480i through the converter</sub></td></tr></table>
+<p align="center"><img src="../docs/img/readme/game-dkc2-1080.jpg" alt="Donkey Kong Country 2 under the Trinitron shader" width="100%"></p>
+<p align="center"><sub>Donkey Kong Country 2 on the flat TV, through the <code>trinitron-hdmi</code> shader: aperture-grille mask, a little curvature.</sub></p>
+
+<table><tr><td align="center"><img src="../docs/img/readme/es-snes-1080.jpg" width="400"><br><sub>The system carousel (Carbon theme, HDMI profile)</sub></td><td align="center"><img src="../docs/img/readme/es-grid-snes-1080.jpg" width="400"><br><sub>313 SNES games with box art</sub></td><td align="center"><img src="../docs/img/readme/bcc-game-1080.jpg" width="400"><br><sub>Batocera's Control Center over a running game</sub></td></tr></table>
+
+<table><tr><td align="center"><img src="../docs/img/readme/game-smw-1080.jpg" width="400"><br><sub>Super Mario World</sub></td><td align="center"><img src="../docs/img/readme/game-sonic2-1080.jpg" width="400"><br><sub>Sonic the Hedgehog 2</sub></td><td align="center"><img src="../docs/img/readme/game-crash-1080.jpg" width="400"><br><sub>Crash Bandicoot (PlayStation)</sub></td></tr></table>
 
 ## What the finished system does
 
@@ -95,7 +100,9 @@ changes, and reboots (about 30 s).
 | Kodi skin | Estuary | Estuary CRT: every font bold and 1.5×, the retro TV guide, channel banner, big show details |
 | Plex (PM4K) quality | Original | 480p, 1.5 Mbps (software decoding) |
 
-<table><tr><td align="center"><img src="../docs/img/game-grid-640.png" width="400"><br><sub>The SNES grid at 640×480 with the CRT theme</sub></td><td align="center"><img src="../docs/img/control-center-640.png" width="400"><br><sub>The compact Control Center</sub></td><td align="center"><img src="../docs/img/trinitron-shader-zoom.png" width="400"><br><sub>The Trinitron shader on a flat TV, 3× zoom</sub></td></tr></table>
+<table><tr><td align="center"><img src="../docs/img/readme/es-snes-1080.jpg" width="600"><br><sub>HDMI profile: 1080p, stock Carbon</sub></td><td align="center"><img src="../docs/img/readme/es-snes-640.png" width="600"><br><sub>Trinitron profile: 640×480, Carbon CRT (bold, bigger, no thin strokes)</sub></td></tr></table>
+
+<table><tr><td align="center"><img src="../docs/img/readme/es-grid-snes-640.png" width="400"><br><sub>The SNES grid at 640×480</sub></td><td align="center"><img src="../docs/img/readme/bcc-game-640.png" width="400"><br><sub>The compact Control Center, 12 px bold, fits 640 px</sub></td><td align="center"><img src="../docs/img/trinitron-shader-zoom.png" width="400"><br><sub>The Trinitron shader on a flat TV, 3× zoom</sub></td></tr></table>
 
 Why 640×480: square pixels on a 4:3 tube, 480 lines is exactly twice a 240-line game, and the
 converter gets its native line count instead of a blurry 1080p-to-480i downscale. The Pi's own
@@ -128,7 +135,9 @@ margins are hardware DRM properties set on the kernel command line from
 - The converter does not pass HDMI-CEC, so the controller drives Kodi on the Trinitron, not a
   TV remote.
 
-<table><tr><td align="center"><img src="../docs/img/readme/kodi-guide.png" width="400"><br><sub>Kodi's retro guide, the show playing in the box</sub></td><td align="center"><img src="../docs/img/readme/kodi-details.png" width="400"><br><sub>Show details with Watch now</sub></td><td align="center"><img src="../docs/img/readme/kodi-banner.png" width="400"><br><sub>The channel banner on a channel change</sub></td></tr></table>
+<table><tr><td align="center"><img src="../docs/img/readme/kodi-guide-640.png" width="600"><br><sub>The retro guide: the show you are watching in the box, the highlighted show beside it</sub></td><td align="center"><img src="../docs/img/readme/kodi-details-640.png" width="600"><br><sub>Show details, big and bold for the tube</sub></td></tr></table>
+
+<table><tr><td align="center"><img src="../docs/img/readme/kodi-banner-640.png" width="400"><br><sub>The channel banner on a channel change</sub></td><td align="center"><img src="../docs/img/readme/kodi-guide-office-640.png" width="400"><br><sub>Moving around the grid</sub></td><td align="center"><img src="../docs/img/readme/kodi-watching-640.png" width="400"><br><sub>Watching: no overlay at all</sub></td></tr></table>
 
 ## What is in this folder
 

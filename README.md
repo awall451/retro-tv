@@ -37,7 +37,7 @@ the channels; several small boxes and apps tune in.
 | Piece | What it is | Start here |
 |---|---|---|
 | **ErsatzTV channels** | How the channels are built: video profile for a CRT, smart collections, ad breaks, schedules, the commercials catalog (1,120 clips) and a script to rebuild them | [`ersatztv/README.md`](ersatztv/README.md) |
-| **Browser app** | The TV guide viewer: plain HTML/CSS/JS behind nginx, in Docker. Pick a show, it plays; keeps playing in the corner while you browse. Two themes (Cable, Vaporwave) with splash screens | [`docker/README.md`](docker/README.md) |
+| **Browser app** | The TV guide viewer: plain HTML/CSS/JS behind nginx, in Docker. Pick a show, it plays; keeps playing in the corner while you browse. Two themes (Cable, Vaporwave) with splash screens. Reachable from phones over Tailscale through [Gantry](https://github.com/awall451/gantry), a companion project | [`docker/README.md`](docker/README.md) |
 | **Batocera Pi** | The first Pi: Batocera 43.1 with retro games, Kodi live TV with a cable-style guide skin, Plex, and two display profiles (flat HDMI TV or the Trinitron through a composite converter) | [`pi/README.md`](pi/README.md), full guide in [`docs/`](docs/index.html) |
 | **Retro TV box** | The second Pi: a stock Pi OS Lite card plus one script becomes a box that boots to the guide full screen on a CRT, with a themed boot splash and an IR remote | [`pi-image/README.md`](pi-image/README.md) |
 | **Roku** | The same guide and channels as a sideloaded Roku channel | [`roku-tv/README.md`](roku-tv/README.md) |
@@ -46,9 +46,11 @@ Everything downstream of the server is a **viewer**: it reads ErsatzTV's channel
 streams and changes nothing. The server's web page and API are never exposed; only the three
 read-only `/iptv/` paths get through.
 
-## On real CRTs
+## In pictures
 
-<table><tr><td align="center"><img src="docs/img/readme/trinitron-snes.jpg" width="400"><br><sub>The Batocera Pi on the Sony Trinitron</sub></td><td align="center"><img src="docs/img/readme/sylvania-guide.jpg" width="400"><br><sub>The Retro TV box on the 12-inch Sylvania</sub></td><td align="center"><img src="docs/img/readme/splash-vapor-1280.png" width="400"><br><sub>The Vaporwave splash, one of two themes</sub></td></tr></table>
+<table><tr><td align="center"><img src="docs/img/readme/game-dkc2-1080.jpg" width="400"><br><sub>A game on the Batocera Pi, through the Trinitron shader</sub></td><td align="center"><img src="docs/img/readme/kodi-guide-640.png" width="400"><br><sub>Kodi's retro guide at the CRT's 640×480</sub></td><td align="center"><img src="docs/img/readme/splash-vapor-1280.png" width="400"><br><sub>The browser app's Vaporwave splash</sub></td></tr></table>
+
+<table><tr><td align="center"><img src="docs/img/readme/es-snes-1080.jpg" width="400"><br><sub>Batocera's system view</sub></td><td align="center"><img src="docs/img/readme/tv-guide-playing-cable.png" width="400"><br><sub>The Retro TV box: the guide at 640×480</sub></td><td align="center"><img src="docs/img/readme/kodi-details-640.png" width="400"><br><sub>Show details in Kodi</sub></td></tr></table>
 
 ## Hardware
 
@@ -57,7 +59,7 @@ read-only `/iptv/` paths get through.
 | Server | A Linux box with an NVIDIA GPU running ErsatzTV (k3s here; Docker Compose works too) |
 | Batocera Pi | Raspberry Pi 4 (8 GB), Argon ONE M.2 case, 1 TB SSD, PS5 DualSense, Sony Trinitron KV-19TR20 through a Dingsun HDMI-to-composite converter |
 | Retro TV box | Raspberry Pi 4 (2 GB), official PoE+ HAT, 16 GB card, 12-inch Sylvania CRT through the same kind of converter (the Pi's own composite jack later), MCE USB IR receiver |
-| Elsewhere | A laptop running the browser app in Docker, a Roku, phones |
+| Elsewhere | A laptop running the browser app in Docker behind [Gantry](https://github.com/awall451/gantry), a Roku, phones |
 
 ## Repo map
 
