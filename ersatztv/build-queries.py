@@ -8,7 +8,10 @@ Movies are matched on title plus release year, because a quoted title
 also matches longer titles that contain it (see README.md, "Smart collection queries").
 A movie whose year is null (Plex has no year for the file) is matched on
 title alone. Shows are matched on show title, specials (season 0) left
-out. Test a new query on the ErsatzTV search page before saving it.
+out. An optional "exclude" list holds query clauses to leave out (other
+shows whose titles contain a wanted title, episodes whose chapter marks
+would get them dropped); they are joined with AND NOT. Test a new query
+on the ErsatzTV search page before saving it.
 """
 import json
 import pathlib
@@ -35,7 +38,10 @@ def query(channel):
         parts.append("(type:episode AND NOT season_number:0 AND (%s))" % shows)
     if movies:
         parts.append("(type:movie AND (%s))" % " OR ".join(movie_term(t, y) for t, y in movies))
-    return " OR ".join(parts) if len(parts) > 1 else parts[0][1:-1]
+    q = " OR ".join(parts) if len(parts) > 1 else parts[0][1:-1]
+    if channel.get("exclude"):
+        q = "(%s) AND NOT (%s)" % (q, " OR ".join(channel["exclude"]))
+    return q
 
 
 def main(args):

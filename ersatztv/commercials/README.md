@@ -1,7 +1,7 @@
 # Commercials for retro channels
 
 The commercials, trailers and bumpers that play between programmes on our ErsatzTV channels:
-**1,120 clips in 12 sets, all from the Internet Archive**, with a record of where every clip came
+**1,815 clips in 24 sets, plus two small news sets, all from the Internet Archive**, with a record of where every clip came
 from, how it was cut, and what we threw out and why. `build.py` rebuilds any set on your machine
 from that record.
 
@@ -25,6 +25,20 @@ link to them, and what you do with them is up to you.
 | `fifties` | 153 | 1950s TV ads (cigarettes, beer, detergent, gasoline, toothpaste…), cut into single ads | `misc1950s-*`, Prelinger `ClassicT1948` I–VIII, `Televisi1960` |
 | `ads2000s` | 28 | 2000s ads, cut into single ads | `2000sCommercials`, `a-bunch-of-2000s-commercials-720p` |
 | `starwars` | 146 | Kenner toy ads 1978–85, Micro Machines, 1977–83 tie-ins, 1997–99 Pepsi / Taco Bell / Episode I spots | single `youtube-*` items, `star-wars-kenner-toy-commercials-trailers-and-more` |
+| `marvel` | 42 | Spider-Man 2 TV spots and tie-ins (2004), Marvel Transformers comic ads, a 1981 Marvel Comics ad, Spider-Man toy and game ads | `spider-man-2-commercials`, `transformers-marvel-comics-commercials-upscaled-60fps`, single items |
+| `cars` | 25 | Car ads: 1950s–60s classics, 80s Toyota and Chevrolet, 2000s European ads | `Classic_Car_Commercials_From_The_50s_and_60s_1993_Moon_River_Tape`, `top-10-car-commercials`, single items |
+| `scifi` | 110 | SCI FI Channel breaks 1996–2005: promos, "IF" idents, Sci Fi Friday, and the ads that ran with them | `capture-a-*` "Sci-Fi Channel commercials", `sci-fi-channel-i-am-sci-fi-promos`, `sci-fi-channel-idents-and-bumpers-compiliation` |
+| `discovery` | 41 | Discovery Channel promos (1999), History Channel promos (1999, 2003), a Mail Call promo (2002) | `1999DiscoveryChannelPromos` (1, 2), `February1999HistoryChannelPromos`, `22January2003HistoryChannelPromos`, `history-channel-mail-call-promo-usa-2002` |
+| `comedycentral` | 125 | Comedy Central breaks 1995–2002: promos (The Man Show, TV Funhouse, The Daily Show, Crank Yankers) and period ads; 2004 promos | `capture-a-*` "Comedy Central commercials", `2000-comedy-cntrl`, `comedy-central-commercials-july-5-2002`, `MNN-002_*` |
+| `wb` | 132 | WB network breaks 1998–2002: Charmed and Dawson's Creek promos, Michigan J. Frog, period ads | `Commercials_The_WB_WBNE_New_Haven_Connecticut_1998`, `capture-a-*` "WB commercials" |
+| `drivein` | 14 | Drive-in snack bar ads and intermission reels | `SnackBar*` items, `Drive-inSnackBarAd`, `1953_Movie_Trailers_Intermission_*`, `Commercials39` |
+| `sixties` | 13 | Early-1960s daytime ads (Ivory Snow, Dash, Carnation, Camay) | `Early1960sDaytimeCommercials` |
+| `seventies` | 36 | Early-1970s ads | `0649_Early_1970s_Television_Commercials_*`, `usa-vintage-commercials`, `abcearly1970scommercials` |
+| `ads2010s` | 6 | Late-2000s / early-2010s ads | `jingles-from-your-childhood-2000s2010s-nostalgic-commercials-parts-1-and-2` |
+| `apple` | 102 | Apple ads: 1984, iMac colours, iPod silhouettes, Get a Mac (US and UK), iPhone 4 and iCloud | `AppleAds`, `apple_getamac`, `apple_ipoditunes`, `apple-1984`, `apple-colors`, single items |
+| `travel` | 49 | Travel Channel breaks (2005, 2007) and 1958–65 airline ads (Eastern, Northwest Orient) | `capture-a-537`, `capture-a-557`, `EasternAirlines1965` (+ ads 2–4), `northwestorient1958` |
+| `cnn` (news) | 12 | CNN's launch day (1 June 1980, four parts) and CNN Headline News recordings, 1985–1997, whole tapes | `CNN_pt._1_6-1-1980` … `pt._4`, `headline-news-*`, `capture-a-*` "CNN Headline News" |
+| `newsreels` (news) | 31 | Universal Newsreel stories, 1933–1964: flights, rockets, sport, ceremonies (nothing on wars or disasters) | collection `universal_newsreels` |
 
 `python3 build.py OUT --list` prints the same with download sizes. The full build downloads
 about 20 GB and keeps about 13 GB.
@@ -33,6 +47,16 @@ What we pair them with: 80s shows get `80s`, 90s shows `90s`; Stranger Things ge
 `reels8486` + `games80s` + `trailers80s`; horror films get `horror` + `fifties`; black-and-white
 classics and The Twilight Zone get `fifties`; romantic comedies get `romcom` + `ads2000s` + `90s`;
 Star Wars films get `starwars` + `90s`.
+The sets added on 2026-11-08 go with channels of the same name (MCU films get `marvel`, Fast & Furious
+`cars`, a Sci-Fi channel `scifi`, and so on); `sixties` and `fifties` go between drama episodes,
+`seventies` with 70s crime films and drive-in movies.
+
+**Quality bar for the 2026-11-08 sets.** Ordinary soft VHS stays. Thrown out: burned-in watermarks
+and running timecode (two Periscope Film uploads, 97 pieces), VHS tracking noise over the whole
+picture, VCR on-screen displays, black or title-card pieces, pieces over about two minutes, and
+software demo videos that never aired. Two sources were mislabelled (one "2000s/2010s ads" item is
+Steamboat Willie). 24 Comedy Central 2004 sources (`MNN-002_*`) are marked "not used": their
+download had not finished when the catalog was written.
 
 ## Rebuilding a set
 
