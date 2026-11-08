@@ -43,7 +43,7 @@ the whole setup can be rebuilt from a blank card.
   shaders, overscan margins and a CRT-legible menu. Either profile gives a picture on either TV.
 - Kodi with the live channels (ErsatzTV on the home server) and on-demand Plex (PM4K), both
   following the active display profile.
-- Storage on a 1 TB SSD, SSH from the PC by key, an Argon ONE case with its fan service on.
+- Storage on a 1 TB SSD, SSH by key, an Argon ONE case with its fan service on.
 
 ## Hardware
 

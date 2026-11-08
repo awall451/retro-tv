@@ -31,7 +31,7 @@ the channels; several small boxes and apps tune in.
   Kodi, retro      Pi 4 that boots   Docker container   SceneGraph       mpv, VLC …
   guide skin,      straight into     with the guide,    channel for a
   1,075 games,     the guide on a    open it on a       Roku on the
-  Sony Trinitron   12" Sylvania CRT  laptop or phone    home network
+  Sony Trinitron   12-inch CRT       laptop or phone    home network
 ```
 
 | Piece | What it is | Start here |
@@ -58,7 +58,7 @@ read-only `/iptv/` paths get through.
 |---|---|
 | Server | A Linux box with an NVIDIA GPU running ErsatzTV (k3s here; Docker Compose works too) |
 | Batocera Pi | Raspberry Pi 4 (8 GB), Argon ONE M.2 case, 1 TB SSD, PS5 DualSense, Sony Trinitron KV-19TR20 through a Dingsun HDMI-to-composite converter |
-| Retro TV box | Raspberry Pi 4 (2 GB), official PoE+ HAT, 16 GB card, 12-inch Sylvania CRT through the same kind of converter (the Pi's own composite jack later), MCE USB IR receiver |
+| Retro TV box | Raspberry Pi 4 (2 GB), official PoE+ HAT, 16 GB card, a 12-inch CRT with composite input through the same kind of converter (or the Pi's own composite jack), MCE USB IR receiver |
 | Elsewhere | A laptop running the browser app in Docker behind [Gantry](https://github.com/awall451/gantry), a Roku, phones |
 
 ## Repo map
@@ -71,11 +71,11 @@ read-only `/iptv/` paths get through.
 | `pi/scripts/` | Batocera launch hooks (`/userdata/system/scripts/`) |
 | `pi/shaders/` | Shader sets and the Trinitron CRT presets |
 | `pi/snapshots/` | Sanitized copies of the Batocera Pi's config files |
-| `tools/` | Scripts run from the PC or copied to the Pi: flashing, importing a game library, BIOS check, shader benchmarks |
+| `tools/` | Scripts run from a PC or copied to the Pi: flashing, importing a game library, BIOS check, shader benchmarks |
 | `tools/render-splash/` | Renders the viewer's splash scenes to PNG for the Roku app and the box's boot screen |
 | `docker/` | The browser app (Docker Compose) |
 | `roku-tv/` | The Roku app |
-| `pi-image/` | The Retro TV box: design, config, `setup.sh`, boot splash, IR key map |
+| `pi-image/` | The Retro TV box: design, config, `setup.sh`, boot splash, IR key map, build log |
 | `ersatztv/` | How the channels are built, and the commercials |
 
 ## Conventions

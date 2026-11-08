@@ -1,4 +1,4 @@
-# Retro TV box: the Pi image
+# Retro TV box: a Pi that boots into the guide
 
 <p align="center">
   <a href="../README.md">Home</a> &nbsp;·&nbsp;
@@ -9,42 +9,42 @@
   <a href="../ersatztv/README.md">ErsatzTV channels</a>
 </p>
 
-A Raspberry Pi 4 that boots straight into the Retro TV guide on a CRT, with an IR remote. No
-Batocera, no Kodi: the box runs the browser viewer from `../docker/web/app` full screen, served by
-its own web server, with a boot splash in the chosen theme. This folder holds everything about
-that box: the design, the configuration, the script that builds it, and later the image recipe.
+A Raspberry Pi 4 that powers on into the Retro TV guide, full screen on a CRT, driven by an IR
+remote. No Batocera, no Kodi: the box runs the [browser viewer](../docker/README.md) from
+`docker/web/app`, served by its own web server, with a boot splash in the viewer's theme. This
+folder holds the design, the configuration, and the script that turns a stock Raspberry Pi OS
+Lite card into the box.
 
-**Status:** step 1 works. On 2026-11-07 a stock Pi OS Lite card plus `setup.sh` booted into the
-guide at 640×480 on the Sylvania through the HDMI converter, with no cursor and no phantom
-display. Still to check on the tube: the margins, the boot splash, the remote (receiver not
-here yet), sound. Decisions below are settled unless marked open.
+Where it stands: the script route (step 1, below) works on real hardware; the one-file image
+(step 2) is not built yet. The build log, with dates and what is still to be tested, is in
+[`NOTES.md`](NOTES.md).
 
 <table><tr><td align="center"><img src="../docs/img/readme/tv-guide-playing-cable.png" width="600"><br><sub>What the box shows: the guide at 640×480, a show playing in the box</sub></td><td align="center"><img src="../docs/img/readme/poe-hat.jpg" width="600"><br><sub>The official PoE+ HAT: one cable for power and network</sub></td></tr></table>
 
 <table><tr><td align="center"><img src="config/plymouth/retro-tv/splash-cable-640.png" width="400"><br><sub>Boot splash, Cable theme (640×480)</sub></td><td align="center"><img src="config/plymouth/retro-tv/splash-vapor-640.png" width="400"><br><sub>Boot splash, Vaporwave theme</sub></td></tr></table>
 
-## The box
+## Hardware
 
-| Part | What we have |
+| Part | What is needed |
 |---|---|
-| Computer | Raspberry Pi 4 Model B, 2 GB, with the official PoE+ HAT (power and network over one cable; its fan is run by the firmware) |
-| Card | 16 GB microSD (the system needs about 3 GB) |
-| Screen | 12-inch Sylvania CRT, composite input |
-| Video out | For now: HDMI at 640×480 into the HDMI-to-composite converter (same as the Trinitron). Later: the Pi's own composite jack, 720×480i, once the 4-pole cable arrives |
-| Remote | A Media Center (MCE) USB IR receiver (on order); a universal remote programmed for the Sylvania's power and volume and for the box |
-| Controller | PS5 pad over Bluetooth, optional |
-| Network | Wired, through the PoE switch; the ErsatzTV server is on the home network |
+| Computer | Raspberry Pi 4 Model B. 2 GB is plenty. Power over Ethernet with the official PoE+ HAT (one cable, and the firmware runs its fan), or an ordinary USB-C supply |
+| Card | A 16 GB microSD; the system needs about 3 GB |
+| Screen | Any CRT with a composite input. Any TV with HDMI also works, at 640×480 |
+| Video out | HDMI at 640×480 into an HDMI-to-composite converter (the same kind the [Batocera Pi](../pi/README.md) uses), or the Pi's own composite jack at 720×480i. One setting switches between them |
+| Remote | A "Windows Media Center" (MCE) USB IR receiver and any remote it understands; a universal remote can send power and volume to the TV and everything else to the box |
+| Controller | A Bluetooth game pad, optional |
+| Network | Wired, ideally from a PoE switch. The box needs to reach the ErsatzTV server |
 
 ## Decisions
 
 - **Base system: Raspberry Pi OS Lite, 64-bit** (current release). It has the Pi's video drivers,
   Chromium with hardware H.264 decoding, Plymouth, and `apt`. A fully custom Buildroot system was
-  considered and kept as a possible later step; Pi OS gets us there in days, not weeks.
+  considered and kept as a possible later step; Pi OS gets there in days, not weeks.
 - **The viewer runs on the box itself.** nginx serves `docker/web/app` and proxies `/iptv/` to
-  ErsatzTV, using the very same `docker/web/nginx.conf.template` as the laptop container (only
+  ErsatzTV, using the very same `docker/web/nginx.conf.template` as the Docker container (only
   the port and root differ). Reasons: the box never shows a browser error page (if the server is
   down, the guide's own "Can't reach the TV server" message appears, in the theme's style); no
-  dependency on the laptop being up; and the viewer's theme can be read by the box (below).
+  dependency on another machine being up; and the viewer's theme can be read by the box (below).
 - **Kiosk: `cage` + Chromium.** `cage` is a Wayland compositor that shows exactly one window, full
   screen, no desktop, no cursor. Chromium runs in kiosk mode with sound allowed from the start
   (the "press a key for sound" problem does not exist here) and its profile on a writable data
@@ -60,47 +60,47 @@ here yet), sound. Decisions below are settled unless marked open.
   the matching splash, so the *next* boot already matches. Anywhere else (laptop, phone) the
   request answers 404 and is ignored.
 - **Composite video from the Pi itself** is the end state: Pi OS can drive the 3.5 mm jack
-  (Batocera could not). The jack also carries the sound. Until the cable arrives, HDMI at
-  640×480 through the converter, exactly like the Trinitron setup, with the same kind of
-  kernel margin settings for overscan. Switching between the two is one line in the box's
-  config file.
+  (Batocera cannot). The jack also carries the sound. The alternative is HDMI at 640×480 through
+  a converter, exactly like the Batocera Pi's CRT profile, with the same kind of kernel margin
+  settings for overscan. Switching between the two is one line in the box's config file.
 - **IR: a USB MCE receiver, decoded by Linux.** The kernel's `mceusb` driver decodes the remote;
-  a key map of ours (`config/rc_keymaps/retro-tv-mce.toml`) turns its buttons into the plain
-  keyboard keys the viewer already understands (arrows, Enter, Escape, Page Up/Down, digits,
-  I, S, M, R). No wiring, no soldering, and the receiver can sit on top of the TV. The official
-  PoE+ HAT covers the GPIO header, which is why a USB receiver rather than a 3-wire module.
-  Many MCE receivers also have IR *emitter* jacks: a later step can let the box switch the TV
-  on and off itself.
+  a key map (`config/rc_keymaps/retro-tv-mce.toml`) turns its buttons into the plain keyboard
+  keys the viewer already understands (arrows, Enter, Escape, Page Up/Down, digits, I, S, M, R).
+  No wiring, no soldering, and the receiver can sit on top of the TV. The PoE+ HAT covers the
+  GPIO header, which is why a USB receiver rather than a 3-wire module. Many MCE receivers also
+  have IR *emitter* jacks: a later step can let the box switch the TV on and off itself.
 - **TV power and volume stay with the TV.** A universal remote with "punch-through" sends power
-  and volume to the Sylvania and everything else to the box. The box's own power button on the
-  remote is for later (blank the picture, stop the stream); the Pi cannot be switched on by IR.
-  Power from fully off: the PoE switch's port (if it is managed) or the plug.
-- **Read-only system, writable data.** The root filesystem is mounted read-only with an overlay,
-  so pulling the plug can never corrupt the card. A separate writable area (`/data`) holds the
-  Chromium profile (the viewer's settings), the theme choice, Bluetooth pairings and logs.
+  and volume to the TV and everything else to the box. The box's own power button on the remote
+  is for later (blank the picture, stop the stream); the Pi cannot be switched on by IR. Power
+  from fully off: the PoE switch's port (if it is managed) or the plug.
+- **Read-only system, writable data** (planned for step 2). The root filesystem is mounted
+  read-only with an overlay, so pulling the plug can never corrupt the card. A separate writable
+  area (`/data`) holds the Chromium profile (the viewer's settings), the theme choice, Bluetooth
+  pairings and logs.
 - **Tailscale is optional, off by default.** With it on, and a subnet route for the home network
   advertised by something at home, the box works anywhere with ordinary Wi-Fi or a hotspot (not
   behind a hotel sign-in page: there is no browser to click through).
 - **Two build steps.** First a provisioning script (`setup.sh`) that turns a stock Pi OS Lite card
-  into the box, so every piece can be tried on the real Pi and CRT. Then `pi-gen` wraps that same
+  into the box, so every piece can be tried on a real Pi and CRT. Then `pi-gen` wraps that same
   script into a flashable image: write it to a card and the box is finished.
 
 ## How it starts
 
-1. Power (PoE) → firmware → kernel. Boot text is hidden; Plymouth draws the theme's splash.
+1. Power → firmware → kernel. Boot text is hidden; Plymouth draws the theme's splash.
 2. nginx starts with the viewer and the ErsatzTV proxy. The theme service starts.
 3. `cage` starts on the console as user `tv` and launches Chromium in kiosk mode on the viewer.
 4. The viewer shows its own animated splash while it loads the listings, then the guide.
 5. The IR receiver's key map is loaded when the receiver is seen (`ir-keytable`), so the remote
    works from the first screen.
 
-About 20–25 seconds from power to guide on a Pi 4, to be measured.
+About 25 seconds from power to SSH on a Pi 4; the guide follows a few seconds later.
 
 ## Files
 
 ```
 pi-image/
-├── README.md                      this file
+├── README.md                      this page
+├── NOTES.md                       build log: what was tested when, open items
 ├── setup.sh                       turns a fresh Pi OS Lite into the box; run again after changes
 └── config/
     ├── retro-tv.env.example       the box's settings: server address, display mode, margins, Tailscale
@@ -121,38 +121,42 @@ the Roku app's icons, from `docker/web/app/js/splash.js`. Re-run it when the sce
 ## Building the box, step 1: a stock card plus `setup.sh`
 
 1. **Flash** Raspberry Pi OS Lite (64-bit) with Raspberry Pi Imager. In its settings: hostname
-   `retro-tv`, user `tv` with a password of your choice, SSH on with public-key login only, and
-   paste the public key for the box (kept out of the repo; the private half lives on the
-   maintainer's PC). Wi-Fi is not needed on PoE.
-2. **Boot** it on the network, then from the PC: `ssh tv@retro-tv.local`.
-3. **Get the repo** onto it (`git clone` of the GitHub repo, or `rsync` from the PC) and run
+   `retro-tv`, a user with a password of your choice, SSH on with public-key login only, and your
+   SSH public key. Wi-Fi is not needed on a wired network.
+2. **Boot** it on the network, then `ssh <user>@retro-tv.local`. If the user Imager created has
+   no passwordless `sudo`, add a line for it under `/etc/sudoers.d/`; `setup.sh` needs root.
+3. **Get the repo** onto it (`git clone`, or `rsync` from another machine) and run
    `sudo pi-image/setup.sh`. The first run copies `config/retro-tv.env.example` to
    `/etc/retro-tv.env` and stops so you can fill in the ErsatzTV address and the display mode;
    run it again and it does everything else, then reboots into the guide.
-4. **Tune the picture** on the CRT with the margins in `/etc/retro-tv.env` (a bigger number
-   pulls the picture in from that edge), `sudo pi-image/setup.sh`, reboot.
+4. **Tune the picture** on the CRT. Set `PAGE=overscan` in `/etc/retro-tv.env`, run
+   `sudo pi-image/setup.sh` and reboot: the viewer shows a test pattern with a white frame at
+   the edge. Adjust the margins in the same file (a bigger number pulls the picture in from that
+   edge) until the frame is just visible on every side, then set `PAGE=guide`. Margins take a
+   reboot; the page only `systemctl restart retro-tv`. As a starting point, a 12-inch set
+   through a converter needed left 19, right 21, top 10, bottom 6.
 
 `setup.sh` is written to be safe to run repeatedly: it installs what is missing, rewrites the
-files it owns, and leaves the rest alone.
+files it owns, and leaves the rest alone. A full install takes about 4 minutes.
 
 ## Step 2: the image (`pi-gen`)
 
-Later. A `pi-gen` stage that runs `setup.sh` inside the image build, plus the read-only overlay
-and the `/data` partition, produces `retro-tv-<date>.img.xz`. Building needs a Linux machine
-(the Garuda laptop, or WSL on the PC) and about 30 minutes. Until then, step 1 gives a working
-box, just not a one-file one.
+Not built yet. A `pi-gen` stage that runs `setup.sh` inside the image build, plus the read-only
+overlay and the `/data` partition, produces `retro-tv-<date>.img.xz`. Building needs a Linux
+machine (or WSL) and about 30 minutes. Until then, step 1 gives a working box, just not a
+one-file one.
 
 ## Display details
 
-- **HDMI 640×480 (now):** `video=HDMI-A-1:640x480@60D` on the kernel command line plus the
-  margins (`margin_left=…` and so on), the same mechanism the Trinitron uses. The converter
-  makes 480i from it.
-- **Composite (later):** `dtoverlay=vc4-kms-v3d,composite` and `enable_tvout=1` in
-  `config.txt`, and `video=Composite-1:720x480@60ie` on the command line (NTSC). The picture is
-  720×480 with non-square pixels; the viewer's `?tv` layout is 640×480 and is stretched to fit,
-  which is what a 4:3 CRT expects. Margins work the same way.
-- The 12-inch tube is small: text that reads fine on the 19-inch Trinitron may need a size
-  bump. The viewer's design units make that a CSS change.
+- **HDMI 640×480:** `video=HDMI-A-1:640x480@60` on the kernel command line plus the margins
+  (`margin_left=…` and so on), the same mechanism as the Batocera Pi's CRT profile. The
+  converter makes 480i from it. The mode is also given for `HDMI-A-2`, so either port works.
+- **Composite:** `dtoverlay=vc4-kms-v3d,composite` and `enable_tvout=1` in `config.txt`, and
+  `video=Composite-1:720x480@60ie` on the command line (NTSC). The picture is 720×480 with
+  non-square pixels; the viewer's `?tv` layout is 640×480 and is stretched to fit, which is what
+  a 4:3 CRT expects. Margins work the same way.
+- On a small tube (12 inches) the guide's text is on the small side; the viewer's design units
+  make a size bump a CSS change.
 
 ## The remote
 
@@ -165,52 +169,42 @@ box, just not a one-file one.
   to the TV. `ir-keytable` loads it through `/etc/rc_maps.cfg` whenever the receiver appears.
 - **Any other remote** can be used once its codes are known: `ir-keytable -t` prints what the
   receiver sees while you press buttons, and the map is a text file.
-- **Universal remote:** program the TV device with the Sylvania's codes and the box as a
+- **Universal remote:** program the TV device with the TV's codes and the box as a
   "Media Center PC" (or learn the MCE remote's codes), with volume and power punched through to
   the TV.
 
-## Learned on the first boot
+## Things that bit, and their fixes
 
-- **Pi OS Lite is Debian 13 (Trixie)** here; the packages are `chromium` and `cage` (0.3.1, a
-  Raspberry Pi build), both in the standard repository. The whole install takes about 4 minutes.
+Each of these is handled by `setup.sh` or the kiosk script now; they are listed so the reasons
+survive.
+
 - **The compositor picks the display's preferred mode, not the kernel's.** `cage` (wlroots)
-  started the converter at its preferred 1280×720 whatever `video=` said. The kiosk script
-  now sets the mode from inside the session with `wlr-randr` before starting Chromium; the
-  kernel line still carries the mode and the margins (the margins are connector properties the
-  compositor leaves alone).
+  started the converter at its preferred 1280×720 whatever `video=` said. The kiosk script sets
+  the mode from inside the session with `wlr-randr` before starting Chromium; the kernel line
+  still carries the mode and the margins (the margins are connector properties the compositor
+  leaves alone).
 - **Never write `@60D` in `video=`.** The `D` suffix means "force this connector on". With it,
-  the empty HDMI port 1 became a phantom 1024×768 display, and `cage` spread the screen across
-  both. Plain `@60`, and the mode is given for both HDMI ports so either one can be used. The
-  same goes for `hdmi_force_hotplug=1`, which is not needed: the converter presents an EDID.
+  the empty second HDMI port became a phantom 1024×768 display and `cage` spread the screen
+  across both. Plain `@60`, given for both ports. The same goes for `hdmi_force_hotplug=1`,
+  which is not needed: the converter presents an EDID.
 - **The CEC devices are the "mouse".** Each HDMI port has a CEC remote-control input that
   libinput classes as keyboard + pointer, and a pointer makes `cage` draw a cursor in the middle
   of the screen. A udev rule hides them (and game pads) from libinput; with no input devices
   left, wlroots refuses to start unless `WLR_LIBINPUT_NO_DEVICES=1` is set, so the service sets
   it. The viewer also hides the pointer in `?tv` mode.
-- **Imager's user has no passwordless `sudo` on this image.** A line in `/etc/sudoers.d/` gives
-  it, as every stock Pi OS has; `setup.sh` needs root.
-- **Boot to SSH is about 25 s.**
-- **Margins on the 12-inch Sylvania through the converter: left 19, right 21, top 10,
-  bottom 6** (the Trinitron's were 13/27/0/20). Tuned with the test pattern: `PAGE=overscan` in
-  `/etc/retro-tv.env`, `sudo pi-image/setup.sh`, reboot, and adjust until the white 0 px frame
-  is just visible on every side; then `PAGE=guide`. The margins take a reboot; the page only a
-  `systemctl restart retro-tv`.
 - **Sound defaulted to the headphone jack.** PipeWire picks the 3.5 mm jack as the default
-  output, so the converter got silence. The kiosk script now makes the HDMI output the default
-  at full volume (the jack in composite mode, where it carries the sound).
+  output, so HDMI got silence. The kiosk script makes the HDMI output the default at full volume
+  (the jack in composite mode, where it carries the sound).
 
-## Open items
+## Not yet
 
-- Confirm sound through the converter while a channel plays; the boot splash; the IR receiver
-  when it arrives.
-- Whether Plymouth on Pi OS runs from the initramfs (then a theme change also regenerates it in
-  the background, which the theme service already does if it finds one).
-- A "standby" action for the remote's power button: blank the picture and stop the stream, in
-  the viewer. Needs a small viewer change.
-- The box controlling the TV through an IR emitter (power on with the box, off at standby).
-- Tailscale: install, sign in from a phone, accept the home subnet route; a settings-screen
-  switch for it would need the box to expose a second local endpoint like `/pi/theme`.
-- Font sizes on the 12-inch tube.
+- The Pi's own composite output and the IR receiver have not been tried on hardware.
+- A "standby" action for the remote's power button (blank the picture, stop the stream) needs a
+  small viewer change.
+- The box controlling the TV through an IR emitter.
+- Tailscale: a settings-screen switch for it would need a second local endpoint like
+  `/pi/theme`.
+- Step 2, the image.
 
 ## Conventions
 
