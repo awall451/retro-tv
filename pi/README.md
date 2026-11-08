@@ -131,7 +131,7 @@ margins are hardware DRM properties set on the kernel command line from
 - **Standard and HD.** The server gives every channel an HD twin (number + 100, group `HD`).
   Kodi loads every group; the guide opens on the `ErsatzTV` group or the `HD` group according
   to the Quality setting, so channel up/down stays within the set you picked. In HD the numbers
-  read 101–136 (Kodi's labels cannot subtract 100). Group names are constants at the top of
+  read 101 and up (Kodi's labels cannot subtract 100). Group names are constants at the top of
   `make_kodi_skin.sh`, which reads each group's PVR client id from Kodi's TV database to build
   the `pvr://channels/tv/<group>@<id>/` paths the guide is opened with; before the groups exist
   (first run) Home → TV opens the guide on its last group.
