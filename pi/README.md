@@ -97,7 +97,7 @@ changes, and reboots (about 30 s).
 | Shader set | `trinitron-hdmi`: crt-pi with an aperture-grille mask, horizontal curvature; LCD looks for handhelds | `trinitron-crt`: none; the tube draws the real thing |
 | Menu theme | Stock Carbon | Carbon CRT: bold, white, bigger titles (1-pixel strokes flicker on 480i) |
 | Control Center | Stock | Compact 12 px bold layout that fits 640 px |
-| Kodi skin | Estuary | Estuary CRT: every font bold and 1.5×, the retro TV guide, channel banner, big show details |
+| Kodi skin | Estuary Retro: the retro TV guide, channel banner and show details laid out for 16:9 | Estuary CRT: the same screens on the 4:3 canvas, plus every font bold and 1.5× |
 | Plex (PM4K) quality | Original | 480p, 1.5 Mbps (software decoding) |
 
 <table><tr><td align="center"><img src="../docs/img/readme/es-snes-1080.jpg" width="600"><br><sub>HDMI profile: 1080p, stock Carbon</sub></td><td align="center"><img src="../docs/img/readme/es-snes-640.png" width="600"><br><sub>Trinitron profile: 640×480, Carbon CRT (bold, bigger, no thin strokes)</sub></td></tr></table>
@@ -118,7 +118,8 @@ margins are hardware DRM properties set on the kernel command line from
   details beside it. Home → TV opens it. A channel banner
   ([`kodi-skin/crt-banner.xml`](kodi-skin/crt-banner.xml)) shows on channel change or Info, and
   show details ([`kodi-skin/DialogPVRInfo.xml`](kodi-skin/DialogPVRInfo.xml)) get big bold text and
-  a Watch now button. Coordinates are Estuary's 1920×1440 canvas, 3× the real pixels.
+  a Watch now button. The files in `kodi-skin/` use Estuary's 4:3 canvas (1920×1440, 3× the
+  real pixels); `kodi-skin/hdmi/` holds the same screens for 16:9 at 1080p.
 - **Controller** ([`kodi-skin/livetv-controller.xml`](kodi-skin/livetv-controller.xml)): Cross/A
   pauses or switches to the highlighted channel; Circle/B opens the guide with the show still
   playing (hold to stop); Square/X shows controls or details.
@@ -139,6 +140,10 @@ margins are hardware DRM properties set on the kernel command line from
 
 <table><tr><td align="center"><img src="../docs/img/readme/kodi-banner-640.png" width="400"><br><sub>The channel banner on a channel change</sub></td><td align="center"><img src="../docs/img/readme/kodi-guide-office-640.png" width="400"><br><sub>Moving around the grid</sub></td><td align="center"><img src="../docs/img/readme/kodi-watching-640.png" width="400"><br><sub>Watching: no overlay at all</sub></td></tr></table>
 
+<p align="center"><sub>The same screens on a 16:9 TV, from the HDMI profile's Estuary Retro:</sub></p>
+
+<table><tr><td align="center"><img src="../docs/img/readme/kodi-guide-1080.jpg" width="400"><br><sub>The guide at 1080p: 8 channels by 2½ hours</sub></td><td align="center"><img src="../docs/img/readme/kodi-details-1080.jpg" width="400"><br><sub>Show details</sub></td><td align="center"><img src="../docs/img/readme/kodi-banner-1080.jpg" width="400"><br><sub>The channel banner</sub></td></tr></table>
+
 ## What is in this folder
 
 | Path | Installed on the Pi as |
@@ -148,7 +153,7 @@ margins are hardware DRM properties set on the kernel command line from
 | `display-profiles/crt-margins.conf` | The Trinitron's overscan margins |
 | `display-profiles/make_crt_theme.sh` | Builds the Carbon CRT theme (`/userdata/themes/es-theme-carbon-crt`) |
 | `display-profiles/make_bcc_compact_css.py`, `make_bcc_layout.py` | Control Center stylesheet and layout |
-| `display-profiles/make_kodi_crt_skin.sh` + `kodi-skin/` | Builds and enables Kodi's Estuary CRT skin; stops cleanly and falls back to stock Estuary if a Batocera update changed Estuary |
+| `display-profiles/make_kodi_skin.sh` + `kodi-skin/` | Builds and enables the retro Kodi skin: `crt` (4:3, big bold fonts; screens in `kodi-skin/`) or `hdmi` (16:9; screens in `kodi-skin/hdmi/`). Stops cleanly and falls back to stock Estuary if a Batocera update changed Estuary |
 | `display-profiles/kodi_tv_settings.py` | Kodi live-TV settings, controller map, the HD group filter (`--groups` refreshes only the groups) |
 | `display-profiles/overscan-test.png` | The margin test pattern (bands 8 px apart) |
 | `scripts/` | `/userdata/system/scripts/`: Batocera's per-launch hooks |

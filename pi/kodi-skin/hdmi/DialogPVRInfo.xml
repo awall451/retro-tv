@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Show details pop-up (guide: Square / Info) for the 16:9 skin (skin.estuary.retro).
+  Replaces Estuary's DialogPVRInfo.xml, which Kodi also uses for recording details.
+  1920x1080 canvas = real 1080p pixels. Same design as ../DialogPVRInfo.xml (4:3).
+  Button ids are Kodi's: 5 switch to channel, 8 play recording, 6 record.
+-->
+<window>
+	<defaultcontrol always="true">5</defaultcontrol>
+	<controls>
+		<control type="group">
+			<animation effect="fade" start="0" end="100" time="150">WindowOpen</animation>
+			<animation effect="fade" start="100" end="0" time="120">WindowClose</animation>
+			<!-- yellow frame and navy panel, centred, with the picture dimmed behind -->
+			<control type="image">
+				<left>0</left>
+				<top>0</top>
+				<width>1920</width>
+				<height>1080</height>
+				<texture colordiffuse="A0000000">colors/white.png</texture>
+			</control>
+			<control type="image">
+				<left>234</left>
+				<top>114</top>
+				<width>1452</width>
+				<height>852</height>
+				<texture colordiffuse="FFF2C200">colors/white.png</texture>
+			</control>
+			<control type="image">
+				<left>240</left>
+				<top>120</top>
+				<width>1440</width>
+				<height>840</height>
+				<texture colordiffuse="FF0A1240">colors/white.png</texture>
+			</control>
+			<control type="group">
+				<left>300</left>
+				<top>160</top>
+				<width>1320</width>
+				<control type="label">
+					<top>0</top>
+					<height>44</height>
+					<font>retro_guide</font>
+					<textcolor>FFF2C200</textcolor>
+					<label>$INFO[ListItem.ChannelNumberLabel,Ch , · ]$INFO[ListItem.ChannelName]</label>
+				</control>
+				<control type="label">
+					<top>48</top>
+					<height>76</height>
+					<font>retro_big</font>
+					<textcolor>FFFFFFFF</textcolor>
+					<scroll>true</scroll>
+					<label>$INFO[ListItem.Title]</label>
+				</control>
+				<control type="label">
+					<top>128</top>
+					<height>44</height>
+					<font>retro_info</font>
+					<textcolor>FFCFE0FF</textcolor>
+					<scroll>true</scroll>
+					<label>$INFO[ListItem.EpisodeName,&quot;,&quot;]</label>
+				</control>
+				<control type="label">
+					<top>176</top>
+					<height>44</height>
+					<font>retro_info</font>
+					<textcolor>FFFFFFFF</textcolor>
+					<label>$INFO[ListItem.StartTime]$INFO[ListItem.EndTime, – ]$INFO[ListItem.ParentalRatingCode,  ·  ]$INFO[ListItem.Genre,  ·  ]</label>
+				</control>
+				<control type="textbox">
+					<top>240</top>
+					<height>400</height>
+					<font>retro_info</font>
+					<textcolor>FFCFE0FF</textcolor>
+					<label>$INFO[ListItem.Plot]</label>
+					<autoscroll delay="6000" time="3000" repeat="6000">true</autoscroll>
+				</control>
+			</control>
+			<!-- buttons: Watch now (or Play for recordings) and Record -->
+			<control type="grouplist" id="9000">
+				<left>300</left>
+				<top>820</top>
+				<width>1320</width>
+				<height>96</height>
+				<itemgap>24</itemgap>
+				<orientation>horizontal</orientation>
+				<onleft>9000</onleft>
+				<onright>9000</onright>
+				<control type="button" id="5">
+					<width>420</width>
+					<height>96</height>
+					<font>retro_title</font>
+					<textoffsetx>24</textoffsetx>
+					<align>center</align>
+					<aligny>center</aligny>
+					<label>Watch now</label>
+					<textcolor>FFFFFFFF</textcolor>
+					<focusedcolor>FF0A1240</focusedcolor>
+					<texturefocus colordiffuse="FFF2C200">colors/white.png</texturefocus>
+					<texturenofocus colordiffuse="FF1C3FA8">colors/white.png</texturenofocus>
+					<visible>Window.IsActive(PVRGuideInfo)</visible>
+				</control>
+				<control type="button" id="8">
+					<width>420</width>
+					<height>96</height>
+					<font>retro_title</font>
+					<align>center</align>
+					<aligny>center</aligny>
+					<label>Play</label>
+					<textcolor>FFFFFFFF</textcolor>
+					<focusedcolor>FF0A1240</focusedcolor>
+					<texturefocus colordiffuse="FFF2C200">colors/white.png</texturefocus>
+					<texturenofocus colordiffuse="FF1C3FA8">colors/white.png</texturenofocus>
+					<visible>Window.IsActive(PVRRecordingInfo)</visible>
+				</control>
+				<control type="button" id="6">
+					<width>320</width>
+					<height>96</height>
+					<font>retro_title</font>
+					<align>center</align>
+					<aligny>center</aligny>
+					<textcolor>FFFFFFFF</textcolor>
+					<focusedcolor>FF0A1240</focusedcolor>
+					<texturefocus colordiffuse="FFF2C200">colors/white.png</texturefocus>
+					<texturenofocus colordiffuse="FF1C3FA8">colors/white.png</texturenofocus>
+					<visible>Window.IsActive(PVRGuideInfo)</visible>
+				</control>
+			</control>
+		</control>
+	</controls>
+</window>

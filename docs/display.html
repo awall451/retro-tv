@@ -130,8 +130,8 @@ mpv --fs --osd-level=0 --image-display-duration=inf /userdata/system/display-pro
     <li>The converter doesn't pass HDMI-CEC, so a TV remote won't drive Kodi on the Trinitron; the PS5 controller does.</li>
     <li>PM4K's own menus at 640×480 haven't been checked on the tube yet.</li>
   </ul>
-  <h3>The retro TV guide (Trinitron)</h3>
-  <p>Stock Estuary lays out a 4:3 screen on a 1920×1440 canvas, so at 640×480 everything is drawn at a third of its size: list text came out 8–10 px tall. The Trinitron profile switches Kodi to <strong>Estuary CRT</strong>, a copy of Estuary built by <code>make_kodi_crt_skin.sh</code> (screens of our own are in <code>pi/kodi-skin/</code>):</p>
+  <h3>The retro TV guide</h3>
+  <p>Both profiles replace Kodi's live-TV screens with the retro guide; <code>make_kodi_skin.sh crt|hdmi</code> builds a copy of Estuary with them and the profile selects it. The HDMI profile's <strong>Estuary Retro</strong> lays the screens out for 16:9 at 1080p (<code>pi/kodi-skin/hdmi/</code>, 8 channels by 2½ hours) and leaves Estuary's own fonts alone. The Trinitron's <strong>Estuary CRT</strong> has more to do: stock Estuary lays out a 4:3 screen on a 1920×1440 canvas, so at 640×480 everything is drawn at a third of its size and list text came out 8–10 px tall. Its screens are in <code>pi/kodi-skin/</code>:</p>
   <ul>
     <li><strong>Every font bigger and bold:</strong> all 50 of Estuary's fonts become Cabin Bold at 1.5× (display sizes 1.25×, the clock 1.1× so it stays on screen), and Estuary's thin "lighten" style is dropped. List text goes from about 10 to 15 px on the tube, in menus, settings, the channel list and the Plex add-on (which uses the skin's font names).</li>
     <li><strong>TV guide</strong> (<code>MyPVRGuide.xml</code>): a late-90s cable-style grid, navy and yellow, 8 channels by 90 minutes, with the show you're watching in a framed box and the highlighted show's details beside it. The video zooms from full screen into the box. Home → TV opens it instead of the channel list.</li>

@@ -111,14 +111,16 @@ fi
 
 # Kodi live TV. Both profiles: Select in the guide switches channel, guide refresh every
 # 15 minutes, Circle opens the guide without stopping the show (kodi_tv_settings.py).
-# Trinitron: the "Estuary CRT" skin with the retro guide (make_kodi_crt_skin.sh, rebuilt
-# from stock Estuary each time); HDMI: stock Estuary. Kodi is closed at this point.
+# Both profiles get a copy of Estuary with the retro guide, details and banner, rebuilt from
+# stock Estuary each time (make_kodi_skin.sh): "Estuary CRT" for the Trinitron (4:3 canvas,
+# big bold fonts), "Estuary Retro" for a 16:9 TV. If the build fails, stock Estuary. Kodi is
+# closed at this point.
 KODI_GUI=/userdata/system/.kodi/userdata/guisettings.xml
 python3 /userdata/system/display-profiles/kodi_tv_settings.py >> "$LOG" 2>&1
 if [ "$profile" = crt ]; then
-    /userdata/system/display-profiles/make_kodi_crt_skin.sh >> "$LOG" 2>&1 && kodi_skin=skin.estuary.crt || kodi_skin=skin.estuary
+    /userdata/system/display-profiles/make_kodi_skin.sh crt >> "$LOG" 2>&1 && kodi_skin=skin.estuary.crt || kodi_skin=skin.estuary
 else
-    kodi_skin=skin.estuary
+    /userdata/system/display-profiles/make_kodi_skin.sh hdmi >> "$LOG" 2>&1 && kodi_skin=skin.estuary.retro || kodi_skin=skin.estuary
 fi
 if [ -f "$KODI_GUI" ]; then
     cp "$KODI_GUI" "$BACKUPS/guisettings.xml.$stamp"

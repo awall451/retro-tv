@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Retro cable-style TV guide for a 16:9 screen (skin.estuary.retro, the HDMI profile).
+  Replaces Estuary's MyPVRGuide.xml in that copy of the skin. Same design as the 4:3 version
+  in ../MyPVRGuide.xml, laid out on Estuary's 16:9 canvas (1920x1080 = real 1080p pixels):
+  the show you are watching in a framed box top left, the highlighted show's details beside
+  it, and below them 8 channels by 2.5 hours. Fonts retro_* are added to Font.xml by
+  make_kodi_skin.sh (Cabin Bold at ordinary 1080p sizes).
+-->
+<window>
+	<defaultcontrol always="true">50</defaultcontrol>
+	<views>50</views>
+	<controls>
+		<!-- navy background -->
+		<control type="image">
+			<left>0</left>
+			<top>0</top>
+			<width>1920</width>
+			<height>1080</height>
+			<texture colordiffuse="FF0A1240">colors/white.png</texture>
+		</control>
+
+		<!-- preview: what's playing now, in a yellow frame -->
+		<control type="image">
+			<left>30</left>
+			<top>30</top>
+			<width>612</width>
+			<height>350</height>
+			<texture colordiffuse="FFF2C200">colors/white.png</texture>
+		</control>
+		<control type="image">
+			<left>36</left>
+			<top>36</top>
+			<width>600</width>
+			<height>338</height>
+			<texture colordiffuse="FF000000">colors/white.png</texture>
+		</control>
+		<control type="videowindow">
+			<left>36</left>
+			<top>36</top>
+			<width>600</width>
+			<height>338</height>
+			<visible>Player.HasVideo</visible>
+			<animation effect="zoom" start="0,0,1920,1080" end="36,36,600,338" time="350" tween="cubic" easing="out">WindowOpen</animation>
+			<animation effect="zoom" start="36,36,600,338" end="0,0,1920,1080" time="300" tween="cubic" easing="in">WindowClose</animation>
+		</control>
+		<control type="label">
+			<left>36</left>
+			<top>36</top>
+			<width>600</width>
+			<height>338</height>
+			<align>center</align>
+			<aligny>center</aligny>
+			<font>retro_info</font>
+			<textcolor>FFCFE0FF</textcolor>
+			<label>Press Select on a show to watch</label>
+			<visible>!Player.HasVideo</visible>
+		</control>
+
+		<!-- details of the highlighted show -->
+		<control type="group">
+			<left>684</left>
+			<top>30</top>
+			<width>1206</width>
+			<control type="label">
+				<top>0</top>
+				<height>44</height>
+				<font>retro_guide</font>
+				<textcolor>FFF2C200</textcolor>
+				<label>$INFO[ListItem.ChannelNumberLabel,Ch , · ]$INFO[ListItem.ChannelName]</label>
+			</control>
+			<control type="label">
+				<top>46</top>
+				<height>62</height>
+				<font>retro_title</font>
+				<textcolor>FFFFFFFF</textcolor>
+				<scroll>true</scroll>
+				<label>$INFO[ListItem.Title]</label>
+			</control>
+			<control type="label">
+				<top>110</top>
+				<height>44</height>
+				<font>retro_info</font>
+				<textcolor>FFCFE0FF</textcolor>
+				<label>$INFO[ListItem.EpisodeName,&quot;,&quot;]</label>
+			</control>
+			<control type="label">
+				<top>154</top>
+				<height>44</height>
+				<font>retro_info</font>
+				<textcolor>FFFFFFFF</textcolor>
+				<label>$INFO[ListItem.StartTime]$INFO[ListItem.EndTime, – ]$INFO[ListItem.ParentalRatingCode,  ·  ]</label>
+			</control>
+			<control type="textbox">
+				<top>208</top>
+				<height>172</height>
+				<font>retro_plot</font>
+				<textcolor>FFCFE0FF</textcolor>
+				<label>$INFO[ListItem.Plot]</label>
+				<autoscroll delay="8000" time="3000" repeat="8000">true</autoscroll>
+			</control>
+		</control>
+
+		<!-- the grid: 8 channel rows x 150 minutes (30 five-minute blocks) -->
+		<control type="epggrid" id="50">
+			<left>0</left>
+			<top>416</top>
+			<width>1920</width>
+			<height>664</height>
+			<orientation>vertical</orientation>
+			<scrolltime tween="quadratic" easing="out">200</scrolltime>
+			<timeblocks>30</timeblocks>
+			<rulerunit>6</rulerunit>
+			<viewtype label="19298">list</viewtype>
+			<!-- Circle/Back: back to the show if one is playing, otherwise normal Back -->
+			<onback condition="Player.HasVideo">FullScreen</onback>
+			<rulerlayout height="64" width="318">
+				<!-- Kodi's first ruler item is the date and sits over the channel column: show day and clock there -->
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>324</width>
+					<height>58</height>
+					<texture colordiffuse="FFF2C200">colors/white.png</texture>
+					<visible>!String.Contains(ListItem.Label,:)</visible>
+				</control>
+				<control type="label">
+					<left>18</left>
+					<top>0</top>
+					<width>300</width>
+					<height>58</height>
+					<aligny>center</aligny>
+					<font>retro_guide</font>
+					<textcolor>FF0A1240</textcolor>
+					<label>$INFO[System.Date(ddd)] $INFO[System.Time]</label>
+					<visible>!String.Contains(ListItem.Label,:)</visible>
+				</control>
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>312</width>
+					<height>58</height>
+					<texture colordiffuse="FF5A7FE0">colors/white.png</texture>
+					<visible>String.Contains(ListItem.Label,:)</visible>
+				</control>
+				<control type="label">
+					<left>18</left>
+					<top>0</top>
+					<width>290</width>
+					<height>58</height>
+					<aligny>center</aligny>
+					<font>retro_guide</font>
+					<textcolor>FFFFFFFF</textcolor>
+					<label>$INFO[ListItem.Label]</label>
+					<visible>String.Contains(ListItem.Label,:)</visible>
+				</control>
+			</rulerlayout>
+			<channellayout height="75" width="330">
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>324</width>
+					<height>69</height>
+					<texture colordiffuse="FF1C3FA8">colors/white.png</texture>
+				</control>
+				<control type="label">
+					<left>18</left>
+					<top>0</top>
+					<width>300</width>
+					<height>69</height>
+					<aligny>center</aligny>
+					<font>retro_guide</font>
+					<textcolor>FFFFFFFF</textcolor>
+					<label>$INFO[ListItem.ChannelNumberLabel,, ]$INFO[ListItem.ChannelName]</label>
+				</control>
+			</channellayout>
+			<focusedchannellayout height="75" width="330">
+				<control type="image">
+					<left>0</left>
+					<top>0</top>
+					<width>324</width>
+					<height>69</height>
+					<texture colordiffuse="FFF2C200">colors/white.png</texture>
+				</control>
+				<control type="label">
+					<left>18</left>
+					<top>0</top>
+					<width>300</width>
+					<height>69</height>
+					<aligny>center</aligny>
+					<font>retro_guide</font>
+					<textcolor>FF0A1240</textcolor>
+					<label>$INFO[ListItem.ChannelNumberLabel,, ]$INFO[ListItem.ChannelName]</label>
+				</control>
+			</focusedchannellayout>
+			<itemlayout height="75" width="53">
+				<control type="image" id="2">
+					<left>0</left>
+					<top>0</top>
+					<width>47</width>
+					<height>69</height>
+					<texture colordiffuse="FF0F2A7A">colors/white.png</texture>
+				</control>
+				<control type="label" id="1">
+					<left>18</left>
+					<top>0</top>
+					<height>69</height>
+					<aligny>center</aligny>
+					<font>retro_guide</font>
+					<textcolor>FFFFFFFF</textcolor>
+					<label>$INFO[ListItem.Label]</label>
+				</control>
+			</itemlayout>
+			<focusedlayout height="75" width="53">
+				<control type="image" id="2">
+					<left>0</left>
+					<top>0</top>
+					<width>47</width>
+					<height>69</height>
+					<texture colordiffuse="FFF2C200">colors/white.png</texture>
+				</control>
+				<control type="label" id="1">
+					<left>18</left>
+					<top>0</top>
+					<height>69</height>
+					<aligny>center</aligny>
+					<font>retro_guide</font>
+					<textcolor>FF0A1240</textcolor>
+					<label>$INFO[ListItem.Label]</label>
+				</control>
+			</focusedlayout>
+		</control>
+	</controls>
+</window>
