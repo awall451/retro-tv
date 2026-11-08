@@ -1,7 +1,7 @@
 # Commercials for retro channels
 
 The commercials, trailers and bumpers that play between programmes on our ErsatzTV channels:
-**1,815 clips in 24 sets, plus two small news sets, all from the Internet Archive**, with a record of where every clip came
+**1,838 clips in 24 sets, plus two small news sets, all from the Internet Archive**, with a record of where every clip came
 from, how it was cut, and what we threw out and why. `build.py` rebuilds any set on your machine
 from that record.
 
@@ -29,7 +29,7 @@ link to them, and what you do with them is up to you.
 | `cars` | 25 | Car ads: 1950s–60s classics, 80s Toyota and Chevrolet, 2000s European ads | `Classic_Car_Commercials_From_The_50s_and_60s_1993_Moon_River_Tape`, `top-10-car-commercials`, single items |
 | `scifi` | 110 | SCI FI Channel breaks 1996–2005: promos, "IF" idents, Sci Fi Friday, and the ads that ran with them | `capture-a-*` "Sci-Fi Channel commercials", `sci-fi-channel-i-am-sci-fi-promos`, `sci-fi-channel-idents-and-bumpers-compiliation` |
 | `discovery` | 41 | Discovery Channel promos (1999), History Channel promos (1999, 2003), a Mail Call promo (2002) | `1999DiscoveryChannelPromos` (1, 2), `February1999HistoryChannelPromos`, `22January2003HistoryChannelPromos`, `history-channel-mail-call-promo-usa-2002` |
-| `comedycentral` | 125 | Comedy Central breaks 1995–2002: promos (The Man Show, TV Funhouse, The Daily Show, Crank Yankers) and period ads; 2004 promos | `capture-a-*` "Comedy Central commercials", `2000-comedy-cntrl`, `comedy-central-commercials-july-5-2002`, `MNN-002_*` |
+| `comedycentral` | 148 | Comedy Central breaks 1995–2002: promos (The Man Show, TV Funhouse, The Daily Show, Crank Yankers) and period ads; 2004 promos | `capture-a-*` "Comedy Central commercials", `2000-comedy-cntrl`, `comedy-central-commercials-july-5-2002`, `MNN-002_*` |
 | `wb` | 132 | WB network breaks 1998–2002: Charmed and Dawson's Creek promos, Michigan J. Frog, period ads | `Commercials_The_WB_WBNE_New_Haven_Connecticut_1998`, `capture-a-*` "WB commercials" |
 | `drivein` | 14 | Drive-in snack bar ads and intermission reels | `SnackBar*` items, `Drive-inSnackBarAd`, `1953_Movie_Trailers_Intermission_*`, `Commercials39` |
 | `sixties` | 13 | Early-1960s daytime ads (Ivory Snow, Dash, Carnation, Camay) | `Early1960sDaytimeCommercials` |
@@ -55,8 +55,7 @@ The sets added on 2026-11-08 go with channels of the same name (MCU films get `m
 and running timecode (two Periscope Film uploads, 97 pieces), VHS tracking noise over the whole
 picture, VCR on-screen displays, black or title-card pieces, pieces over about two minutes, and
 software demo videos that never aired. Two sources were mislabelled (one "2000s/2010s ads" item is
-Steamboat Willie). 24 Comedy Central 2004 sources (`MNN-002_*`) are marked "not used": their
-download had not finished when the catalog was written.
+Steamboat Willie).
 
 ## Rebuilding a set
 
