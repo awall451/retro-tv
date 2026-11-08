@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Settings dialog for the retro live-TV screens (4:3 Trinitron skin). Opens with Triangle / Y or the
+  S key in the guide and while watching (keymaps/livetv-controller.xml), window id 1150.
+  Each row flips a skin setting; the screens read the settings through $VAR[Retro*] and the
+  Home → TV item (make_kodi_skin.sh), so Theme and Banner apply at once and Quality when the
+  guide is opened next. 1920x1440 canvas = 3x the real 640x480 pixels.
+-->
+<window id="1150" type="dialog">
+	<defaultcontrol always="true">9100</defaultcontrol>
+	<animation effect="fade" start="0" end="100" time="150">WindowOpen</animation>
+	<animation effect="fade" start="100" end="0" time="120">WindowClose</animation>
+	<controls>
+		<control type="image">
+			<left>0</left><top>0</top><width>1920</width><height>1440</height>
+			<texture colordiffuse="A0000000">colors/white.png</texture>
+		</control>
+		<control type="image">
+			<left>354</left><top>264</top><width>1212</width><height>912</height>
+			<texture colordiffuse="$VAR[RetroYellow]">colors/white.png</texture>
+		</control>
+		<control type="image">
+			<left>360</left><top>270</top><width>1200</width><height>900</height>
+			<texture colordiffuse="$VAR[RetroNavy]">colors/white.png</texture>
+		</control>
+		<control type="label">
+			<left>420</left><top>300</top><width>1080</width><height>90</height>
+			<font>crt_title</font><visible>!Skin.HasSetting(retro.vapor)</visible><textcolor>$VAR[RetroAccent]</textcolor>
+			<label>Settings for this TV</label>
+		</control>
+		<control type="label">
+			<left>420</left><top>300</top><width>1080</width><height>90</height>
+			<font>crt_title_vapor</font><visible>Skin.HasSetting(retro.vapor)</visible><textcolor>$VAR[RetroAccent]</textcolor>
+			<label>Settings for this TV</label>
+		</control>
+		<control type="grouplist" id="9100">
+			<left>420</left><top>414</top><width>1080</width><height>560</height>
+			<itemgap>18</itemgap>
+			<orientation>vertical</orientation>
+			<onup>9100</onup>
+			<ondown>9100</ondown>
+			<control type="button" id="9101">
+				<width>1080</width><height>120</height>
+				<font>crt_info</font>
+				<textoffsetx>36</textoffsetx>
+				<aligny>center</aligny>
+				<label>Theme</label>
+				<label2>$VAR[RetroThemeName]</label2>
+				<textcolor>FFFFFFFF</textcolor>
+				<focusedcolor>$VAR[RetroInk]</focusedcolor>
+				<texturefocus colordiffuse="$VAR[RetroYellow]">colors/white.png</texturefocus>
+				<texturenofocus colordiffuse="$VAR[RetroChannel]">colors/white.png</texturenofocus>
+				<onclick>Skin.ToggleSetting(retro.vapor)</onclick>
+			</control>
+			<control type="button" id="9102">
+				<width>1080</width><height>120</height>
+				<font>crt_info</font>
+				<textoffsetx>36</textoffsetx>
+				<aligny>center</aligny>
+				<label>Quality</label>
+				<label2>$VAR[RetroQualityName]</label2>
+				<textcolor>FFFFFFFF</textcolor>
+				<focusedcolor>$VAR[RetroInk]</focusedcolor>
+				<texturefocus colordiffuse="$VAR[RetroYellow]">colors/white.png</texturefocus>
+				<texturenofocus colordiffuse="$VAR[RetroChannel]">colors/white.png</texturenofocus>
+				<onclick>Skin.ToggleSetting(retro.hd)</onclick>
+			</control>
+			<control type="button" id="9103">
+				<width>1080</width><height>120</height>
+				<font>crt_info</font>
+				<textoffsetx>36</textoffsetx>
+				<aligny>center</aligny>
+				<label>Channel banner</label>
+				<label2>$VAR[RetroBannerName]</label2>
+				<textcolor>FFFFFFFF</textcolor>
+				<focusedcolor>$VAR[RetroInk]</focusedcolor>
+				<texturefocus colordiffuse="$VAR[RetroYellow]">colors/white.png</texturefocus>
+				<texturenofocus colordiffuse="$VAR[RetroChannel]">colors/white.png</texturenofocus>
+				<onclick>Skin.ToggleSetting(retro.banner.large)</onclick>
+			</control>
+			<control type="button" id="9109">
+				<width>1080</width><height>120</height>
+				<font>crt_info</font>
+				<align>center</align>
+				<aligny>center</aligny>
+				<label>Done</label>
+				<textcolor>FFFFFFFF</textcolor>
+				<focusedcolor>$VAR[RetroInk]</focusedcolor>
+				<texturefocus colordiffuse="$VAR[RetroYellow]">colors/white.png</texturefocus>
+				<texturenofocus colordiffuse="$VAR[RetroProgram]">colors/white.png</texturenofocus>
+				<onclick>Dialog.Close(1150)</onclick>
+			</control>
+		</control>
+		<control type="textbox">
+			<left>420</left><top>1000</top><width>1080</width><height>150</height>
+			<font>crt_plot</font><textcolor>$VAR[RetroSoft]</textcolor>
+			<label>Quality picks the Standard or HD channel list the next time the guide opens. Theme and banner change straight away.</label>
+		</control>
+	</controls>
+</window>

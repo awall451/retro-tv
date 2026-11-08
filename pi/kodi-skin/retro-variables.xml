@@ -1,0 +1,52 @@
+<!--
+  Colours of the retro live-TV screens, as Kodi skin variables. make_kodi_skin.sh appends these
+  to the skin's Variables.xml for both variants (4:3 and 16:9). Every screen refers to colours
+  as $VAR[RetroX], so the theme switch in the settings dialog (Skin.ToggleSetting(retro.vapor))
+  recolours everything at once. Values are AARRGGBB; they mirror the browser viewer's two
+  themes in docker/web/app/css/guide.css (Cable, then Vaporwave). Fonts cannot be variables in
+  Kodi, so Vaporwave's Audiowide titles are second labels with a visible condition.
+-->
+<variable name="RetroNavy">
+	<value condition="Skin.HasSetting(retro.vapor)">FF0D0624</value>
+	<value>FF0A1240</value>
+</variable>
+<variable name="RetroProgram">
+	<value condition="Skin.HasSetting(retro.vapor)">FF2A0A4E</value>
+	<value>FF0F2A7A</value>
+</variable>
+<variable name="RetroChannel">
+	<value condition="Skin.HasSetting(retro.vapor)">FF4A1278</value>
+	<value>FF1C3FA8</value>
+</variable>
+<variable name="RetroTimebar">
+	<value condition="Skin.HasSetting(retro.vapor)">FF7B3FC4</value>
+	<value>FF5A7FE0</value>
+</variable>
+<variable name="RetroYellow">
+	<value condition="Skin.HasSetting(retro.vapor)">FFFF3FA4</value>
+	<value>FFF2C200</value>
+</variable>
+<variable name="RetroSoft">
+	<value condition="Skin.HasSetting(retro.vapor)">FFD9C8FF</value>
+	<value>FFCFE0FF</value>
+</variable>
+<variable name="RetroAccent">
+	<value condition="Skin.HasSetting(retro.vapor)">FF19E6FF</value>
+	<value>FFF2C200</value>
+</variable>
+<variable name="RetroInk">
+	<value condition="Skin.HasSetting(retro.vapor)">FF0D0624</value>
+	<value>FF0A1240</value>
+</variable>
+<variable name="RetroThemeName">
+	<value condition="Skin.HasSetting(retro.vapor)">Vaporwave</value>
+	<value>Cable</value>
+</variable>
+<variable name="RetroQualityName">
+	<value condition="Skin.HasSetting(retro.hd)">HD</value>
+	<value>Standard</value>
+</variable>
+<variable name="RetroBannerName">
+	<value condition="Skin.HasSetting(retro.banner.large)">Large</value>
+	<value>Compact</value>
+</variable>

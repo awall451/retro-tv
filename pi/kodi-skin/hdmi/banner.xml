@@ -1,84 +1,185 @@
 <!--
-  Live-TV channel banner for the 16:9 skin (skin.estuary.retro), in the retro guide's navy
-  and yellow. make_kodi_skin.sh inserts this group into DialogSeekBar.xml (before </controls>)
-  and hides Estuary's own live-TV info while it shows. It appears when you change channel or
-  press Info while watching live TV. 1920x1080 canvas = real 1080p pixels.
+  Live-TV channel banner for the 16:9 skin (skin.estuary.retro), in the retro guide's colours
+  ($VAR[Retro*], see ../retro-variables.xml). make_kodi_skin.sh inserts this into
+  DialogSeekBar.xml (before </controls>) and hides Estuary's own live-TV info while it shows.
+  It appears when you change channel or press Info while watching live TV.
+  Two layouts, chosen in the settings dialog: Compact (default), a strip along the bottom of
+  the screen like the browser viewer's; Large (Skin.HasSetting(retro.banner.large)), a panel
+  with the description and what's next. 1920x1080 canvas = real 1080p pixels.
   Shown when: [Player.ShowInfo | Window.IsActive(fullscreeninfo)] + VideoPlayer.Content(LiveTV)
               + !Window.IsVisible(videoosd)
 -->
 <control type="group">
 	<visible>[Player.ShowInfo | Window.IsActive(fullscreeninfo)] + VideoPlayer.Content(LiveTV) + !Window.IsVisible(videoosd)</visible>
-	<animation effect="slide" start="0,440" end="0,0" time="250" tween="cubic" easing="out">Visible</animation>
-	<animation effect="slide" start="0,0" end="0,440" time="200" tween="cubic" easing="in">Hidden</animation>
-	<left>60</left>
-	<top>680</top>
-	<width>1800</width>
-	<height>352</height>
-	<!-- yellow frame, navy panel -->
-	<control type="image">
-		<left>0</left><top>0</top><width>1800</width><height>352</height>
-		<texture colordiffuse="FFF2C200">colors/white.png</texture>
-	</control>
-	<control type="image">
-		<left>6</left><top>6</top><width>1788</width><height>340</height>
-		<texture colordiffuse="FF0A1240">colors/white.png</texture>
-	</control>
-	<!-- channel box: big number, name -->
-	<control type="image">
-		<left>6</left><top>6</top><width>300</width><height>340</height>
-		<texture colordiffuse="FF1C3FA8">colors/white.png</texture>
-	</control>
-	<control type="label">
-		<left>6</left><top>24</top><width>300</width><height>120</height>
-		<align>center</align><aligny>center</aligny>
-		<font>retro_num</font><textcolor>FFF2C200</textcolor>
-		<label>$INFO[VideoPlayer.ChannelNumberLabel]</label>
-	</control>
-	<control type="textbox">
-		<left>24</left><top>170</top><width>264</width><height>150</height>
-		<align>center</align>
-		<font>retro_guide</font><textcolor>FFFFFFFF</textcolor>
-		<label>$INFO[VideoPlayer.ChannelName]</label>
-	</control>
-	<!-- show -->
+
+	<!-- Compact: a strip across the bottom -->
 	<control type="group">
-		<left>342</left><top>20</top><width>1416</width>
+		<visible>!Skin.HasSetting(retro.banner.large)</visible>
+		<animation effect="slide" start="0,130" end="0,0" time="220" tween="cubic" easing="out">Visible</animation>
+		<animation effect="slide" start="0,0" end="0,130" time="180" tween="cubic" easing="in">Hidden</animation>
+		<left>0</left>
+		<top>962</top>
+		<width>1920</width>
+		<height>118</height>
+		<control type="image">
+			<left>0</left><top>0</top><width>1920</width><height>6</height>
+			<texture colordiffuse="$VAR[RetroYellow]">colors/white.png</texture>
+		</control>
+		<control type="image">
+			<left>0</left><top>6</top><width>1920</width><height>112</height>
+			<texture colordiffuse="$VAR[RetroNavy]">colors/white.png</texture>
+		</control>
+		<!-- channel: number and name -->
+		<control type="image">
+			<left>0</left><top>6</top><width>190</width><height>112</height>
+			<texture colordiffuse="$VAR[RetroChannel]">colors/white.png</texture>
+		</control>
 		<control type="label">
-			<top>0</top><height>60</height><width>1416</width>
-			<font>retro_title</font><textcolor>FFFFFFFF</textcolor><scroll>true</scroll>
+			<left>0</left><top>8</top><width>190</width><height>66</height>
+			<align>center</align><aligny>center</aligny>
+			<font>retro_big</font><visible>!Skin.HasSetting(retro.vapor)</visible><textcolor>$VAR[RetroAccent]</textcolor>
+			<label>$INFO[VideoPlayer.ChannelNumberLabel]</label>
+		</control>
+		<control type="label">
+			<left>0</left><top>8</top><width>190</width><height>66</height>
+			<align>center</align><aligny>center</aligny>
+			<font>retro_big_vapor</font><visible>Skin.HasSetting(retro.vapor)</visible><textcolor>$VAR[RetroAccent]</textcolor>
+			<label>$INFO[VideoPlayer.ChannelNumberLabel]</label>
+		</control>
+		<control type="label">
+			<left>6</left><top>70</top><width>178</width><height>40</height>
+			<align>center</align><aligny>center</aligny>
+			<font>retro_plot</font><textcolor>FFFFFFFF</textcolor>
+			<label>$INFO[VideoPlayer.ChannelName]</label>
+		</control>
+		<!-- show: title; time, episode; what's next and the clock on the right -->
+		<control type="label">
+			<left>214</left><top>12</top><width>1300</width><height>54</height>
+			<font>retro_title</font><visible>!Skin.HasSetting(retro.vapor)</visible><textcolor>FFFFFFFF</textcolor><scroll>true</scroll>
 			<label>$INFO[VideoPlayer.Title]</label>
 		</control>
 		<control type="label">
-			<top>60</top><height>44</height><width>1416</width>
-			<font>retro_info</font><textcolor>FFCFE0FF</textcolor>
-			<label>$INFO[VideoPlayer.EpisodeName,&quot;,&quot;]</label>
+			<left>214</left><top>12</top><width>1300</width><height>54</height>
+			<font>retro_title_vapor</font><visible>Skin.HasSetting(retro.vapor)</visible><textcolor>FFFFFFFF</textcolor><scroll>true</scroll>
+			<label>$INFO[VideoPlayer.Title]</label>
 		</control>
 		<control type="label">
-			<top>104</top><height>44</height><width>1416</width>
-			<font>retro_info</font><textcolor>FFFFFFFF</textcolor>
-			<label>$INFO[VideoPlayer.StartTime]$INFO[VideoPlayer.EndTime, – ]</label>
+			<left>214</left><top>66</top><width>1000</width><height>40</height>
+			<font>retro_info</font><textcolor>$VAR[RetroSoft]</textcolor>
+			<label>$INFO[VideoPlayer.StartTime]$INFO[VideoPlayer.EndTime, – ]$INFO[VideoPlayer.EpisodeName,  ·  &quot;,&quot;]</label>
 		</control>
 		<control type="label">
-			<top>104</top><height>44</height><width>1416</width><align>right</align>
-			<font>retro_info</font><textcolor>FFF2C200</textcolor>
+			<left>1540</left><top>12</top><width>356</width><height>54</height>
+			<align>right</align>
+			<font>retro_title</font><visible>!Skin.HasSetting(retro.vapor)</visible><textcolor>$VAR[RetroAccent]</textcolor>
 			<label>$INFO[System.Time]</label>
 		</control>
-		<!-- progress through the show: yellow on dark blue -->
-		<control type="progress">
-			<top>158</top><height>14</height><width>1416</width>
-			<texturebg colordiffuse="FF1C3FA8">colors/white.png</texturebg>
-			<midtexture colordiffuse="FFF2C200">colors/white.png</midtexture>
-			<info>PVR.EpgEventProgress</info>
-		</control>
-		<control type="textbox">
-			<top>190</top><height>72</height><width>1416</width>
-			<font>retro_plot</font><textcolor>FFCFE0FF</textcolor>
-			<label>$INFO[VideoPlayer.Plot]</label>
+		<control type="label">
+			<left>1540</left><top>12</top><width>356</width><height>54</height>
+			<align>right</align>
+			<font>retro_title_vapor</font><visible>Skin.HasSetting(retro.vapor)</visible><textcolor>$VAR[RetroAccent]</textcolor>
+			<label>$INFO[System.Time]</label>
 		</control>
 		<control type="label">
-			<top>278</top><height>40</height><width>1416</width>
-			<font>retro_guide</font><textcolor>FFF2C200</textcolor><scroll>true</scroll>
+			<left>1216</left><top>66</top><width>680</width><height>40</height>
+			<align>right</align>
+			<font>retro_info</font><textcolor>$VAR[RetroAccent]</textcolor>
 			<label>$INFO[VideoPlayer.NextStartTime,Next ,  ]$INFO[VideoPlayer.NextTitle]</label>
+		</control>
+		<!-- progress through the show, along the bottom edge -->
+		<control type="progress">
+			<left>190</left><top>110</top><width>1730</width><height>8</height>
+			<texturebg colordiffuse="$VAR[RetroChannel]">colors/white.png</texturebg>
+			<midtexture colordiffuse="$VAR[RetroYellow]">colors/white.png</midtexture>
+			<info>PVR.EpgEventProgress</info>
+		</control>
+	</control>
+
+	<!-- Large: a panel with the description -->
+	<control type="group">
+		<visible>Skin.HasSetting(retro.banner.large)</visible>
+		<animation effect="slide" start="0,440" end="0,0" time="250" tween="cubic" easing="out">Visible</animation>
+		<animation effect="slide" start="0,0" end="0,440" time="200" tween="cubic" easing="in">Hidden</animation>
+		<left>60</left>
+		<top>680</top>
+		<width>1800</width>
+		<height>352</height>
+		<!-- frame, panel -->
+		<control type="image">
+			<left>0</left><top>0</top><width>1800</width><height>352</height>
+			<texture colordiffuse="$VAR[RetroYellow]">colors/white.png</texture>
+		</control>
+		<control type="image">
+			<left>6</left><top>6</top><width>1788</width><height>340</height>
+			<texture colordiffuse="$VAR[RetroNavy]">colors/white.png</texture>
+		</control>
+		<!-- channel box: big number, name -->
+		<control type="image">
+			<left>6</left><top>6</top><width>300</width><height>340</height>
+			<texture colordiffuse="$VAR[RetroChannel]">colors/white.png</texture>
+		</control>
+		<control type="label">
+			<left>6</left><top>24</top><width>300</width><height>120</height>
+			<align>center</align><aligny>center</aligny>
+			<font>retro_num</font><visible>!Skin.HasSetting(retro.vapor)</visible><textcolor>$VAR[RetroAccent]</textcolor>
+			<label>$INFO[VideoPlayer.ChannelNumberLabel]</label>
+		</control>
+		<control type="label">
+			<left>6</left><top>24</top><width>300</width><height>120</height>
+			<align>center</align><aligny>center</aligny>
+			<font>retro_num_vapor</font><visible>Skin.HasSetting(retro.vapor)</visible><textcolor>$VAR[RetroAccent]</textcolor>
+			<label>$INFO[VideoPlayer.ChannelNumberLabel]</label>
+		</control>
+		<control type="textbox">
+			<left>24</left><top>170</top><width>264</width><height>150</height>
+			<align>center</align>
+			<font>retro_guide</font><textcolor>FFFFFFFF</textcolor>
+			<label>$INFO[VideoPlayer.ChannelName]</label>
+		</control>
+		<!-- show -->
+		<control type="group">
+			<left>342</left><top>20</top><width>1416</width>
+			<control type="label">
+				<top>0</top><height>60</height><width>1416</width>
+				<font>retro_title</font><visible>!Skin.HasSetting(retro.vapor)</visible><textcolor>FFFFFFFF</textcolor><scroll>true</scroll>
+				<label>$INFO[VideoPlayer.Title]</label>
+			</control>
+			<control type="label">
+				<top>0</top><height>60</height><width>1416</width>
+				<font>retro_title_vapor</font><visible>Skin.HasSetting(retro.vapor)</visible><textcolor>FFFFFFFF</textcolor><scroll>true</scroll>
+				<label>$INFO[VideoPlayer.Title]</label>
+			</control>
+			<control type="label">
+				<top>60</top><height>44</height><width>1416</width>
+				<font>retro_info</font><textcolor>$VAR[RetroSoft]</textcolor>
+				<label>$INFO[VideoPlayer.EpisodeName,&quot;,&quot;]</label>
+			</control>
+			<control type="label">
+				<top>104</top><height>44</height><width>1416</width>
+				<font>retro_info</font><textcolor>FFFFFFFF</textcolor>
+				<label>$INFO[VideoPlayer.StartTime]$INFO[VideoPlayer.EndTime, – ]</label>
+			</control>
+			<control type="label">
+				<top>104</top><height>44</height><width>1416</width><align>right</align>
+				<font>retro_info</font><textcolor>$VAR[RetroAccent]</textcolor>
+				<label>$INFO[System.Time]</label>
+			</control>
+			<control type="progress">
+				<top>158</top><height>14</height><width>1416</width>
+				<texturebg colordiffuse="$VAR[RetroChannel]">colors/white.png</texturebg>
+				<midtexture colordiffuse="$VAR[RetroYellow]">colors/white.png</midtexture>
+				<info>PVR.EpgEventProgress</info>
+			</control>
+			<control type="textbox">
+				<top>190</top><height>72</height><width>1416</width>
+				<font>retro_plot</font><textcolor>$VAR[RetroSoft]</textcolor>
+				<label>$INFO[VideoPlayer.Plot]</label>
+			</control>
+			<control type="label">
+				<top>278</top><height>40</height><width>1416</width>
+				<font>retro_guide</font><textcolor>$VAR[RetroAccent]</textcolor><scroll>true</scroll>
+				<label>$INFO[VideoPlayer.NextStartTime,Next ,  ]$INFO[VideoPlayer.NextTitle]</label>
+			</control>
 		</control>
 	</control>
 </control>

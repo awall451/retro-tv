@@ -5,7 +5,8 @@
   Coordinates are Estuary's 4:3 canvas (1920x1440), exactly 3x the Pi's 640x480 output,
   so every number here is (640x480 pixels) x 3. Keep lines and gaps at least 6 units
   (2 real pixels): 1-pixel lines flicker on 480i.
-  Fonts crt_* are added to Font.xml by make_kodi_crt_skin.sh (Cabin Bold).
+  Fonts crt_* are added to Font.xml by make_kodi_skin.sh (Cabin Bold); colours are $VAR[Retro*]
+  from retro-variables.xml so the theme setting recolours the screen.
 -->
 <window>
 	<defaultcontrol always="true">50</defaultcontrol>
@@ -17,7 +18,7 @@
 			<top>0</top>
 			<width>1920</width>
 			<height>1440</height>
-			<texture colordiffuse="FF0A1240">colors/white.png</texture>
+			<texture colordiffuse="$VAR[RetroNavy]">colors/white.png</texture>
 		</control>
 
 		<!-- preview: what's playing now, in a yellow frame -->
@@ -26,7 +27,7 @@
 			<top>24</top>
 			<width>768</width>
 			<height>579</height>
-			<texture colordiffuse="FFF2C200">colors/white.png</texture>
+			<texture colordiffuse="$VAR[RetroYellow]">colors/white.png</texture>
 		</control>
 		<control type="image">
 			<left>30</left>
@@ -52,7 +53,7 @@
 			<align>center</align>
 			<aligny>center</aligny>
 			<font>crt_info</font>
-			<textcolor>FFCFE0FF</textcolor>
+			<textcolor>$VAR[RetroSoft]</textcolor>
 			<label>Press Select on a show to watch</label>
 			<visible>!Player.HasVideo</visible>
 		</control>
@@ -66,13 +67,21 @@
 				<top>0</top>
 				<height>60</height>
 				<font>crt_guide</font>
-				<textcolor>FFF2C200</textcolor>
+				<textcolor>$VAR[RetroAccent]</textcolor>
 				<label>$INFO[ListItem.ChannelNumberLabel,Ch , · ]$INFO[ListItem.ChannelName]</label>
 			</control>
 			<control type="label">
 				<top>63</top>
 				<height>78</height>
-				<font>crt_title</font>
+				<font>crt_title</font><visible>!Skin.HasSetting(retro.vapor)</visible>
+				<textcolor>FFFFFFFF</textcolor>
+				<scroll>true</scroll>
+				<label>$INFO[ListItem.Title]</label>
+			</control>
+			<control type="label">
+				<top>63</top>
+				<height>78</height>
+				<font>crt_title_vapor</font><visible>Skin.HasSetting(retro.vapor)</visible>
 				<textcolor>FFFFFFFF</textcolor>
 				<scroll>true</scroll>
 				<label>$INFO[ListItem.Title]</label>
@@ -81,7 +90,7 @@
 				<top>144</top>
 				<height>60</height>
 				<font>crt_info</font>
-				<textcolor>FFCFE0FF</textcolor>
+				<textcolor>$VAR[RetroSoft]</textcolor>
 				<label>$INFO[ListItem.EpisodeName,&quot;,&quot;]</label>
 			</control>
 			<control type="label">
@@ -95,10 +104,22 @@
 				<top>276</top>
 				<height>306</height>
 				<font>crt_plot</font>
-				<textcolor>FFCFE0FF</textcolor>
+				<textcolor>$VAR[RetroSoft]</textcolor>
 				<label>$INFO[ListItem.Plot]</label>
 				<autoscroll delay="8000" time="3000" repeat="8000">true</autoscroll>
 			</control>
+		</control>
+
+		<!-- settings hint, bottom right of the details area -->
+		<control type="label">
+			<left>1296</left>
+			<top>582</top>
+			<width>600</width>
+			<height>42</height>
+			<align>right</align>
+			<font>crt_plot</font>
+			<textcolor>$VAR[RetroSoft]</textcolor>
+			<label>Settings: Triangle / Y</label>
 		</control>
 
 		<!-- the grid: 8 channel rows x 90 minutes (18 five-minute blocks) -->
@@ -121,7 +142,7 @@
 					<top>0</top>
 					<width>378</width>
 					<height>81</height>
-					<texture colordiffuse="FFF2C200">colors/white.png</texture>
+					<texture colordiffuse="$VAR[RetroYellow]">colors/white.png</texture>
 					<visible>!String.Contains(ListItem.Label,:)</visible>
 				</control>
 				<control type="label">
@@ -131,7 +152,7 @@
 					<height>81</height>
 					<aligny>center</aligny>
 					<font>crt_guide</font>
-					<textcolor>FF0A1240</textcolor>
+					<textcolor>$VAR[RetroInk]</textcolor>
 					<label>$INFO[System.Date(ddd)] $INFO[System.Time]</label>
 					<visible>!String.Contains(ListItem.Label,:)</visible>
 				</control>
@@ -140,7 +161,7 @@
 					<top>0</top>
 					<width>506</width>
 					<height>81</height>
-					<texture colordiffuse="FF5A7FE0">colors/white.png</texture>
+					<texture colordiffuse="$VAR[RetroTimebar]">colors/white.png</texture>
 					<visible>String.Contains(ListItem.Label,:)</visible>
 				</control>
 				<control type="label">
@@ -161,7 +182,7 @@
 					<top>0</top>
 					<width>378</width>
 					<height>81</height>
-					<texture colordiffuse="FF1C3FA8">colors/white.png</texture>
+					<texture colordiffuse="$VAR[RetroChannel]">colors/white.png</texture>
 				</control>
 				<control type="label">
 					<left>21</left>
@@ -180,7 +201,7 @@
 					<top>0</top>
 					<width>378</width>
 					<height>81</height>
-					<texture colordiffuse="FFF2C200">colors/white.png</texture>
+					<texture colordiffuse="$VAR[RetroYellow]">colors/white.png</texture>
 				</control>
 				<control type="label">
 					<left>21</left>
@@ -189,7 +210,7 @@
 					<height>81</height>
 					<aligny>center</aligny>
 					<font>crt_guide</font>
-					<textcolor>FF0A1240</textcolor>
+					<textcolor>$VAR[RetroInk]</textcolor>
 					<label>$INFO[ListItem.ChannelNumberLabel,, ]$INFO[ListItem.ChannelName]</label>
 				</control>
 			</focusedchannellayout>
@@ -199,7 +220,7 @@
 					<top>0</top>
 					<width>54</width>
 					<height>81</height>
-					<texture colordiffuse="FF0F2A7A">colors/white.png</texture>
+					<texture colordiffuse="$VAR[RetroProgram]">colors/white.png</texture>
 				</control>
 				<control type="label" id="1">
 					<left>21</left>
@@ -217,7 +238,7 @@
 					<top>0</top>
 					<width>54</width>
 					<height>81</height>
-					<texture colordiffuse="FFF2C200">colors/white.png</texture>
+					<texture colordiffuse="$VAR[RetroYellow]">colors/white.png</texture>
 				</control>
 				<control type="label" id="1">
 					<left>21</left>
@@ -225,7 +246,7 @@
 					<height>81</height>
 					<aligny>center</aligny>
 					<font>crt_guide</font>
-					<textcolor>FF0A1240</textcolor>
+					<textcolor>$VAR[RetroInk]</textcolor>
 					<label>$INFO[ListItem.Label]</label>
 				</control>
 			</focusedlayout>

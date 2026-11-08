@@ -114,23 +114,36 @@ margins are hardware DRM properties set on the kernel command line from
 ## Kodi and the channels
 
 - **The retro guide** ([`kodi-skin/MyPVRGuide.xml`](kodi-skin/MyPVRGuide.xml)): navy and yellow,
-  8 channels by 90 minutes, the show you are watching in a framed box, the highlighted show's
-  details beside it. Home → TV opens it. A channel banner
-  ([`kodi-skin/crt-banner.xml`](kodi-skin/crt-banner.xml)) shows on channel change or Info, and
-  show details ([`kodi-skin/DialogPVRInfo.xml`](kodi-skin/DialogPVRInfo.xml)) get big bold text and
-  a Watch now button. The files in `kodi-skin/` use Estuary's 4:3 canvas (1920×1440, 3× the
+  the show you are watching in a framed box, the highlighted show's details beside it, and the
+  grid below (8 channels by 90 minutes on the 4:3 set, by 2½ hours at 16:9). Home → TV opens it.
+  Show details ([`kodi-skin/DialogPVRInfo.xml`](kodi-skin/DialogPVRInfo.xml)) get big bold text
+  and a Watch now button. The files in `kodi-skin/` use Estuary's 4:3 canvas (1920×1440, 3× the
   real pixels); `kodi-skin/hdmi/` holds the same screens for 16:9 at 1080p.
+- **Channel banner** ([`kodi-skin/crt-banner.xml`](kodi-skin/crt-banner.xml), `hdmi/banner.xml`):
+  on a channel change or Info. Two sizes: a compact strip along the bottom of the screen like
+  the browser app's (default), or a large panel with the description and what's next.
+- **Settings** ([`kodi-skin/Custom_1150_RetroSettings.xml`](kodi-skin/Custom_1150_RetroSettings.xml)):
+  Triangle/Y, or S on a keyboard, in the guide or while watching. Theme (Cable or Vaporwave, the
+  browser app's two palettes; Vaporwave sets titles in Audiowide), Quality (Standard or HD) and
+  the banner size. Theme and banner change at once; Quality applies when the guide opens next.
+  Every colour in the screens is a skin variable ([`kodi-skin/retro-variables.xml`](kodi-skin/retro-variables.xml)),
+  which is what lets one setting recolour everything.
+- **Standard and HD.** The server gives every channel an HD twin (number + 100, group `HD`).
+  Kodi loads every group; the guide opens on the `ErsatzTV` group or the `HD` group according
+  to the Quality setting, so channel up/down stays within the set you picked. In HD the numbers
+  read 101–136 (Kodi's labels cannot subtract 100). Group names are constants at the top of
+  `make_kodi_skin.sh`, which reads each group's PVR client id from Kodi's TV database to build
+  the `pvr://channels/tv/<group>@<id>/` paths the guide is opened with; before the groups exist
+  (first run) Home → TV opens the guide on its last group.
+  Caveat: the server's XMLTV currently carries no programmes for the twins, so in HD the grid is
+  empty until that is added on the server side; the channels themselves play.
 - **Controller** ([`kodi-skin/livetv-controller.xml`](kodi-skin/livetv-controller.xml)): Cross/A
   pauses or switches to the highlighted channel; Circle/B opens the guide with the show still
-  playing (hold to stop); Square/X shows controls or details.
+  playing (hold to stop); Square/X shows controls or details; Triangle/Y opens Settings.
 - **Settings for both profiles** ([`display-profiles/kodi_tv_settings.py`](display-profiles/kodi_tv_settings.py)):
-  Select switches channel instead of opening details, the guide reloads every 15 minutes, and the
-  server's `HD` channel group is hidden. The HD twins (number + 100) are for modern screens and
-  useless on a 4:3 set, so IPTV Simple loads a custom groups file that lists every server group
-  except `HD`; [`scripts/kodi-channel-groups.sh`](scripts/kodi-channel-groups.sh) rewrites it at
-  every Kodi launch, so a new group appears on the next launch. If the server is down the last
-  list is kept.
-- **Launch hooks** in `/userdata/system/scripts/`: the groups refresh above, and
+  Select switches channel instead of opening details, the guide reloads every 15 minutes, IPTV
+  Simple loads every channel group, and the controller map is installed.
+- **Launch hook** in `/userdata/system/scripts/`:
   [`scripts/kodi-fullscreen-fix.sh`](scripts/kodi-fullscreen-fix.sh), which toggles full screen
   once after Kodi opens because sway first places the window 19 px low.
 - The converter does not pass HDMI-CEC, so the controller drives Kodi on the Trinitron, not a
@@ -142,7 +155,9 @@ margins are hardware DRM properties set on the kernel command line from
 
 <p align="center"><sub>The same screens on a 16:9 TV, from the HDMI profile's Estuary Retro:</sub></p>
 
-<table><tr><td align="center"><img src="../docs/img/readme/kodi-guide-1080.jpg" width="400"><br><sub>The guide at 1080p: 8 channels by 2½ hours</sub></td><td align="center"><img src="../docs/img/readme/kodi-details-1080.jpg" width="400"><br><sub>Show details</sub></td><td align="center"><img src="../docs/img/readme/kodi-banner-1080.jpg" width="400"><br><sub>The channel banner</sub></td></tr></table>
+<table><tr><td align="center"><img src="../docs/img/readme/kodi-guide-1080.jpg" width="400"><br><sub>The guide at 1080p: 8 channels by 2½ hours</sub></td><td align="center"><img src="../docs/img/readme/kodi-details-1080.jpg" width="400"><br><sub>Show details</sub></td><td align="center"><img src="../docs/img/readme/kodi-banner-1080.jpg" width="400"><br><sub>The compact channel banner</sub></td></tr></table>
+
+<table><tr><td align="center"><img src="../docs/img/readme/kodi-settings-1080.jpg" width="600"><br><sub>Settings: theme, Standard/HD, banner size</sub></td><td align="center"><img src="../docs/img/readme/kodi-guide-vapor-1080.jpg" width="600"><br><sub>The Vaporwave theme, Audiowide titles</sub></td></tr></table>
 
 ## What is in this folder
 

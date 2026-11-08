@@ -5,17 +5,27 @@
   a = Cross (PS) / A (Xbox), b = Circle / B, x = Square / X, y = Triangle / Y.
   Kodi's stock map has Circle = Stop while watching live TV, which ended the show
   whenever you went to the guide.
+  Triangle / Y (or S on a keyboard) opens the retro skin's settings dialog (window 1150:
+  theme, Standard/HD, banner size) in the guide and while watching.
 -->
 <keymap>
   <FullscreenLiveTV>
     <joystick profile="game.controller.default">
       <b>ActivateWindow(TVGuide)</b>
       <b holdtime="500">Stop</b>
+      <y>ActivateWindow(1150)</y>
     </joystick>
+    <keyboard>
+      <s>ActivateWindow(1150)</s>
+    </keyboard>
   </FullscreenLiveTV>
   <TVGuide>
     <joystick profile="game.controller.default">
       <x>Info</x>
+      <y>ActivateWindow(1150)</y>
     </joystick>
+    <keyboard>
+      <s>ActivateWindow(1150)</s>
+    </keyboard>
   </TVGuide>
 </keymap>

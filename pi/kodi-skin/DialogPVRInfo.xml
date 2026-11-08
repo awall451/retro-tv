@@ -17,14 +17,14 @@
 				<top>54</top>
 				<width>1812</width>
 				<height>1332</height>
-				<texture colordiffuse="FFF2C200">colors/white.png</texture>
+				<texture colordiffuse="$VAR[RetroYellow]">colors/white.png</texture>
 			</control>
 			<control type="image">
 				<left>60</left>
 				<top>60</top>
 				<width>1800</width>
 				<height>1320</height>
-				<texture colordiffuse="FF0A1240">colors/white.png</texture>
+				<texture colordiffuse="$VAR[RetroNavy]">colors/white.png</texture>
 			</control>
 			<control type="group">
 				<left>120</left>
@@ -34,13 +34,21 @@
 					<top>0</top>
 					<height>60</height>
 					<font>crt_guide</font>
-					<textcolor>FFF2C200</textcolor>
+					<textcolor>$VAR[RetroAccent]</textcolor>
 					<label>$INFO[ListItem.ChannelNumberLabel,Ch , · ]$INFO[ListItem.ChannelName]</label>
 				</control>
 				<control type="label">
 					<top>66</top>
 					<height>90</height>
-					<font>crt_big</font>
+					<font>crt_big</font><visible>!Skin.HasSetting(retro.vapor)</visible>
+					<textcolor>FFFFFFFF</textcolor>
+					<scroll>true</scroll>
+					<label>$INFO[ListItem.Title]</label>
+				</control>
+				<control type="label">
+					<top>66</top>
+					<height>90</height>
+					<font>crt_big_vapor</font><visible>Skin.HasSetting(retro.vapor)</visible>
 					<textcolor>FFFFFFFF</textcolor>
 					<scroll>true</scroll>
 					<label>$INFO[ListItem.Title]</label>
@@ -49,7 +57,7 @@
 					<top>162</top>
 					<height>60</height>
 					<font>crt_info</font>
-					<textcolor>FFCFE0FF</textcolor>
+					<textcolor>$VAR[RetroSoft]</textcolor>
 					<scroll>true</scroll>
 					<label>$INFO[ListItem.EpisodeName,&quot;,&quot;]</label>
 				</control>
@@ -64,7 +72,7 @@
 					<top>312</top>
 					<height>690</height>
 					<font>crt_info</font>
-					<textcolor>FFCFE0FF</textcolor>
+					<textcolor>$VAR[RetroSoft]</textcolor>
 					<label>$INFO[ListItem.Plot]</label>
 					<autoscroll delay="6000" time="3000" repeat="6000">true</autoscroll>
 				</control>
@@ -88,9 +96,9 @@
 					<aligny>center</aligny>
 					<label>Watch now</label>
 					<textcolor>FFFFFFFF</textcolor>
-					<focusedcolor>FF0A1240</focusedcolor>
-					<texturefocus colordiffuse="FFF2C200">colors/white.png</texturefocus>
-					<texturenofocus colordiffuse="FF1C3FA8">colors/white.png</texturenofocus>
+					<focusedcolor>$VAR[RetroInk]</focusedcolor>
+					<texturefocus colordiffuse="$VAR[RetroYellow]">colors/white.png</texturefocus>
+					<texturenofocus colordiffuse="$VAR[RetroChannel]">colors/white.png</texturenofocus>
 					<visible>Window.IsActive(PVRGuideInfo)</visible>
 				</control>
 				<control type="button" id="8">
@@ -101,9 +109,9 @@
 					<aligny>center</aligny>
 					<label>Play</label>
 					<textcolor>FFFFFFFF</textcolor>
-					<focusedcolor>FF0A1240</focusedcolor>
-					<texturefocus colordiffuse="FFF2C200">colors/white.png</texturefocus>
-					<texturenofocus colordiffuse="FF1C3FA8">colors/white.png</texturenofocus>
+					<focusedcolor>$VAR[RetroInk]</focusedcolor>
+					<texturefocus colordiffuse="$VAR[RetroYellow]">colors/white.png</texturefocus>
+					<texturenofocus colordiffuse="$VAR[RetroChannel]">colors/white.png</texturenofocus>
 					<visible>Window.IsActive(PVRRecordingInfo)</visible>
 				</control>
 				<control type="button" id="6">
@@ -113,9 +121,9 @@
 					<align>center</align>
 					<aligny>center</aligny>
 					<textcolor>FFFFFFFF</textcolor>
-					<focusedcolor>FF0A1240</focusedcolor>
-					<texturefocus colordiffuse="FFF2C200">colors/white.png</texturefocus>
-					<texturenofocus colordiffuse="FF1C3FA8">colors/white.png</texturenofocus>
+					<focusedcolor>$VAR[RetroInk]</focusedcolor>
+					<texturefocus colordiffuse="$VAR[RetroYellow]">colors/white.png</texturefocus>
+					<texturenofocus colordiffuse="$VAR[RetroChannel]">colors/white.png</texturenofocus>
 					<visible>Window.IsActive(PVRGuideInfo)</visible>
 				</control>
 			</control>

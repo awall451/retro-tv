@@ -3,6 +3,8 @@
 #   - a navy-and-yellow TV guide (MyPVRGuide.xml) that Home → TV opens,
 #   - a show details pop-up (DialogPVRInfo.xml),
 #   - a channel banner while watching live TV (banner, inserted into DialogSeekBar.xml),
+#   - a settings dialog (theme, Standard/HD, banner size; Custom_1150_RetroSettings.xml),
+#   - the colours as skin variables (kodi-skin/retro-variables.xml) so the theme can switch,
 # and register it as an enabled add-on in Kodi's database. Two variants, one per display profile:
 #
 #   make_kodi_skin.sh crt    skin.estuary.crt  "Estuary CRT"  for the 4:3 Trinitron at 640x480:
@@ -17,11 +19,18 @@
 set -eu
 variant=${1:-}
 case "$variant" in
-    crt)  ID=skin.estuary.crt;   NAME="Estuary CRT";   XMLDIR=kodi-skin;      BANNER=crt-banner.xml ;;
-    hdmi) ID=skin.estuary.retro; NAME="Estuary Retro"; XMLDIR=kodi-skin/hdmi; BANNER=banner.xml ;;
+    crt)  ID=skin.estuary.crt;   NAME="Estuary CRT";   XMLDIR=kodi-skin;      BANNER=crt-banner.xml; PREFIX=crt ;;
+    hdmi) ID=skin.estuary.retro; NAME="Estuary Retro"; XMLDIR=kodi-skin/hdmi; BANNER=banner.xml;     PREFIX=retro ;;
     *) echo "usage: $0 crt|hdmi" >&2; exit 1 ;;
 esac
 HERE=/userdata/system/display-profiles
+# Channel groups in ErsatzTV's list: the ordinary channels and their HD twins (number + 100).
+# Home → TV opens the guide on one or the other, from the Quality setting. Kodi addresses a
+# group as pvr://channels/tv/<name>@<client id>/; the client id is read from Kodi's TV database
+# (it is the PVR add-on's id on this install).
+SD_GROUP=ErsatzTV
+HD_GROUP=HD
+TVDB=$(ls /userdata/system/.kodi/userdata/Database/TV*.db 2>/dev/null | sort -V | tail -1)
 SRC=/usr/share/kodi/addons/skin.estuary
 DST=/userdata/system/.kodi/addons/$ID
 FONT=/usr/share/emulationstation/themes/es-theme-carbon/art/fonts/Cabin-Bold.ttf
@@ -37,23 +46,46 @@ mkdir -p "$(dirname "$DST")"
 cp -a "$SRC" "$DST.tmp"
 sed -i -e "s/id=\"skin.estuary\"/id=\"$ID\"/" -e "s/name=\"Estuary\"/name=\"$NAME\"/" "$DST.tmp/addon.xml"
 cp "$FONT" "$DST.tmp/fonts/Cabin-Bold.ttf"
+cp "$HERE/kodi-skin/fonts/Audiowide-Regular.ttf" "$DST.tmp/fonts/Audiowide-Regular.ttf"
 cp "$HERE/$XMLDIR/MyPVRGuide.xml" "$DST.tmp/xml/MyPVRGuide.xml"
 cp "$HERE/$XMLDIR/DialogPVRInfo.xml" "$DST.tmp/xml/DialogPVRInfo.xml"
+cp "$HERE/$XMLDIR/Custom_1150_RetroSettings.xml" "$DST.tmp/xml/Custom_1150_RetroSettings.xml"
+
+# Colour variables, appended to the skin's Variables.xml (inside <includes>).
+python3 - "$DST.tmp/xml/Variables.xml" "$HERE/kodi-skin/retro-variables.xml" "$PREFIX" <<'PY'
+import re, sys
+path, vars_file = sys.argv[1], sys.argv[2]
+text = open(path, encoding="utf-8").read()
+block = re.sub(r"<!--.*?-->\s*", "", open(vars_file, encoding="utf-8").read(), count=1, flags=re.S)
+block = block.replace("@P@", sys.argv[3])
+cut = text.rfind("</includes>")
+if cut < 0:
+    sys.exit("make_kodi_skin: no </includes> in Variables.xml")
+open(path, "w", encoding="utf-8").write(text[:cut] + block + text[cut:])
+print("variables added to Variables.xml")
+PY
 
 # Fonts. crt: sizes in 1920x1440 units (divide by 3 for real pixels), plus every stock font
 # scaled. hdmi: sizes in real 1080p pixels, stock fonts as they are.
 python3 - "$DST.tmp/xml/Font.xml" "$variant" <<'PY'
 import re, sys
 path, variant = sys.argv[1], sys.argv[2]
+variant_prefix = "crt" if variant == "crt" else "retro"
 if variant == "crt":
     fonts = [("crt_guide", 45), ("crt_title", 63), ("crt_info", 48), ("crt_plot", 42), ("crt_big", 72),
              ("crt_num", 108)]
 else:
     fonts = [("retro_guide", 32), ("retro_title", 46), ("retro_info", 32), ("retro_plot", 29),
              ("retro_big", 58), ("retro_num", 92)]
+# Vaporwave sets titles in Audiowide (one weight, wider letters, so a little smaller)
+vapor = [("%s_title_vapor" % variant_prefix, round(fonts[1][1] * 0.91)),
+         ("%s_big_vapor" % variant_prefix, round(fonts[4][1] * 0.92)),
+         ("%s_num_vapor" % variant_prefix, round(fonts[5][1] * 0.93))]
 block = "".join(
     "\n\t\t<font><name>%s</name><filename>Cabin-Bold.ttf</filename><size>%d</size></font>" % f
-    for f in fonts)
+    for f in fonts) + "".join(
+    "\n\t\t<font><name>%s</name><filename>Audiowide-Regular.ttf</filename><size>%d</size></font>" % f
+    for f in vapor)
 text = open(path, encoding="utf-8").read()
 
 if variant == "crt":
@@ -86,7 +118,7 @@ PY
 # Live TV: our channel banner replaces Estuary's info while watching (Info / channel change),
 # and Home's TV item opens the retro guide instead of the channel list. Each patch must match
 # exactly once; if a Batocera update changes Estuary, fail so apply.sh falls back to stock.
-python3 - "$DST.tmp/xml" "$HERE/$XMLDIR/$BANNER" <<'PY'
+python3 - "$DST.tmp/xml" "$HERE/$XMLDIR/$BANNER" "$SD_GROUP" "$HD_GROUP" "$TVDB" <<'PY'
 import re, sys
 xml, banner_file = sys.argv[1], sys.argv[2]
 BANNER = ("[Player.ShowInfo | Window.IsActive(fullscreeninfo)] + VideoPlayer.Content(LiveTV)"
@@ -121,8 +153,30 @@ print("inserted banner into %s" % seek)
 # Top bar (title, clock, "Ends at"): out of the way while the banner shows.
 top = '<window type="dialog" id="1109">'
 patch("Custom_1109_TopBarOverlay.xml", top, top + "\n\t<visible>![%s]</visible>" % BANNER)
-# Home → TV opens the guide.
-patch("Home.xml", "<onclick>ActivateWindow(TVChannels)</onclick>", "<onclick>ActivateWindow(TVGuide)</onclick>")
+# Home → TV opens the guide, on the Standard or the HD channel group (settings dialog).
+import sqlite3, urllib.parse
+sd, hd, tvdb = sys.argv[3], sys.argv[4], sys.argv[5]
+def group_path(name):
+    client = None
+    if tvdb:
+        try:
+            row = sqlite3.connect(tvdb).execute(
+                "SELECT iClientId FROM channelgroups WHERE sName = ? AND bIsRadio = 0 AND iClientId >= 0", (name,)).fetchone()
+            client = row[0] if row else None
+        except sqlite3.Error as e:
+            print("make_kodi_skin: TV database: %s" % e)
+    if client is None:
+        print("make_kodi_skin: group %r not in Kodi's TV database yet; Home -> TV opens the guide on its last group" % name)
+        return None
+    return "pvr://channels/tv/%s@%d/" % (urllib.parse.quote(name), client)
+sd, hd = group_path(sd), group_path(hd)
+if sd and hd:
+    patch("Home.xml", "<onclick>ActivateWindow(TVChannels)</onclick>",
+          ('<onclick condition="Skin.HasSetting(retro.hd)">ActivateWindow(TVGuide,%s,return)</onclick>'
+           + "\n" + "\t" * 7 +
+           '<onclick condition="!Skin.HasSetting(retro.hd)">ActivateWindow(TVGuide,%s,return)</onclick>') % (hd, sd))
+else:
+    patch("Home.xml", "<onclick>ActivateWindow(TVChannels)</onclick>", "<onclick>ActivateWindow(TVGuide)</onclick>")
 PY
 
 rm -rf "$DST"
