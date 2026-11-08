@@ -186,6 +186,49 @@ viewer's Quality setting switches to it.
   1 → 16, 9916 → 1), then the same for their twins; a twin follows its channel by id, not by
   number. Channels → Edit Channel Numbers renumbers by drag order, which is not what you want.
 
+## Audio tracks and subtitles
+
+A live channel cannot offer a subtitle button: every viewer gets the same
+stream, so subtitles are burned into the picture on the server, one choice
+per channel. A small rules file decides, per programme, which audio track
+and subtitles to use. Put it in ErsatzTV's config folder under
+`scripts/channel-stream-selectors/` and pick it in the channel form
+(Stream Selector Mode **Custom**, Stream Selector = the file). Ours, "dub
+first":
+
+```yaml
+items:
+  # 1. English audio (a dub, or the original), no subtitles.
+  #    Untagged audio ("und") is English in our library.
+  - audio_language: ["en", "eng", "und"]
+    audio_title_blocklist: ["commentary"]
+    disable_subtitles: true
+  # 2. Otherwise the original language with English subtitles.
+  - audio_language: ["*"]
+    audio_title_blocklist: ["commentary"]
+    subtitle_language: ["en", "eng"]
+  # 3. No English subtitles either: the original language as it is.
+  - audio_language: ["*"]
+    audio_title_blocklist: ["commentary"]
+    disable_subtitles: true
+```
+
+Rules are tried in order; the first whose audio (and subtitles, when it
+asks for them) exist wins. Why it matters: without a rule ErsatzTV prefers
+English audio, and on a foreign film the only English track is often a
+**director's commentary**.
+
+- **Text subtitles (srt, ass) are used only after extraction**: Settings →
+  FFmpeg → "Extract Embedded (Text) Subtitles". Picture subtitles (PGS,
+  VobSub) work without it.
+- **Extraction reads every file in full**, once, for every upcoming
+  programme with text subtitles on any channel with subtitles or a Custom
+  selector, as fast as the source allows. From a remote Plex that is a
+  heavy download (we saw about 450 Mbps). Use the Custom selector only on
+  the channels that need it.
+- A film with only foreign audio and no English subtitles cannot be fixed
+  this way: leave it off English-speaking channels.
+
 ## Checking what a file looks like on air
 
 `GET /api/troubleshoot/playback.m3u8?mediaItem=<id>&ffmpegProfile=<id>&streamingMode=4&seekSeconds=<n>`
