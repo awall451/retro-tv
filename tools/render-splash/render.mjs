@@ -2,9 +2,11 @@
 // the Roku app and the Pi box show the very same pictures as the browser:
 //
 //   roku-tv/images/        icons and splash (Cable), splash_vapor_fhd.png, Vaporwave icons
-//   pi-image/config/plymouth/retro-tv/   splash-<theme>-{640,720,1080}.png for the boot screen
+//   pi-image/config/plymouth/retro-tv/   splash-<theme>-{640,720,1080}.png for the boot screen,
+//                                        one set per scene in splash.js
 //
-// Run from this folder after `npm install`:  node render.mjs
+// Run from this folder after `npm install` and `python fonts.py` (which unpacks
+// the viewer's WOFF2 fonts into fonts/ttf/ for the rasterizer):  node render.mjs
 import { Resvg } from '@resvg/resvg-js';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -22,17 +24,31 @@ for (const f of ['themes', 'splash']) {
 }
 const { SCENES } = await import('./splash.mjs');
 
+const ttfDir = path.join(here, 'fonts/ttf');
+if (!fs.existsSync(ttfDir)) {
+  console.error('fonts/ttf is missing: run `python fonts.py` here first (it unpacks the viewer fonts).');
+  process.exit(1);
+}
 const fonts = [
   path.join(repo, 'roku-tv/fonts/Cabin-Bold.ttf'),
   path.join(repo, 'roku-tv/fonts/Audiowide-Regular.ttf'),
   path.join(here, 'fonts/MrDafoe-Regular.ttf'),
 ].filter(fs.existsSync);
 
-// The scenes pick fonts by CSS class; give the rasterizer explicit families.
-const withFonts = svg => svg
-  .replace(/class="cabin"/g, 'font-family="Cabin" font-weight="700"')
-  .replace(/class="disp"/g, 'font-family="Audiowide"')
-  .replace(/class="script"/g, 'font-family="Mr Dafoe"');
+// The scenes pick fonts by CSS class (the rules are in guide.css under #splash);
+// give the rasterizer explicit families and the same default weights. A text's
+// own style="font-weight:…" still wins, as in the browser.
+const FAMILIES = {
+  cabin: ['Cabin', 700], disp: ['Audiowide'], script: ['Mr Dafoe'],
+  arimo: ['Arimo', 700], exo: ['Exo 2', 800], nunito: ['Nunito', 900],
+  osans: ['Open Sans', 300], lato: ['Lato', 900], archivo: ['Archivo Black'],
+  chakra: ['Chakra Petch', 400], vt: ['VT323'],
+};
+const withFonts = svg => svg.replace(/class="([a-z]+)"/g, (m, c) => {
+  const f = FAMILIES[c];
+  if (!f) return m;                       // animation classes (blink, loadbar): nothing to draw
+  return `font-family="${f[0]}"` + (f[1] ? ` font-weight="${f[1]}"` : '');
+}).replace(/[▲▼] /g, '');       // the DVR scene's triangles: the browser borrows them from a system font, the rasterizer has none
 
 // Re-frame a 640x480 scene for a target size: viewBox of the target's aspect,
 // centred on the scene (the scenes draw their backdrop far past the frame).
@@ -43,7 +59,7 @@ function framed(svg, w, h, vb, stretch = false) {
 }
 
 function render(svg, out) {
-  const r = new Resvg(svg, { fitTo: { mode: 'original' }, font: { fontFiles: fonts, loadSystemFonts: false, defaultFontFamily: 'Cabin' } });
+  const r = new Resvg(svg, { fitTo: { mode: 'original' }, font: { fontFiles: fonts, fontDirs: [ttfDir], loadSystemFonts: false, defaultFontFamily: 'Cabin' } });
   const png = r.render();
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, png.asPng());
@@ -72,8 +88,9 @@ render(tri('#0d0624'), roku('playing_sel_vapor.png'));
 render(cog('#d9c8ff', '#0d0624'), roku('cog_vapor.png'));
 render(cog('#19e6ff', '#0d0624'), roku('cog_sel_vapor.png'));
 
-// Pi boot splash: both themes at the three screen sizes the box can have.
-for (const [name, scene] of [['cable', cable], ['vapor', vapor]]) {
+// Pi boot splash: every scene at the three screen sizes the box can have.
+for (const name of Object.keys(SCENES)) {
+  const scene = name === 'vapor' ? vapor : SCENES[name].svg();
   render(framed(scene, 640, 480, '0 0 640 480'), pi(`splash-${name}-640.png`));
   render(framed(scene, 720, 480, '0 0 640 480', true), pi(`splash-${name}-720.png`));
   render(framed(scene, 1920, 1080, '-320 -120 1280 720'), pi(`splash-${name}-1080.png`));

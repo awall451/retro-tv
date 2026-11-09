@@ -37,6 +37,10 @@ stays a description anyone can use. Newest first.
 - Wi-Fi at the TV spot on 2.4 GHz: 60–69% signal, 0% loss over 240 pings to the router from the
   box, and the watchdog has logged 0% on every check. The 5 GHz link in the same place lost 5 of
   6 packets yesterday. That closes the "Channel unavailable" story for this location.
+- Boot splashes rendered for all nine themes (the other session's theme picker had seven new
+  ones with only the viewer's animated splash). `fonts.py` unpacks the viewer's WOFF2 fonts to
+  TTF for resvg; the theme service now accepts any theme that has a splash file. The box's
+  current theme is Vaporwave; with no remote yet, that is what the tube shows at boot.
 - Added the settings screen's **Power off** row (`/pi/power` through `retro-tv-themed.py`,
   two presses, then `systemctl poweroff`); tested end to end with the `reboot` action. The
   settings list is now six rows on the box, so a compact layout kicks in under 540 px of height.

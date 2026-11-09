@@ -2,8 +2,8 @@
 """Retro TV theme (and power) service.
 
 A tiny local web service on 127.0.0.1:8412 that the viewer talks to through
-nginx (/pi/theme, /pi/power). The viewer posts its theme ("cable" or "vapor")
-whenever it applies one; this records the choice in /data/retro-tv/theme and
+nginx (/pi/theme, /pi/power). The viewer posts its theme id whenever it
+applies one; this records the choice in /data/retro-tv/theme and
 points the Plymouth theme's images at the matching splash, so the next boot
 shows it. If Plymouth runs from the initramfs on this system, the initramfs is
 rebuilt in the background so the change gets in. The settings screen's
@@ -22,12 +22,23 @@ import subprocess
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-THEMES = ("cable", "vapor")
 POWER = {"off": "poweroff", "reboot": "reboot"}
 STATE_DIR = "/data/retro-tv"
 STATE = os.path.join(STATE_DIR, "theme")
 PLYMOUTH = "/usr/share/plymouth/themes/retro-tv"
 SIZES = ("640", "720", "1080")
+
+
+def known_themes() -> tuple:
+    """The themes with a rendered boot splash (splash-<theme>-640.png); cable first."""
+    names = set()
+    for f in glob.glob(os.path.join(PLYMOUTH, "splash-*-640.png")):
+        names.add(os.path.basename(f)[len("splash-"):-len("-640.png")])
+    names.discard("cable")
+    return ("cable",) + tuple(sorted(names))
+
+
+THEMES = known_themes()
 lock = threading.Lock()
 
 

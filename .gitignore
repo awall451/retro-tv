@@ -37,3 +37,5 @@ Thumbs.db
 docker/.env
 # Pi box: a local copy of its settings, if kept
 pi-image/retro-tv.env
+# TTF copies of the viewer fonts, made by tools/render-splash/fonts.py
+tools/render-splash/fonts/ttf/

@@ -57,7 +57,8 @@ Where it stands: the script route (step 1, below) works on real hardware; the on
 - **The theme follows the viewer's setting.** The viewer posts its theme to `/pi/theme` whenever
   it is applied (on every start and on every change). On the box, nginx passes that to a small
   local service (`retro-tv-themed.py`), which records the choice and points Plymouth's images at
-  the matching splash, so the *next* boot already matches. Anywhere else (laptop, phone) the
+  the matching splash, so the *next* boot already matches. Every viewer theme has a rendered
+  boot splash; the service accepts whatever `splash-<theme>-*.png` files are installed. Anywhere else (laptop, phone) the
   request answers 404 and is ignored. The same service takes the settings screen's **Power
   off** (`/pi/power`), which shuts Pi OS down cleanly; the row only appears on the box.
 - **Wi-Fi comes from the boot partition, and a watchdog keeps it up.** Raspberry Pi Imager
@@ -128,10 +129,11 @@ pi-image/
     └── rc_keymaps/retro-tv-mce.toml   MCE remote buttons → the viewer's keys
 ```
 
-The splash pictures in `config/plymouth/retro-tv/` are generated, not drawn by hand:
-`node tools/render-splash/render.mjs` (from the repo root, after `npm install` in that folder)
-renders both themes at 640×480 (HDMI), 720×480 (composite, non-square pixels) and 1920×1080, and
-the Roku app's icons, from `docker/web/app/js/splash.js`. Re-run it when the scenes change.
+The splash pictures in `config/plymouth/retro-tv/` are generated, not drawn by hand. In
+`tools/render-splash`, after `npm install` and `python fonts.py` (which unpacks the viewer's web
+fonts for the rasterizer), `node render.mjs` renders every theme's scene at 640×480 (HDMI),
+720×480 (composite, non-square pixels) and 1920×1080, and the Roku app's icons, from
+`docker/web/app/js/splash.js`. Re-run it when the scenes change or a theme is added.
 
 ## Building the box, step 1: a stock card plus `setup.sh`
 
