@@ -188,6 +188,8 @@
   --frame-shadow: none;
   --cell-font: 15px;
   --case: none;                   /* uppercase in the bevelled and pixel themes */
+  --lines: var(--gap);            /* the frame behind settings rows and button groups;
+                                     transparent in the rounded themes, so no box shows */
   --track: normal;
 }
 
@@ -209,6 +211,7 @@
 /* Digital Cable (2000s digital cable guide): black and deep blue, glossy
    rounded bars, a light-blue highlight that glows. */
 [data-theme="digital"] {
+  --lines: transparent;
   --navy: #000814; --program: #163d86; --channel: #22262f; --timebar: #3f4855;
   --yellow: #4aa3ff; --soft: #b9d6ff; --white: #ffffff; --gap: #000814;
   --ink-accent: #8fc8ff; --splash-bg: #000208;
@@ -228,6 +231,7 @@
 /* Satellite (early-2000s satellite receiver): navy into purple, rounded
    channel tabs, gold highlight, a bold italic-feeling face. */
 [data-theme="satellite"] {
+  --lines: transparent;
   --navy: #0b0828; --program: #1b2766; --channel: #2c1a6e; --timebar: #43349a;
   --yellow: #ffce5c; --soft: #c9cff5; --white: #ffffff; --gap: #0b0828;
   --ink-accent: #ffce5c; --splash-bg: #05041a;
@@ -248,6 +252,7 @@
 /* DVR (1999-2005 hard-disk recorder): soft blues, everything rounded,
    white pills with dark text, a green highlight, a friendly face. */
 [data-theme="dvr"] {
+  --lines: transparent;
   --navy: #173a80; --program: #e9f0fb; --channel: #ffffff; --timebar: #ffd54a;
   --yellow: #7ed957; --soft: #e3ecff; --white: #ffffff; --gap: #23559f;
   --ink-accent: #ffd54a; --splash-bg: #173a80;
@@ -264,6 +269,7 @@
 /* Media Center (2005 living-room PC): glassy blue, see-through tiles,
    a green glowing highlight, a thin face. */
 [data-theme="mediacenter"] {
+  --lines: transparent;
   --navy: #031a3a; --program: #0d3d70; --channel: #14497f; --timebar: #08356a;
   --yellow: #3fae32; --soft: #b7e0ff; --white: #ffffff; --gap: #062a55;
   --ink-accent: #9ff07e; --splash-bg: #031a3a;
@@ -284,6 +290,7 @@
 /* Aqua (Y2K desktop): light pinstripes, white rounded cells, brushed-metal
    tabs, a blue gel highlight; dark text throughout. */
 [data-theme="aqua"] {
+  --lines: transparent;
   --navy: #e3e7ec; --program: #f4f6f9; --channel: #c9ced5; --timebar: #c9ced5;
   --yellow: #2a95ef; --soft: #4c5868; --white: #1d2a3a; --gap: #ffffff;
   --ink-accent: #1f78c8; --splash-bg: #e3e7ec;
@@ -439,20 +446,20 @@ body.settings #cog { color: var(--ink-accent); }
 #setRows {
   flex: none; align-self: flex-start; min-width: min(100%, 380px);
   display: grid; grid-template-columns: auto 1fr; gap: 2px;
-  background: var(--gap); border: 2px solid var(--gap);
+  background: var(--lines); border: 2px solid var(--lines);
 }
 #setRows > div {
   height: 27px; line-height: 27px; padding: 0 10px; font-size: 15px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.setLabel { background: var(--fill-channel); color: var(--text); }
-.setValue { background: var(--fill-program); color: var(--text); cursor: pointer; }
-.setLabel.sel, .setValue.sel { background: var(--fill-sel); color: var(--sel-text); }
+.setLabel { background: var(--fill-channel); color: var(--text); border-radius: var(--r-chan); box-shadow: var(--cell-shadow); }
+.setValue { background: var(--fill-program); color: var(--text); cursor: pointer; border-radius: var(--r); box-shadow: var(--cell-shadow); }
+.setLabel.sel, .setValue.sel { background: var(--fill-sel); color: var(--sel-text); box-shadow: var(--sel-shadow); }
 #setHelp {
   flex: 1 1 0; min-height: 0; overflow: hidden;
   font-size: 15px; font-weight: 400; line-height: 20px; color: var(--soft);
 }
-#setButtons { flex: none; align-self: flex-start; display: flex; background: var(--gap); border: 2px solid var(--gap); }
+#setButtons { flex: none; align-self: flex-start; display: flex; background: var(--lines); border: 2px solid var(--lines); }
 
 /* ---- Theme picker (over the grid) ---------------------------------- */
 /* Each tile's preview carries its own data-theme, so it is drawn with that
@@ -522,7 +529,7 @@ body.settings #cog { color: var(--ink-accent); }
 }
 #detText::-webkit-scrollbar { display: none; }
 #detText b { color: var(--white); font-weight: 700; }
-#detButtons { flex: none; display: flex; gap: 2px; background: var(--gap); align-self: flex-start; border: 2px solid var(--gap); }
+#detButtons { flex: none; display: flex; gap: 2px; background: var(--lines); align-self: flex-start; border: 2px solid var(--lines); }
 
 .btn {
   font: inherit; font-size: 15px; height: 27px; line-height: 27px; padding: 0 12px;
@@ -588,7 +595,7 @@ body.full #screen { overflow: visible; }
   font-size: calc(15 * var(--b)); font-weight: 700;
   height: calc(28 * var(--b)); line-height: calc(28 * var(--b));
   padding: 0 calc(14 * var(--b));
-  border: calc(2 * var(--b)) solid var(--gap);
+  border: calc(2 * var(--b)) solid var(--lines);
 }
 #banner .btn + .btn { margin-left: calc(-2 * var(--b)); }
 
@@ -605,11 +612,11 @@ body.full #screen { overflow: visible; }
 #banner.narrow #banButtons {
   justify-self: stretch; margin: 0 calc(-14 * var(--b));
   display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
-  border-top: calc(2 * var(--b)) solid var(--gap);
+  border-top: calc(2 * var(--b)) solid var(--lines);
 }
 #banner.narrow .btn {
   box-sizing: border-box; min-width: 0; padding: 0; margin: 0; overflow: hidden;
-  border: 0; border-right: calc(2 * var(--b)) solid var(--gap);
+  border: 0; border-right: calc(2 * var(--b)) solid var(--lines);
   height: calc(36 * var(--b)); line-height: calc(36 * var(--b)); font-size: calc(14 * var(--b));
 }
 #banner.narrow .btn:last-child { border-right: 0; }
