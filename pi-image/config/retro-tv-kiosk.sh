@@ -13,6 +13,9 @@ case "$PAGE" in
     overscan) URL="http://127.0.0.1:8410/overscan.html" ;;   # the margin test pattern
     *)        URL="http://127.0.0.1:8410/?tv" ;;
 esac
+# The Pi's composite output is 720x480 pixels shown as 4:3: tell the viewer so
+# it lays out for a 4:3 screen and stretches to the pixel width.
+[ "$PAGE" != overscan ] && [ "$DISPLAY_MODE" = composite ] && URL="$URL&screen=4:3"
 
 # cage starts every output at the display's own preferred mode (the
 # HDMI-to-composite converter claims 1280x720), whatever the kernel command

@@ -168,9 +168,10 @@ one-file one.
   converter makes 480i from it. The mode is also given for `HDMI-A-2`, so either port works.
 - **Composite:** `dtoverlay=vc4-kms-v3d,composite` and `enable_tvout=1` in `config.txt`, and
   `video=Composite-1:720x480@60ie` on the command line (NTSC). The picture is 720×480 with
-  non-square pixels, shown as 4:3 by the set. The viewer's `?tv` layout is 640×480 and is not
-  stretched yet, so the guide sits in the middle with a thin black bar at each side (under "Not
-  yet"). Margins work the same way. The jack is a 4-pole 3.5 mm socket wired left, right,
+  non-square pixels, shown as 4:3 by the set. The kiosk adds `&screen=4:3` to the viewer's
+  address, and the viewer lays its 640×480 `?tv` page out for a 4:3 screen and stretches it to
+  the 720 pixels (without that, the guide sat in the middle with a black bar at each side).
+  Margins work the same way. The jack is a 4-pole 3.5 mm socket wired left, right,
   ground, **video on the sleeve**; a camcorder-type TRRS lead has video and right audio the
   other way round, so on it the Pi's video comes out of the *red* plug. In this mode the Pi 4's HDMI ports are off (the
   overlay's `composite` option does that), so a screenshot or a monitor for debugging is not an
@@ -238,10 +239,6 @@ survive.
 ## Not yet
 
 - The IR receiver has not been tried on hardware.
-- In composite mode the picture is 720 pixels wide but shown as 4:3, so pixels are not square.
-  The viewer still lays its 640-wide guide out as if they were, which leaves a thin black bar
-  at each side of the guide (not of a show that fills the screen). The viewer needs to stretch
-  for that; the boot splash already does (it is drawn at 720).
 - A "standby" action for the remote's power button (blank the picture, stop the stream, without
   shutting down) needs a small viewer change.
 - The box controlling the TV through an IR emitter.

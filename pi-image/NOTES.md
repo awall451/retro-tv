@@ -24,9 +24,11 @@ stays a description anyone can use. Newest first.
   The cable is a camcorder-type (J&D "for Sony Handycam") TRRS lead, which puts the video on the
   **red** plug when used on a Pi; red into the TV's video jack and the guide appeared. Margins
   19/21/10/6 carried over from the converter days look right at a glance; not re-tuned yet.
-- Seen on the tube: the guide has a thin black bar at each side (the viewer lays out 640 wide
-  inside the 720-pixel anamorphic picture); a widescreen show with "Fill the screen" has none.
-  Noted under "Not yet" in the README, not changed.
+- Seen on the tube: the guide had a thin black bar at each side (the viewer laid out 640 wide
+  inside the 720-pixel anamorphic picture); a widescreen show with "Fill the screen" had none.
+  Fixed the same day: the kiosk passes `&screen=4:3` in composite mode and the viewer stretches
+  the whole page by 720/640 (`body` transform), so the layout, the picture box, the banner and
+  the splash all come out 4:3 on the tube.
 - Wi-Fi at the TV spot on 2.4 GHz: 60–69% signal, 0% loss over 240 pings to the router from the
   box, and the watchdog has logged 0% on every check. The 5 GHz link in the same place lost 5 of
   6 packets yesterday. That closes the "Channel unavailable" story for this location.
@@ -74,7 +76,6 @@ stays a description anyone can use. Newest first.
 - Plymouth boot splash: not yet confirmed on the tube (seen over HDMI only).
 - Composite margins on the 12-inch set: re-check with `PAGE=overscan` now that the Pi drives the
   jack itself. Sound on the jack: not yet confirmed on the tube.
-- The viewer's side bars in composite mode (non-square pixels): a horizontal stretch in TV mode.
 - The IR receiver when it arrives: `ir-keytable -t` to check the codes, then the key map.
 - Whether Plymouth on Pi OS runs from the initramfs (then a theme change also regenerates it in
   the background, which the theme service already does if it finds one).

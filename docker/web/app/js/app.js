@@ -35,6 +35,13 @@ const el = {
 // hides the pointer (the Pi box: a television, no mouse).
 const TV_MODE = new URLSearchParams(location.search).has('tv');
 document.body.classList.toggle('tv', TV_MODE);
+// ?screen=4:3 says the screen shows the whole window as 4:3 whatever its pixel
+// count (the Pi's composite output is 720×480 pixels on a 4:3 tube). The page
+// is then laid out for square pixels and stretched to the real width.
+const SCREEN_SHAPE = (() => {
+  const m = /^(\d+):(\d+)$/.exec(new URLSearchParams(location.search).get('screen') || '');
+  return m && +m[2] ? +m[1] / +m[2] : 0;
+})();
 const LAST_CHANNEL_KEY = 'retro-tv.last-channel';
 const REFRESH_MS = 15 * 60 * 1000;       // re-read the listings this often
 const HIDDEN_STOP_MS = 5 * 60 * 1000;    // stop streaming in a tab hidden this long
@@ -84,7 +91,13 @@ function fmtRange(a, b) {
 // result is then scaled as one piece to fit the window.
 
 function computeLayout() {
-  const vw = window.innerWidth, vh = window.innerHeight, aspect = vw / vh;
+  let vw = window.innerWidth;
+  const vh = window.innerHeight;
+  // Non-square pixels: lay out as if the window were SCREEN_SHAPE wide, and
+  // stretch the page (applyLayout) by the difference.
+  const stretch = SCREEN_SHAPE ? (vw / vh) / SCREEN_SHAPE : 1;
+  vw /= stretch;
+  const aspect = vw / vh;
   let W, H, portrait = false;
   if (TV_MODE) { W = 640; H = 480; }
   else if (aspect >= 4 / 3) { H = 480; W = Math.min(854, Math.round(H * aspect)); }
@@ -92,7 +105,7 @@ function computeLayout() {
   else { portrait = true; W = 360; H = clamp(Math.round(W / aspect), 560, 820); }
 
   const scale = Math.min(vw / W, vh / H);
-  const L = { W, H, portrait, scale, ox: (vw - W * scale) / 2, oy: (vh - H * scale) / 2 };
+  const L = { W, H, portrait, scale, stretch, ox: (vw - W * scale) / 2, oy: (vh - H * scale) / 2 };
   if (portrait) {
     L.pv = { x: 8, y: 8, w: 344, h: 259 };
     L.info = { x: 8, y: 272, w: 344, h: 152 };
@@ -136,6 +149,10 @@ function px(node, box) {
 
 function applyLayout() {
   const L = S.L = computeLayout();
+  // The whole page is stretched for non-square pixels (see computeLayout); every
+  // fixed-position element then measures against the body's logical size.
+  document.body.style.width = L.stretch === 1 ? '' : `${L.vw}px`;
+  document.body.style.transform = L.stretch === 1 ? '' : `scale(${L.stretch.toFixed(5)}, 1)`;
   const root = document.documentElement.style;
   root.setProperty('--u', `${L.u}px`);
   root.setProperty('--b', `${L.b}px`);

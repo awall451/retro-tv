@@ -339,6 +339,7 @@ html, body {
   overscroll-behavior: none;
 }
 body {
+  transform-origin: 0 0;          /* stretched by the script for non-square pixels (?screen=) */
   font-family: var(--font); font-weight: 700; color: var(--white);
   -webkit-user-select: none; user-select: none;
   touch-action: none; -webkit-tap-highlight-color: transparent;

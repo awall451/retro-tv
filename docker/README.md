@@ -139,6 +139,8 @@ Keep it on the tailnet. Do not publish it to the internet (no Funnel, no port fo
   only (`js/theme-boot.js` checks). The Roku app and the Retro TV box's boot splash still know
   only Cable and Vaporwave.
 - Add `?tv` to the address for the plain 640×480 layout, whatever the window's shape.
+- Add `&screen=4:3` when the screen shows the window as 4:3 whatever its pixel count (a CRT fed
+  720×480 from the Pi's composite jack): the page is laid out for square pixels and stretched.
 - **Full screen** on a phone or tablet also turns the screen on its side. (iPhones cannot put a
   page in full screen; there the button hands the picture to the phone's own video player.)
 
