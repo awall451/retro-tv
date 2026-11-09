@@ -149,7 +149,9 @@ the Roku app's icons, from `docker/web/app/js/splash.js`. Re-run it when the sce
    the edge. Adjust the margins in the same file (a bigger number pulls the picture in from that
    edge) until the frame is just visible on every side, then set `PAGE=guide`. Margins take a
    reboot; the page only `systemctl restart retro-tv`. As a starting point, a 12-inch set
-   through a converter needed left 19, right 21, top 10, bottom 6.
+   through a converter needed left 19, right 21, top 10, bottom 6; the same set on the Pi's own
+   composite output needed left 45, right 37, top 10, bottom 6 (the sides overscan far more
+   than the converter did, the height did not change).
 
 `setup.sh` is written to be safe to run repeatedly: it installs what is missing, rewrites the
 files it owns, and leaves the rest alone. A full install takes about 4 minutes.
@@ -232,6 +234,11 @@ survive.
   tube stayed dark. The cable was a camcorder lead, which carries the Pi's video on its red plug:
   red into the TV's video input, and the picture appeared. A cable sold for the Pi (or a Zune)
   is wired the Pi's way.
+- **The margin test pattern was never styled.** nginx sends a Content-Security-Policy for the
+  viewer that forbids inline styles, so the pattern page's `<style>` was silently dropped: the
+  image drew at its own 640×480 in the top-left corner with the browser's default 8 px margin.
+  On the 640×480 HDMI mode this was nearly invisible; on composite (720 wide) it was obvious.
+  The style is a separate file now (`overscan.css`) and the image fills the screen.
 - **Sound defaulted to the headphone jack.** PipeWire picks the 3.5 mm jack as the default
   output, so HDMI got silence. The kiosk script makes the HDMI output the default at full volume
   (the jack in composite mode, where it carries the sound).

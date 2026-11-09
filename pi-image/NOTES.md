@@ -22,8 +22,13 @@ stays a description anyone can use. Newest first.
   At the TV, on Wi-Fi only and the 3.5 mm cable: no picture at first although the kernel showed
   `Composite-1` connected and a `grim` capture under cage showed the guide being scanned out.
   The cable is a camcorder-type (J&D "for Sony Handycam") TRRS lead, which puts the video on the
-  **red** plug when used on a Pi; red into the TV's video jack and the guide appeared. Margins
-  19/21/10/6 carried over from the converter days look right at a glance; not re-tuned yet.
+  **red** plug when used on a Pi; red into the TV's video jack and the guide appeared.
+- Margins re-tuned once the viewer was stretched (which exposed the edges the 40 px bars had
+  hidden). The test pattern turned out to have been unstyled all along (CSP), fixed with
+  `overscan.css`, but reading its photos still misled: a first guess of 29/31/18/14 left the
+  sides cut and put bars top and bottom. Judged on the guide itself instead, one reboot at a
+  time: left 45, right 37, **top 10 and bottom 6 unchanged**. Channel numbers and the cog are
+  fully on screen with no bar on either side.
 - Seen on the tube: the guide had a thin black bar at each side (the viewer laid out 640 wide
   inside the 720-pixel anamorphic picture); a widescreen show with "Fill the screen" had none.
   Fixed the same day: the kiosk passes `&screen=4:3` in composite mode and the viewer stretches
@@ -74,8 +79,7 @@ stays a description anyone can use. Newest first.
 ## Open items
 
 - Plymouth boot splash: not yet confirmed on the tube (seen over HDMI only).
-- Composite margins on the 12-inch set: re-check with `PAGE=overscan` now that the Pi drives the
-  jack itself. Sound on the jack: not yet confirmed on the tube.
+- Sound on the composite jack: not yet confirmed on the tube.
 - The IR receiver when it arrives: `ir-keytable -t` to check the codes, then the key map.
 - Whether Plymouth on Pi OS runs from the initramfs (then a theme change also regenerates it in
   the background, which the theme service already does if it finds one).
