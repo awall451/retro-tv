@@ -413,6 +413,7 @@ if (new URLSearchParams(location.search).has('debug')) {
     + 'background:rgba(0,0,0,.78);color:#9f9;font:11px/1.35 monospace;white-space:pre-wrap;pointer-events:none';
   document.body.append(panel);
   setInterval(() => {
+    window.rtvBars = bars;
     const v = el.video, st = player.stats(), b = bars.last, fs = document.fullscreenElement || document.webkitFullscreenElement;
     const ago = b.at ? ((Date.now() - b.at) / 1000).toFixed(1) + 's ago' : 'never';
     panel.textContent = [
@@ -421,7 +422,7 @@ if (new URLSearchParams(location.search).has('debug')) {
       `window ${innerWidth}x${innerHeight} · visual ${visualViewport ? Math.round(visualViewport.width) + 'x' + Math.round(visualViewport.height) : '-'} · fullscreen ${fs ? fs.id || fs.tagName : 'no'} · dpr ${devicePixelRatio}`,
       `video ${v.videoWidth}x${v.videoHeight} · box ${Math.round(S.L.bw)}x${Math.round(S.L.bh)} · transform ${v.style.transform || 'none'}`,
       `bars: ${b.outcome} (${ago}) · lit ${(b.lit * 100).toFixed(0)}% · max ${b.max ?? '-'} · box ${b.box ? `${b.box.left}-${b.box.right} x ${b.box.top}-${b.box.bottom} of 64x48` : '-'}`,
-      `bars found x ${bars.bars.x.toFixed(3)} y ${bars.bars.y.toFixed(3)} · watcher ${bars.timer ? 'running' : 'stopped'}`,
+      `bars found x ${bars.bars.x.toFixed(3)} y ${bars.bars.y.toFixed(3)} · method ${bars.method} · watcher ${bars.timer ? 'running' : 'stopped'}`,
       `padding: latency ${st.latency == null ? '-' : st.latency.toFixed(1) + 's'} · queued ${st.buffered.toFixed(1)}s · speed ${st.rate} · bw ${st.bandwidth ? (st.bandwidth / 1e6).toFixed(1) + ' Mbps' : '-'}`,
     ].join('\n');
   }, 500);

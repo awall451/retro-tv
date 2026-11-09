@@ -193,6 +193,13 @@ empties the buffer and the picture stops. `js/player.js` keeps more in hand:
 
 Safari on iPhones plays HLS itself, so none of this applies there.
 
+**"Fill the screen" in Firefox for Android.** The bar finder (`js/bars.js`) looks at a tiny copy
+of the frame twice a second. Firefox for Android gives a 2D canvas an all-black copy of
+hardware-decoded video (no error; every pixel 0), so the bars were never found. After six
+pure-black reads in a row during playback the finder switches to reading the frame through
+WebGL, which Firefox does show; if that is blind too it stops. `?debug` shows which way it is
+reading (`method 2d / webgl / none`).
+
 Other players that read ErsatzTV's channel list directly (Kodi) will see the twins as extra
 channels unless they skip the `HD` group (filter the M3U, or show only the channel group the
 normal channels are in). More on twins: [`../ersatztv/README.md`](../ersatztv/README.md), "HD
