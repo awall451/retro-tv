@@ -184,8 +184,13 @@ function placeScreen(animate) {
 // With the HD setting on, the viewer asks for a channel's HD twin where
 // it has one. Nothing else changes: same guide, names and numbers.
 
-const wantHd = () => S.hasHd && getSetting('quality') === 'hd';
-const streamOf = ch => ({ num: wantHd() && ch.hd ? ch.hd : ch.num });
+// If HD could not keep up on this connection (player.js reports it), the
+// viewer drops to Standard for a while, then tries HD again on the next tune.
+const SLOW_SD_MS = 10 * 60 * 1000;
+let sdUntil = 0;
+const slowNow = () => Date.now() < sdUntil;
+const wantHd = () => S.hasHd && getSetting('quality') === 'hd' && !slowNow();
+const streamOf = ch => ({ num: wantHd() && ch.hd ? ch.hd : ch.num, hd: wantHd() && !!ch.hd });
 function pictureShape() {
   const ch = S.channels.find(c => c.id === S.tunedId);
   return ch && wantHd() && ch.hd ? 16 / 9 : 4 / 3;
@@ -385,7 +390,20 @@ const player = new Player(el.video, {
     if (muted) showOsd(SOUND_HINT, 0);
     else hideOsd();
   },
+  // HD cannot keep up on this connection: switch to Standard for a while.
+  onSlow(ch) {
+    if (!ch || ch !== player.channel) return;
+    sdUntil = Date.now() + SLOW_SD_MS;
+    stopSurf();
+    bars.reset();
+    applyLayout();
+    player.tune(ch, { warm: true, stream: ch.num });
+    showOsd('Slow connection: switched to Standard', 5000);
+  },
 });
+
+// ?debug: expose the player, to read its padding and speed from the console.
+if (new URLSearchParams(location.search).has('debug')) window.rtvPlayer = player;
 
 // A real key press or click is what browsers want before they allow sound.
 function wake() {
@@ -463,13 +481,15 @@ function changeSetting(step) {
   }
   if (id === 'picture') syncZoom();
   if (id === 'quality') {
+    sdUntil = 0;   // a choice made by hand ends any automatic drop to Standard
     // Switch the channel being watched to its other stream right away.
     const ch = tunedChannel();
     stopSurf();
     if (ch && player.channel) {
       bars.reset();
       applyLayout();
-      player.tune(ch, { stream: streamOf(ch).num });
+      const st = streamOf(ch);
+      player.tune(ch, { stream: st.num, watchSlow: st.hd });
     }
   }
   if (id === 'warm' && getSetting('warm') !== 'on') stopSurf();
@@ -578,7 +598,7 @@ function tune(ch, direction = 0) {
   const warm = warmer.isReady(stream);
   warmer.release(stream);
   bars.reset();
-  player.tune(ch, { warm, stream: stream.num });
+  player.tune(ch, { warm, stream: stream.num, watchSlow: stream.hd });
   if (direction) surf(direction);
   else stopSurf();
 }
@@ -1068,7 +1088,7 @@ document.addEventListener('visibilitychange', () => {
   if (suspendedId) {
     const ch = S.channels.find(c => c.id === suspendedId);
     suspendedId = null;
-    if (ch) player.tune(ch, { stream: streamOf(ch).num });
+    if (ch) { const st = streamOf(ch); player.tune(ch, { stream: st.num, watchSlow: st.hd }); }
   }
   if (Date.now() - S.loadedAt > 60000) refresh();
   render();

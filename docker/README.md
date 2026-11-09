@@ -164,9 +164,34 @@ things:
 - its **number** is the channel's number plus 100 (channel 1 → 101)
 
 In ErsatzTV a twin is a channel with Playout Source **Mirror**, Mirror Source Channel set to the
-channel it copies, an HD FFmpeg profile, Streaming Engine **Next**, and **Show In EPG** off.
+channel it copies, an HD FFmpeg profile, Streaming Engine **Next**, and **Show In EPG** on (so Kodi gets guide data for it).
 See `../ersatztv/README.md` ("HD copies of every channel") for why not Legacy.
 A channel without a twin simply plays in Standard.
+
+### Padding and slow connections
+
+A live channel only exists a little ahead of real time: the server keeps the last ~40 seconds
+of 4-second segments and makes new ones about as fast as they play. Out of the box the player
+(hls.js) plays 3 segments behind the newest, so a dip in the connection longer than ~12 seconds
+empties the buffer and the picture stops. `js/player.js` keeps more in hand:
+
+- **It plays further back** (7 segments, ~28 s). Joining a channel that is already running
+  starts that far back at once.
+- **On a channel that has just started** there is nothing older yet, so playback runs 4% slow
+  (pitch kept, hard to notice) until about 26 seconds are queued, then normal speed. That takes
+  a few minutes; measured: 14 s of padding at the start, about 1 s more every 25 s.
+- **HD that cannot keep up drops to Standard.** While watching an HD twin, every segment's
+  download time is compared with its length. If the last four took more than 85% of their
+  playing time to fetch, or the picture stalled twice in a minute, the viewer switches to the
+  channel's Standard stream and says "Slow connection: switched to Standard". It stays on
+  Standard for 10 minutes, then the next tune tries HD again. Choosing a Quality by hand ends it
+  at once. Each device decides for itself: a phone on mobile data can drop to Standard while a
+  TV on Wi-Fi stays HD. Tested with the connection throttled to 3 Mbps: HD ran dry within 15 s
+  and switched at ~18 s; Standard then played without stalling.
+- Add `?debug` to the address to get `rtvPlayer.stats()` in the browser console: live latency,
+  seconds queued, playback rate, bandwidth estimate.
+
+Safari on iPhones plays HLS itself, so none of this applies there.
 
 Other players that read ErsatzTV's channel list directly (Kodi) will see the twins as extra
 channels unless they skip the `HD` group (filter the M3U, or show only the channel group the
