@@ -402,8 +402,30 @@ const player = new Player(el.video, {
   },
 });
 
-// ?debug: expose the player, to read its padding and speed from the console.
-if (new URLSearchParams(location.search).has('debug')) window.rtvPlayer = player;
+// ?debug: expose the player (rtvPlayer.stats() in the console) and show a
+// small panel with what the viewer sees: padding, and the "Fill the
+// screen" bar finder's view of the frames. For diagnosing a browser.
+if (new URLSearchParams(location.search).has('debug')) {
+  window.rtvPlayer = player;
+  const panel = document.createElement('pre');
+  panel.id = 'debugPanel';
+  panel.style.cssText = 'position:fixed;left:4px;top:4px;z-index:9;margin:0;padding:6px 8px;max-width:96vw;'
+    + 'background:rgba(0,0,0,.78);color:#9f9;font:11px/1.35 monospace;white-space:pre-wrap;pointer-events:none';
+  document.body.append(panel);
+  setInterval(() => {
+    const v = el.video, st = player.stats(), b = bars.last, fs = document.fullscreenElement || document.webkitFullscreenElement;
+    const ago = b.at ? ((Date.now() - b.at) / 1000).toFixed(1) + 's ago' : 'never';
+    panel.textContent = [
+      navigator.userAgent.replace(/^Mozilla\/5\.0 /, '').slice(0, 110),
+      `mode ${S.mode} · picture ${getSetting('picture')} · quality ${getSetting('quality')} · stream ${player.stream || '-'} · ${player.state}`,
+      `window ${innerWidth}x${innerHeight} · visual ${visualViewport ? Math.round(visualViewport.width) + 'x' + Math.round(visualViewport.height) : '-'} · fullscreen ${fs ? fs.id || fs.tagName : 'no'} · dpr ${devicePixelRatio}`,
+      `video ${v.videoWidth}x${v.videoHeight} · box ${Math.round(S.L.bw)}x${Math.round(S.L.bh)} · transform ${v.style.transform || 'none'}`,
+      `bars: ${b.outcome} (${ago}) · lit ${(b.lit * 100).toFixed(0)}% · max ${b.max ?? '-'} · box ${b.box ? `${b.box.left}-${b.box.right} x ${b.box.top}-${b.box.bottom} of 64x48` : '-'}`,
+      `bars found x ${bars.bars.x.toFixed(3)} y ${bars.bars.y.toFixed(3)} · watcher ${bars.timer ? 'running' : 'stopped'}`,
+      `padding: latency ${st.latency == null ? '-' : st.latency.toFixed(1) + 's'} · queued ${st.buffered.toFixed(1)}s · speed ${st.rate} · bw ${st.bandwidth ? (st.bandwidth / 1e6).toFixed(1) + ' Mbps' : '-'}`,
+    ].join('\n');
+  }, 500);
+}
 
 // A real key press or click is what browsers want before they allow sound.
 function wake() {

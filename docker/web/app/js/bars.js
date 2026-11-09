@@ -27,6 +27,8 @@ export class BarWatcher {
     this.timer = 0;
     this.samples = [];
     this.bars = { x: 0, y: 0 };
+    // What the last look at a frame found (read by the ?debug panel).
+    this.last = { at: 0, outcome: 'not started', lit: 0, box: null };
   }
 
   start() {
@@ -52,12 +54,16 @@ export class BarWatcher {
 
   #sample() {
     const video = this.video;
-    if (video.readyState < 2 || video.paused || !video.videoWidth) return;
+    if (video.readyState < 2 || video.paused || !video.videoWidth) {
+      this.last = { ...this.last, at: Date.now(), outcome: `waiting (readyState ${video.readyState}${video.paused ? ', paused' : ''})` };
+      return;
+    }
     let data;
     try {
       this.ctx.drawImage(video, 0, 0, W, H);
       data = this.ctx.getImageData(0, 0, W, H).data;
-    } catch {
+    } catch (err) {
+      this.last = { at: Date.now(), outcome: 'cannot read frame: ' + (err && err.name), lit: 0, box: null };
       return this.stop();      // this browser will not let script see the frame
     }
     let top = H, bottom = -1, left = W, right = -1, lit = 0;
@@ -72,6 +78,9 @@ export class BarWatcher {
         if (x > right) right = x;
       }
     }
+    let max = 0;
+    for (let i = 0; i < data.length; i += 4) max = Math.max(max, data[i], data[i + 1], data[i + 2]);
+    this.last = { at: Date.now(), outcome: 'read', lit: lit / (W * H), max, box: { top, bottom, left, right } };
     // A mostly dark frame says nothing about where the picture ends.
     if (lit < W * H * 0.1) return;
     this.samples.push({ top, bottom, left, right });
