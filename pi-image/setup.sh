@@ -79,8 +79,14 @@ install -m 755 "$HERE/config/retro-tv-kiosk.sh" /usr/local/bin/retro-tv-kiosk.sh
 install -m 755 "$HERE/config/retro-tv-themed.py" /usr/local/bin/retro-tv-themed.py
 install -m 644 "$HERE/config/retro-tv.service" /etc/systemd/system/retro-tv.service
 install -m 644 "$HERE/config/retro-tv-themed.service" /etc/systemd/system/retro-tv-themed.service
+# Network keeper: Wi-Fi profiles restored from the boot partition, a check every minute.
+install -m 755 "$HERE/config/retro-tv-net.sh" /usr/local/bin/retro-tv-net.sh
+install -m 644 "$HERE/config/retro-tv-net-restore.service" "$HERE/config/retro-tv-net-check.service" \
+    "$HERE/config/retro-tv-net-check.timer" /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable retro-tv-themed.service retro-tv.service
+systemctl enable retro-tv-themed.service retro-tv.service retro-tv-net-restore.service retro-tv-net-check.timer
+/usr/local/bin/retro-tv-net.sh restore
+systemctl start retro-tv-net-check.timer
 systemctl disable getty@tty1.service >/dev/null 2>&1 || true
 systemctl set-default graphical.target
 

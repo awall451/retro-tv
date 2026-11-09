@@ -152,6 +152,7 @@ The cog opens settings. They are kept by the browser they were set in, so each d
 | Quality | **Standard**: the 4:3 picture made for the old TV. **HD**: the same channels in widescreen 1080p. The guide, names and numbers do not change. Only shown when the server has HD twins (below). |
 | Picture | **Original**: the whole 4:3 picture, as on the TV. **Fill the screen**: while watching, zooms in until the black bars around a widescreen show are off the screen; a true 4:3 show is left as it is. For wide monitors. The zoom follows the picture, so it can change when a 4:3 commercial follows a widescreen film. |
 | Fast flipping | **On**: the next channel is warmed up while you flip (see below). **Off**: channels start only when tuned. |
+| Power | Only on the [Pi box](../pi-image/README.md): **Power off**, pressed twice, shuts the box down cleanly. A read-only **Network** line under it shows how the box is connected (wired, or the Wi-Fi band and signal). |
 
 ### HD twins on the server
 

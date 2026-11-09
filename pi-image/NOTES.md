@@ -3,6 +3,37 @@
 Working notes for this particular box, kept apart from the [README](README.md) so that page
 stays a description anyone can use. Newest first.
 
+## 2026-11-09: no network at all, then composite
+
+- Moved to the TV on Wi-Fi only and the 3.5 mm composite cable: no picture (expected, the box
+  was still in `hdmi480` mode) and no SSH. The router saw its Wi-Fi address but 5 of 6 packets
+  were lost: 5 GHz at the TV spot, with the PoE HAT over the antenna and the tube beside it. A
+  power cycle made it worse: the only Wi-Fi profile was gone and the box booted with no network
+  at all. (The kernel's "orphan cleanup" line is printed after clean reboots too, so it proves
+  nothing; the lost profile and the pulled plug are the facts.)
+- Written and installed: `retro-tv-net.sh` with its restore unit (profiles rebuilt from Imager's
+  `network-config` at every boot) and the minute check behind `/pi/net`; the viewer's settings
+  screen gained a read-only Network row.
+- The two network names here take the same password; the 2.4 GHz one is `WIFI_EXTRA_SSID` and
+  is preferred. At the switch: 2.4 GHz 68–74%, 5 GHz 71%, 0% loss on either. Yesterday's
+  "no network after pinning the band" is explained: the Imager profile was for the 5 GHz name,
+  which does not exist on 2.4 GHz.
+- Display mode switched to `composite` (`DISPLAY_MODE` in `/etc/retro-tv.env`, then `setup.sh`).
+  At the TV, on Wi-Fi only and the 3.5 mm cable: no picture at first although the kernel showed
+  `Composite-1` connected and a `grim` capture under cage showed the guide being scanned out.
+  The cable is a camcorder-type (J&D "for Sony Handycam") TRRS lead, which puts the video on the
+  **red** plug when used on a Pi; red into the TV's video jack and the guide appeared. Margins
+  19/21/10/6 carried over from the converter days look right at a glance; not re-tuned yet.
+- Seen on the tube: the guide has a thin black bar at each side (the viewer lays out 640 wide
+  inside the 720-pixel anamorphic picture); a widescreen show with "Fill the screen" has none.
+  Noted under "Not yet" in the README, not changed.
+- Wi-Fi at the TV spot on 2.4 GHz: 60–69% signal, 0% loss over 240 pings to the router from the
+  box, and the watchdog has logged 0% on every check. The 5 GHz link in the same place lost 5 of
+  6 packets yesterday. That closes the "Channel unavailable" story for this location.
+- Added the settings screen's **Power off** row (`/pi/power` through `retro-tv-themed.py`,
+  two presses, then `systemctl poweroff`); tested end to end with the `reboot` action. The
+  settings list is now six rows on the box, so a compact layout kicks in under 540 px of height.
+
 ## 2026-11-07: first boot
 
 - A stock Raspberry Pi OS Lite card (Debian 13, Trixie) plus `setup.sh` booted into the guide at
@@ -34,14 +65,16 @@ stays a description anyone can use. Newest first.
 - Pi 4 Model B, 2 GB, official PoE+ HAT, 16 GB card, wired through the PoE switch.
 - 12-inch CRT with composite input, fed by the converter for now (shared with the Batocera Pi,
   so only one of the two is on the tube at a time).
-- 4-pole 3.5 mm composite cable and the MCE USB IR receiver: on order.
+- 4-pole 3.5 mm composite cable: a camcorder-type lead (video on the red plug on a Pi). The MCE USB
+  IR receiver: on order.
 - Universal remote to be programmed for the TV's power and volume and for the box.
 
 ## Open items
 
 - Plymouth boot splash: not yet confirmed on the tube (seen over HDMI only).
-- The Pi's composite output (720×480i) when the cable arrives: mode line, margins, sound on the
-  jack.
+- Composite margins on the 12-inch set: re-check with `PAGE=overscan` now that the Pi drives the
+  jack itself. Sound on the jack: not yet confirmed on the tube.
+- The viewer's side bars in composite mode (non-square pixels): a horizontal stretch in TV mode.
 - The IR receiver when it arrives: `ir-keytable -t` to check the codes, then the key map.
 - Whether Plymouth on Pi OS runs from the initramfs (then a theme change also regenerates it in
   the background, which the theme service already does if it finds one).

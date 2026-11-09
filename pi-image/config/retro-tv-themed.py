@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
-"""Retro TV theme service.
+"""Retro TV theme (and power) service.
 
 A tiny local web service on 127.0.0.1:8412 that the viewer talks to through
-nginx (/pi/theme). The viewer posts its theme ("cable" or "vapor") whenever it
-applies one; this records the choice in /data/retro-tv/theme and points the
-Plymouth theme's images at the matching splash, so the next boot shows it. If
-Plymouth runs from the initramfs on this system, the initramfs is rebuilt in
-the background so the change gets in.
+nginx (/pi/theme, /pi/power). The viewer posts its theme ("cable" or "vapor")
+whenever it applies one; this records the choice in /data/retro-tv/theme and
+points the Plymouth theme's images at the matching splash, so the next boot
+shows it. If Plymouth runs from the initramfs on this system, the initramfs is
+rebuilt in the background so the change gets in. The settings screen's
+"Power off" row posts to /pi/power, and the box shuts down cleanly.
 
   POST /pi/theme   body: the theme id        -> 204
   GET  /pi/theme                             -> the current id
+  POST /pi/power   body: "off" or "reboot"   -> 204, then systemctl poweroff / reboot
 
 Root-only files are touched, so it runs as root (retro-tv-themed.service).
+Only the viewer on this box reaches it: nginx listens on loopback alone.
 """
 import glob
 import os
@@ -20,6 +23,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 THEMES = ("cable", "vapor")
+POWER = {"off": "poweroff", "reboot": "reboot"}
 STATE_DIR = "/data/retro-tv"
 STATE = os.path.join(STATE_DIR, "theme")
 PLYMOUTH = "/usr/share/plymouth/themes/retro-tv"
@@ -86,6 +90,8 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_POST(self):
+        if self.path == "/pi/power":
+            return self.do_power()
         if self.path != "/pi/theme":
             return self.send_error(404)
         length = int(self.headers.get("Content-Length") or 0)
@@ -95,6 +101,17 @@ class Handler(BaseHTTPRequestHandler):
         set_theme(theme)
         self.send_response(204)
         self.end_headers()
+
+    def do_power(self):
+        length = int(self.headers.get("Content-Length") or 0)
+        action = self.rfile.read(min(length, 16)).decode("utf-8", "replace").strip()
+        if action not in POWER:
+            return self.send_error(400, "unknown action")
+        self.send_response(204)
+        self.end_headers()
+        # Answer first, then act a moment later so the viewer gets its 204.
+        threading.Timer(1.0, subprocess.run, args=(["systemctl", POWER[action]],),
+                        kwargs={"check": False}).start()
 
 
 if __name__ == "__main__":

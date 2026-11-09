@@ -448,6 +448,7 @@ body.settings #cog { color: var(--ink-accent); }
 .setLabel { background: var(--fill-channel); color: var(--text); }
 .setValue { background: var(--fill-program); color: var(--text); cursor: pointer; }
 .setLabel.sel, .setValue.sel { background: var(--fill-sel); color: var(--sel-text); }
+.setInfo { background: var(--fill-channel); color: var(--soft); }   /* read-only row: the box's network */
 #setHelp {
   flex: 1 1 0; min-height: 0; overflow: hidden;
   font-size: 15px; font-weight: 400; line-height: 20px; color: var(--soft);
@@ -621,6 +622,16 @@ body.full #screen { overflow: visible; }
   font-size: calc(21 * var(--b)); white-space: nowrap;
 }
 
+/* Short screens (the 480-line TV): the settings list has up to six rows and
+   must leave room for the help line and the Done button. */
+@media (max-height: 540px) {
+  #settings { padding: 6px 8px; gap: 5px; }
+  #setTitle { font-size: 14px; }
+  #setRows > div { height: 22px; line-height: 22px; font-size: 14px; }
+  #setHelp { font-size: 13px; line-height: 16px; }
+  #settings .btn { height: 24px; line-height: 24px; font-size: 14px; }
+}
+
 /* Touch screens: buttons a finger can hit. */
 @media (pointer: coarse) {
   #banner .btn { height: max(calc(28 * var(--b)), 40px); line-height: max(calc(28 * var(--b)), 40px); }
@@ -636,6 +647,7 @@ body.full #screen { overflow: visible; }
 #banner { z-index: 4; }
 #osd { z-index: 5; }
 #splash { z-index: 6; }
+#poweroff { z-index: 7; }
 
 /* ---- Splash (while the guide loads, and after a theme change) ---------- */
 /* js/splash.js draws the theme's scene in here as SVG, in 640x480 units,
@@ -671,3 +683,11 @@ body.full #screen { overflow: visible; }
   #splash .blink { animation: splashBlink 1.6s steps(2, end) infinite; }
 }
 @keyframes splashBlink { to { opacity: .25; } }
+
+/* Shown while the Pi box shuts down (the picture goes dark a few seconds later). */
+#poweroff {
+  position: absolute; inset: 0; background: #000; color: var(--soft);
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  padding: 0 10%; font-size: 20px;
+}
+#poweroff[hidden] { display: none; }
