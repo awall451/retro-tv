@@ -1,5 +1,7 @@
-/* Retro TV guide: a late-90s cable guide. Flat colors, 2 px lines, no
-   gradients, shadows, rounded corners or transparency.
+/* Retro TV guide: a late-90s cable guide. In the Cable theme: flat
+   colors, 2 px lines, no gradients, shadows, rounded corners or
+   transparency. Other themes change that through the shape tokens below
+   (fills may be gradients; corner radius, glow, gloss).
 
    Everything inside #stage is laid out in the units of the 640x480
    design (design/mockup.html) and scaled to the window as one piece.
@@ -51,6 +53,94 @@
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
+/* Faces of the 2026-11 themes (Digital Cable, Satellite, DVR, Media Center,
+   Aqua, Set-Top Web, Listings Channel): Latin only, loaded when a theme uses them. */
+@font-face {
+  font-family: "Arimo"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("/fonts/arimo-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Arimo"; font-style: normal; font-weight: 700; font-display: swap;
+  src: url("/fonts/arimo-latin-700-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Exo 2"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("/fonts/exo-2-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Exo 2"; font-style: normal; font-weight: 800; font-display: swap;
+  src: url("/fonts/exo-2-latin-800-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Nunito"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("/fonts/nunito-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Nunito"; font-style: normal; font-weight: 800; font-display: swap;
+  src: url("/fonts/nunito-latin-800-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Nunito"; font-style: normal; font-weight: 900; font-display: swap;
+  src: url("/fonts/nunito-latin-900-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Open Sans"; font-style: normal; font-weight: 300; font-display: swap;
+  src: url("/fonts/open-sans-latin-300-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Open Sans"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("/fonts/open-sans-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Open Sans"; font-style: normal; font-weight: 600; font-display: swap;
+  src: url("/fonts/open-sans-latin-600-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Lato"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("/fonts/lato-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Lato"; font-style: normal; font-weight: 700; font-display: swap;
+  src: url("/fonts/lato-latin-700-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Lato"; font-style: normal; font-weight: 900; font-display: swap;
+  src: url("/fonts/lato-latin-900-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Archivo Black"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("/fonts/archivo-black-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Chakra Petch"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("/fonts/chakra-petch-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Chakra Petch"; font-style: normal; font-weight: 700; font-display: swap;
+  src: url("/fonts/chakra-petch-latin-700-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "VT323"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("/fonts/vt323-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 /* ---- Themes ---------------------------------------------------------- */
 /* Every color and face is a token here; js/themes.js lists the themes and
    the Theme setting puts one on <html> as data-theme. Token names keep the
@@ -72,6 +162,31 @@
   --display-weight: 700;         /* titles in a face with no bold are set at their one weight */
   --u: 1px;
   --b: 1px;
+
+  /* Shape and surface. The defaults reproduce the flat Cable look; a theme
+     may set gradients as fills, round the cells, add gloss and glow. The
+     grid's geometry (27 px rows, 2 px lines) never changes. */
+  --stage-bg: var(--navy);        /* guide background; may be a gradient */
+  --band: none;                   /* a backdrop behind the picture and details */
+  --text: var(--white);           /* text in grid cells, buttons, settings rows */
+  --sel-text: var(--navy);        /* text on the highlight */
+  --slot-text: var(--white);
+  --clock-text: var(--sel-text);
+  --fill-program: var(--program);
+  --fill-channel: var(--channel);
+  --fill-slot: var(--timebar);
+  --fill-sel: var(--yellow);
+  --fill-clock: var(--yellow);
+  --r: 0px;                       /* corner radius of cells and buttons */
+  --r-chan: var(--r);
+  --cell-shadow: none;            /* gloss or bevel on every cell */
+  --sel-shadow: none;             /* glow or bevel on the highlight */
+  --frame: 2px solid var(--yellow);   /* the picture's frame */
+  --frame-r: 0px;
+  --frame-shadow: none;
+  --cell-font: 15px;
+  --case: none;                   /* uppercase in the bevelled and pixel themes */
+  --track: normal;
 }
 
 /* Vaporwave: purple cells, pink where Cable is yellow, cyan for accent
@@ -88,6 +203,134 @@
   --font-display: "Audiowide", "Cabin", Arial, sans-serif;
   --display-weight: 400;         /* Audiowide has one weight; no faux bold */
 }
+
+/* Digital Cable (2000s digital cable guide): black and deep blue, glossy
+   rounded bars, a light-blue highlight that glows. */
+:root[data-theme="digital"] {
+  --navy: #000814; --program: #163d86; --channel: #22262f; --timebar: #3f4855;
+  --yellow: #4aa3ff; --soft: #b9d6ff; --white: #ffffff; --gap: #000814;
+  --ink-accent: #8fc8ff; --splash-bg: #000208;
+  --font: "Arimo", Arial, Helvetica, sans-serif; --font-display: var(--font);
+  --band: linear-gradient(180deg, #0b2a66 0%, #04122e 100%);
+  --fill-program: linear-gradient(180deg, #2457ad 0%, #163d86 50%, #10306c 51%, #0b2558 100%);
+  --fill-channel: linear-gradient(180deg, #3a404c 0%, #1b1f27 100%);
+  --fill-slot: linear-gradient(180deg, #5d6878 0%, #2c333e 100%); --slot-text: #e6eefc;
+  --fill-sel: linear-gradient(180deg, #f2faff 0%, #9cd2ff 50%, #4aa3ff 51%, #2a7fe0 100%);
+  --fill-clock: var(--fill-sel); --sel-text: #03112e;
+  --r: 8px; --cell-font: 14px;
+  --cell-shadow: inset 0 1px 0 rgba(255, 255, 255, .18);
+  --sel-shadow: 0 0 10px rgba(90, 170, 255, .85);
+  --frame: 2px solid #4aa3ff; --frame-r: 10px; --frame-shadow: 0 0 14px rgba(74, 163, 255, .45);
+}
+
+/* Satellite (early-2000s satellite receiver): navy into purple, rounded
+   channel tabs, gold highlight, a bold italic-feeling face. */
+:root[data-theme="satellite"] {
+  --navy: #0b0828; --program: #1b2766; --channel: #2c1a6e; --timebar: #43349a;
+  --yellow: #ffce5c; --soft: #c9cff5; --white: #ffffff; --gap: #0b0828;
+  --ink-accent: #ffce5c; --splash-bg: #05041a;
+  --font: "Exo 2", Arial, Helvetica, sans-serif; --font-display: var(--font); --display-weight: 800;
+  --stage-bg: linear-gradient(180deg, #1a0d4a 0%, #0b0828 100%);
+  --band: linear-gradient(180deg, rgba(80, 60, 180, .35) 0%, rgba(0, 0, 0, 0) 100%);
+  --fill-program: linear-gradient(180deg, #2b3b8f 0%, #1b2766 100%);
+  --fill-channel: linear-gradient(90deg, #4a2a9c 0%, #2c1a6e 100%);
+  --fill-slot: linear-gradient(180deg, #6d5bd0 0%, #43349a 100%);
+  --fill-sel: linear-gradient(180deg, #ffe08a 0%, #ffce5c 50%, #e9a823 100%);
+  --fill-clock: var(--fill-sel); --sel-text: #1a0d4a;
+  --r: 4px; --r-chan: 13px; --cell-font: 14px; --track: .3px;
+  --cell-shadow: 0 1px 0 rgba(0, 0, 0, .5);
+  --sel-shadow: 0 0 9px rgba(255, 206, 92, .7);
+  --frame: 3px solid #ffce5c; --frame-r: 12px; --frame-shadow: 0 0 16px rgba(255, 206, 92, .35);
+}
+
+/* DVR (1999-2005 hard-disk recorder): soft blues, everything rounded,
+   white pills with dark text, a green highlight, a friendly face. */
+:root[data-theme="dvr"] {
+  --navy: #173a80; --program: #e9f0fb; --channel: #ffffff; --timebar: #ffd54a;
+  --yellow: #7ed957; --soft: #e3ecff; --white: #ffffff; --gap: #23559f;
+  --ink-accent: #ffd54a; --splash-bg: #173a80;
+  --font: "Nunito", Arial, Helvetica, sans-serif; --font-display: var(--font); --display-weight: 800;
+  --stage-bg: radial-gradient(ellipse at 50% 0%, #3f7fd4 0%, #23559f 55%, #173a80 100%);
+  --text: #173a80; --slot-text: #173a80; --sel-text: #134d12;
+  --fill-clock: #ff7a7a; --clock-text: #5e1212;
+  --r: 12px; --cell-font: 14px;
+  --cell-shadow: 0 2px 0 rgba(18, 48, 106, .45);
+  --sel-shadow: 0 3px 0 #3a8a2a;
+  --frame: 4px solid #ffffff; --frame-r: 24px; --frame-shadow: 0 5px 0 #12306a;
+}
+
+/* Media Center (2005 living-room PC): glassy blue, see-through tiles,
+   a green glowing highlight, a thin face. */
+:root[data-theme="mediacenter"] {
+  --navy: #031a3a; --program: #0d3d70; --channel: #14497f; --timebar: #08356a;
+  --yellow: #3fae32; --soft: #b7e0ff; --white: #ffffff; --gap: #062a55;
+  --ink-accent: #9ff07e; --splash-bg: #031a3a;
+  --font: "Open Sans", Arial, Helvetica, sans-serif; --font-display: var(--font); --display-weight: 300;
+  --stage-bg: linear-gradient(160deg, #0d4f8f 0%, #08356a 45%, #031a3a 100%);
+  --band: radial-gradient(ellipse at 20% 0%, rgba(120, 200, 255, .3) 0%, rgba(120, 200, 255, 0) 60%);
+  --fill-program: linear-gradient(180deg, rgba(255, 255, 255, .16) 0%, rgba(255, 255, 255, .06) 100%);
+  --fill-channel: linear-gradient(180deg, rgba(255, 255, 255, .24) 0%, rgba(255, 255, 255, .10) 100%);
+  --fill-slot: transparent; --slot-text: #b7e0ff;
+  --fill-sel: linear-gradient(180deg, #8fe06a 0%, #3fae32 50%, #2a8f22 51%, #2f9d2a 100%);
+  --fill-clock: transparent; --clock-text: #ffffff; --sel-text: #ffffff;
+  --r: 6px; --cell-font: 14px;
+  --cell-shadow: inset 0 1px 0 rgba(255, 255, 255, .25);
+  --sel-shadow: 0 0 12px rgba(123, 224, 90, .75);
+  --frame: 1px solid rgba(255, 255, 255, .6); --frame-r: 8px; --frame-shadow: 0 8px 24px rgba(0, 0, 0, .5);
+}
+
+/* Aqua (Y2K desktop): light pinstripes, white rounded cells, brushed-metal
+   tabs, a blue gel highlight; dark text throughout. */
+:root[data-theme="aqua"] {
+  --navy: #e3e7ec; --program: #f4f6f9; --channel: #c9ced5; --timebar: #c9ced5;
+  --yellow: #2a95ef; --soft: #4c5868; --white: #1d2a3a; --gap: #ffffff;
+  --ink-accent: #1f78c8; --splash-bg: #e3e7ec;
+  --font: "Lato", "Lucida Grande", Arial, sans-serif; --font-display: var(--font);
+  --stage-bg: repeating-linear-gradient(0deg, #eef1f5 0, #eef1f5 2px, #e3e7ec 2px, #e3e7ec 4px);
+  --fill-program: linear-gradient(180deg, #ffffff 0%, #eef2f7 100%);
+  --fill-channel: linear-gradient(180deg, #e9ebee 0%, #c9ced5 50%, #b9bfc8 51%, #cfd4da 100%);
+  --fill-slot: var(--fill-channel); --slot-text: #3a4350;
+  --fill-sel: linear-gradient(180deg, #d8f1ff 0%, #6cc4ff 45%, #2a95ef 50%, #7fd0ff 100%);
+  --fill-clock: var(--fill-sel); --sel-text: #04305a;
+  --r: 11px; --cell-font: 14px;
+  --cell-shadow: 0 1px 1px rgba(0, 0, 0, .15);
+  --sel-shadow: 0 1px 3px rgba(0, 40, 90, .5), inset 0 1px 0 #ffffff;
+  --frame: 1px solid #8f96a0; --frame-r: 10px; --frame-shadow: 0 8px 20px rgba(10, 40, 80, .35);
+}
+
+/* Set-Top Web (late-90s internet box): purple and black, chunky square
+   bevelled buttons, a gold highlight, uppercase. */
+:root[data-theme="settop"] {
+  --navy: #12082a; --program: #3a2468; --channel: #52348e; --timebar: #6a4aa8;
+  --yellow: #ffbe3c; --soft: #d9c8ff; --white: #ffffff; --gap: #07020f;
+  --ink-accent: #ffbe3c; --splash-bg: #07020f;
+  --font: "Chakra Petch", Arial, Helvetica, sans-serif;
+  --font-display: "Archivo Black", "Arial Black", Impact, sans-serif; --display-weight: 400;
+  --stage-bg: radial-gradient(ellipse at 50% 30%, #2a1450 0%, #12082a 60%, #07020f 100%);
+  --sel-text: #2a1450; --cell-font: 14px; --case: uppercase; --track: 1px;
+  --cell-shadow: inset 2px 2px 0 rgba(255, 255, 255, .28), inset -2px -2px 0 rgba(0, 0, 0, .45);
+  --sel-shadow: inset 2px 2px 0 #ffe7a8, inset -2px -2px 0 #8a4a00;
+  --frame: 4px ridge #8f7bc0;
+}
+
+/* Listings Channel (early-90s listings channel): deep blue boxes, a red
+   time bar, big pixel lettering. */
+:root[data-theme="listings"] {
+  --navy: #00125a; --program: #1c2e8a; --channel: #3d5fd1; --timebar: #b3001b;
+  --yellow: #ffe14d; --soft: #9fd0ff; --white: #ffffff; --gap: #000000;
+  --ink-accent: #ffe14d; --splash-bg: #00125a;
+  --font: "VT323", "Courier New", monospace; --font-display: var(--font); --display-weight: 400;
+  --band: linear-gradient(180deg, #2a2a2a 0%, #0a0a0a 100%);
+  --sel-text: #00125a; --cell-font: 20px; --case: uppercase; --track: 1px;
+}
+/* VT323 has one weight; never a faux bold. */
+:root[data-theme="listings"] body { font-weight: 400; }
+/* VT323 sets small for its size: the details beside the picture go up a step. */
+:root[data-theme="listings"] #info .ch { font-size: 20px; }
+:root[data-theme="listings"] #info .title { font-size: 28px; }
+:root[data-theme="listings"] #info .ep, :root[data-theme="listings"] #info .time { font-size: 21px; }
+:root[data-theme="listings"] #info .plot { font-size: 19px; line-height: 20px; }
+:root[data-theme="listings"] #previewFrame { font-size: 17px; }
 
 html, body {
   margin: 0; height: 100%; overflow: hidden; background: #000;
@@ -111,12 +354,12 @@ body.tv, body.tv * { cursor: none !important; }
 
 #stage {
   position: fixed; left: 0; top: 0; transform-origin: 0 0;
-  background: var(--navy); overflow: hidden;
+  background: var(--band) top / 100% 42% no-repeat, var(--stage-bg); overflow: hidden;
 }
 
 #previewFrame {
   position: absolute; box-sizing: border-box;
-  border: 2px solid var(--yellow); background: #000;
+  border: var(--frame); border-radius: var(--frame-r); box-shadow: var(--frame-shadow); background: #000;
   display: flex; align-items: flex-end; padding: 6px;
   font-size: 13px; font-weight: 400; color: var(--soft);
 }
@@ -124,7 +367,7 @@ body.tv, body.tv * { cursor: none !important; }
 #info { position: absolute; display: flex; flex-direction: column; overflow: hidden; }
 #info > * { flex: none; }
 #info .ch { font-size: 15px; padding-right: 34px; }
-#info .title { font-size: 21px; margin: 2px 0; font-family: var(--font-display); font-weight: var(--display-weight); }
+#info .title { font-size: 21px; margin: 2px 0; font-family: var(--font-display); font-weight: var(--display-weight); text-transform: var(--case); letter-spacing: var(--track); }
 #info .ep { font-size: 16px; }
 #info .time { font-size: 16px; margin: 4px 0; }
 #info .ep:empty, #info .time:empty { display: none; }
@@ -142,16 +385,18 @@ body.tv, body.tv * { cursor: none !important; }
 
 .cell {
   position: absolute; box-sizing: border-box; height: 27px; line-height: 27px;
-  padding: 0 7px; font-size: 15px;
+  padding: 0 7px; font-size: var(--cell-font);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: var(--text); border-radius: var(--r); box-shadow: var(--cell-shadow);
+  text-transform: var(--case); letter-spacing: var(--track);
 }
-.cell.clock { background: var(--yellow); color: var(--navy); }
-.cell.slot { background: var(--timebar); }
-.cell.chan { background: var(--channel); cursor: pointer; }
-.cell.show { background: var(--program); cursor: pointer; }
+.cell.clock { background: var(--fill-clock); color: var(--clock-text); }
+.cell.slot { background: var(--fill-slot); color: var(--slot-text); }
+.cell.chan { background: var(--fill-channel); cursor: pointer; border-radius: var(--r-chan); }
+.cell.show { background: var(--fill-program); cursor: pointer; }
 .cell.none { color: var(--soft); }
 .cell.narrow { padding: 0; color: transparent; }
-.cell.sel { background: var(--yellow); color: var(--navy); }
+.cell.sel { background: var(--fill-sel); color: var(--sel-text); box-shadow: var(--sel-shadow); z-index: 1; }
 .cell.narrow.sel { color: transparent; }
 
 /* The channel being watched: a small flat triangle before its name. */
@@ -161,13 +406,13 @@ body.tv, body.tv * { cursor: none !important; }
   border-top: 5px solid transparent; border-bottom: 5px solid transparent;
 }
 .cell.chan.playing { color: var(--ink-accent); }
-.cell.chan.playing.sel { color: var(--navy); }
-.cell.chan.playing.sel::before { border-left-color: var(--navy); }
+.cell.chan.playing.sel { color: var(--sel-text); }
+.cell.chan.playing.sel::before { border-left-color: var(--sel-text); }
 
 #nowTick { position: absolute; width: 2px; height: 27px; background: var(--yellow); }
 
 #gridMsg {
-  position: absolute; left: 0; right: 0; background: var(--program);
+  position: absolute; left: 0; right: 0; background: var(--fill-program); color: var(--text); border-radius: var(--r);
   padding: 0 7px; height: 27px; line-height: 27px; font-size: 15px;
 }
 
@@ -184,7 +429,7 @@ body.settings #cog { color: var(--ink-accent); }
 /* ---- Settings (over the grid) -------------------------------------- */
 
 #settings {
-  position: absolute; left: 0; right: 0; bottom: 0; box-sizing: border-box;
+  position: absolute; left: 0; right: 0; bottom: 0; box-sizing: border-box; z-index: 2;   /* over the highlighted cell, which sits on z-index 1 for its glow */
   background: var(--navy); border-top: 2px solid var(--gap);
   padding: 10px 8px 8px; display: flex; flex-direction: column; gap: 8px;
 }
@@ -198,9 +443,9 @@ body.settings #cog { color: var(--ink-accent); }
   height: 27px; line-height: 27px; padding: 0 10px; font-size: 15px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.setLabel { background: var(--channel); }
-.setValue { background: var(--program); cursor: pointer; }
-.setLabel.sel, .setValue.sel { background: var(--yellow); color: var(--navy); }
+.setLabel { background: var(--fill-channel); color: var(--text); }
+.setValue { background: var(--fill-program); color: var(--text); cursor: pointer; }
+.setLabel.sel, .setValue.sel { background: var(--fill-sel); color: var(--sel-text); }
 #setHelp {
   flex: 1 1 0; min-height: 0; overflow: hidden;
   font-size: 15px; font-weight: 400; line-height: 20px; color: var(--soft);
@@ -210,7 +455,7 @@ body.settings #cog { color: var(--ink-accent); }
 /* ---- Show details (over the grid) --------------------------------- */
 
 #details {
-  position: absolute; left: 0; right: 0; bottom: 0; box-sizing: border-box;
+  position: absolute; left: 0; right: 0; bottom: 0; box-sizing: border-box; z-index: 2;
   background: var(--navy); border-top: 2px solid var(--gap);
   padding: 10px 8px 8px; display: flex; gap: 12px;
 }
@@ -230,10 +475,10 @@ body.settings #cog { color: var(--ink-accent); }
 
 .btn {
   font: inherit; font-size: 15px; height: 27px; line-height: 27px; padding: 0 12px;
-  margin: 0; border: 0; border-radius: 0; cursor: pointer;
-  background: var(--channel); color: var(--white);
+  margin: 0; border: 0; border-radius: var(--r); cursor: pointer;
+  background: var(--fill-channel); color: var(--text); box-shadow: var(--cell-shadow);
 }
-.btn.sel { background: var(--yellow); color: var(--navy); }
+.btn.sel { background: var(--fill-sel); color: var(--sel-text); box-shadow: var(--sel-shadow); }
 .btn:focus { outline: none; }
 
 /* ---- The picture --------------------------------------------------- */
@@ -361,6 +606,14 @@ body.full #screen { overflow: visible; }
 #splash .cabin { font-family: "Cabin", Arial, Helvetica, sans-serif; font-weight: 700; }
 #splash .disp { font-family: "Audiowide", "Arial Black", Impact, sans-serif; }
 #splash .script { font-family: "Mr Dafoe", "Brush Script MT", cursive; }
+#splash .arimo { font-family: "Arimo", Arial, sans-serif; font-weight: 700; }
+#splash .exo { font-family: "Exo 2", Arial, sans-serif; font-weight: 800; }
+#splash .nunito { font-family: "Nunito", Arial, sans-serif; font-weight: 900; }
+#splash .osans { font-family: "Open Sans", Arial, sans-serif; font-weight: 300; }
+#splash .lato { font-family: "Lato", Arial, sans-serif; font-weight: 900; }
+#splash .archivo { font-family: "Archivo Black", "Arial Black", Impact, sans-serif; }
+#splash .chakra { font-family: "Chakra Petch", Arial, sans-serif; font-weight: 400; }
+#splash .vt { font-family: "VT323", "Courier New", monospace; }
 /* Lettering appears once its font is in (or after a short wait). */
 #splash:not(.ready) text { visibility: hidden; }
 @media (prefers-reduced-motion: no-preference) {
