@@ -13,6 +13,34 @@ export const THEMES = [
     id: 'vapor', label: 'Vaporwave', splash: 'vapor', color: '#1a0b3f',
     help: 'Purple cells, pink highlights, cyan text. The splash is a sunset over a neon grid.',
   },
+  {
+    id: 'digital', label: 'Digital Cable', splash: 'digital', color: '#000814',
+    help: 'A 2000s digital cable box: black and deep blue, glossy rounded bars, a light-blue highlight that glows.',
+  },
+  {
+    id: 'satellite', label: 'Satellite', splash: 'satellite', color: '#1a0d4a',
+    help: 'An early-2000s satellite receiver: navy into purple, rounded tabs, a gold highlight. The splash is a dish in orbit.',
+  },
+  {
+    id: 'dvr', label: 'DVR', splash: 'dvr', color: '#173a80',
+    help: 'A hard-disk recorder from around 2000: soft blues, rounded white pills, a green highlight and a friendly little TV.',
+  },
+  {
+    id: 'mediacenter', label: 'Media Center', splash: 'mediacenter', color: '#08356a',
+    help: 'A 2005 living-room PC: glassy blue, see-through tiles, a green glowing highlight, a thin face.',
+  },
+  {
+    id: 'aqua', label: 'Aqua', splash: 'aqua', color: '#e3e7ec',
+    help: 'The Y2K desktop: light pinstripes, white rounded cells, brushed-metal tabs and a blue gel highlight.',
+  },
+  {
+    id: 'settop', label: 'Set-Top Web', splash: 'settop', color: '#12082a',
+    help: 'A late-90s internet box on the TV: purple and black, chunky bevelled buttons, everything in capitals.',
+  },
+  {
+    id: 'listings', label: 'Listings Channel', splash: 'listings', color: '#00125a',
+    help: 'The early-90s listings channel: deep blue boxes, a red time bar, big pixel lettering.',
+  },
 ];
 
 export function themeById(id) {

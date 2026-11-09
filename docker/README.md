@@ -38,6 +38,8 @@ machine that runs it, and any other reverse proxy can stand in its place.
 
 <table><tr><td align="center"><img src="../docs/img/readme/splash-cable-1280.png" width="600"><br><sub>The Cable splash, shown on load</sub></td><td align="center"><img src="../docs/img/readme/splash-vapor-1280.png" width="600"><br><sub>The Vaporwave splash</sub></td></tr></table>
 
+<table><tr><td align="center"><img src="../docs/img/readme/themes-guide.jpg" width="600"><br><sub>All nine themes: Cable, Vaporwave, Digital Cable / Satellite, DVR, Media Center / Aqua, Set-Top Web, Listings Channel</sub></td><td align="center"><img src="../docs/img/readme/themes-splash.jpg" width="600"><br><sub>Their splashes, in the same order</sub></td></tr></table>
+
 <table><tr><td align="center"><img src="../docs/img/readme/tv-guide-playing-cable.png" width="400"><br><sub>The ?tv layout at the CRT's 640×480</sub></td><td align="center"><img src="../docs/img/readme/tv-details-cable.png" width="400"><br><sub>Details at 640×480</sub></td></tr></table>
 
 ## Run it
@@ -124,8 +126,18 @@ Keep it on the tailnet. Do not publish it to the internet (no Funnel, no port fo
   itself.
 - **The splash.** Opening or reloading the page shows the theme's splash for about 2½ seconds
   while the listings load: a little television for Cable, a sunset over a scrolling grid for
-  Vaporwave. The scenes are drawn in `js/splash.js`; the grid is a true perspective projection,
+  Vaporwave, and a scene in each newer theme's style (a glowing orb, a dish in orbit, a friendly
+  TV, a green play button, a gel icon, a sunburst, the listings channel). The scenes are drawn in
+  `js/splash.js`; the grid is a true perspective projection,
   so the same code can draw it on a Pi's boot screen.
+- **Making a theme.** A theme is a `[data-theme="…"]` block of tokens in `css/guide.css`, an
+  entry in `js/themes.js` and a splash scene in `js/splash.js`. Besides colours and faces, a
+  theme can set the shape tokens: fills that are gradients (`--fill-program`, `--fill-sel`…),
+  corner radius (`--r`, `--r-chan`, `--frame-r`), gloss or bevels (`--cell-shadow`), a glow on
+  the highlight (`--sel-shadow`), a backdrop behind the picture (`--band`), letter case and
+  spacing. The grid's geometry stays the same in every theme. Theme ids are lowercase letters
+  only (`js/theme-boot.js` checks). The Roku app and the Retro TV box's boot splash still know
+  only Cable and Vaporwave.
 - Add `?tv` to the address for the plain 640×480 layout, whatever the window's shape.
 - **Full screen** on a phone or tablet also turns the screen on its side. (iPhones cannot put a
   page in full screen; there the button hands the picture to the phone's own video player.)
@@ -136,7 +148,7 @@ The cog opens settings. They are kept by the browser they were set in, so each d
 
 | Setting | Choices |
 |---|---|
-| Theme | **Cable**: the late-90s guide, navy and yellow, flat cells. **Vaporwave**: purple cells, pink highlights, cyan text, chrome titles. Each theme has its own splash (below); changing the theme replays it. |
+| Theme | **Cable**: the late-90s guide, navy and yellow, flat cells. **Vaporwave**: purple cells, pink highlights, cyan text, chrome titles. **Digital Cable**: black and deep blue, glossy rounded bars, a glowing light-blue highlight. **Satellite**: navy into purple, rounded tabs, gold. **DVR**: soft blues, rounded white pills, green highlight. **Media Center**: glassy see-through tiles, green glow, a thin face. **Aqua**: light pinstripes, white rounded cells, a blue gel highlight. **Set-Top Web**: purple and black, chunky bevelled buttons, capitals. **Listings Channel**: deep blue boxes, red time bar, pixel lettering. Each theme has its own splash (below); changing the theme replays it. The looks are in the style of their era; no real logos or names. |
 | Quality | **Standard**: the 4:3 picture made for the old TV. **HD**: the same channels in widescreen 1080p. The guide, names and numbers do not change. Only shown when the server has HD twins (below). |
 | Picture | **Original**: the whole 4:3 picture, as on the TV. **Fill the screen**: while watching, zooms in until the black bars around a widescreen show are off the screen; a true 4:3 show is left as it is. For wide monitors. The zoom follows the picture, so it can change when a 4:3 commercial follows a widescreen film. |
 | Fast flipping | **On**: the next channel is warmed up while you flip (see below). **Off**: channels start only when tuned. |
@@ -231,7 +243,7 @@ docker/
 │       ├── js/warm.js        keeps the next channel running while flipping
 │       ├── js/bars.js        finds black bars in the picture (for "Fill the screen")
 │       ├── js/settings.js    the settings and where they are kept
-│       ├── js/themes.js      the themes (Cable, Vaporwave): names, splash, browser tint
+│       ├── js/themes.js      the themes (Cable, Vaporwave and seven more): names, splash, browser tint
 │       ├── js/theme-boot.js  puts the saved theme on <html> before the first paint
 │       ├── js/splash.js      the splash scenes and the perspective floor grid
 │       ├── js/app.js         the guide, the three screens, every input

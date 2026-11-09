@@ -8,8 +8,8 @@ import { HALF_HOUR, loadGuide, cellAt, programmeAt } from './data.js';
 import { Player } from './player.js';
 import { Warmer } from './warm.js';
 import { BarWatcher } from './bars.js';
-import { SETTINGS, getSetting, cycleSetting } from './settings.js';
-import { applyTheme } from './themes.js';
+import { SETTINGS, getSetting, cycleSetting, setSetting } from './settings.js';
+import { applyTheme, THEMES } from './themes.js';
 import { showSplash, isSplashShowing } from './splash.js';
 
 const $ = id => document.getElementById(id);
@@ -22,6 +22,7 @@ const el = {
   details: $('details'), detPoster: $('detPoster'), detMeta: $('detMeta'), detText: $('detText'),
   detWatch: $('detWatch'), detBack: $('detBack'),
   cog: $('cog'), settings: $('settings'), setRows: $('setRows'), setHelp: $('setHelp'), setClose: $('setClose'),
+  themePick: $('themePick'), tpGrid: $('tpGrid'), tpHelp: $('tpHelp'),
   screen: $('screen'), video: $('video'), tuning: $('tuning'),
   banner: $('banner'), banCh: $('banCh'), banClock: $('banClock'), banTitle: $('banTitle'),
   banEp: $('banEp'), banTime: $('banTime'), banFill: $('banFill'),
@@ -48,7 +49,8 @@ const S = {
   dataEnd: 0,
   loadedAt: 0,
   loading: false,
-  mode: 'guide',               // 'guide' | 'full' | 'details' | 'settings'
+  mode: 'guide',               // 'guide' | 'full' | 'details' | 'settings' | 'themes'
+  tpIndex: 0,                  // highlighted tile in the theme picker
   setRow: 0,                   // highlighted row on the settings screen
   focusCh: 0,                  // index into channels
   focusTime: Date.now(),       // the time position of the highlight
@@ -140,6 +142,7 @@ function applyLayout() {
   px(el.grid, { top: L.gridTop, width: L.W, height: L.gridH });
   px(el.details, { top: L.gridTop });
   px(el.settings, { top: L.gridTop });
+  px(el.themePick, { top: L.gridTop });
   px(el.cog, { left: L.info.x + L.info.w - 28, top: L.info.y - 3 });
   px(el.clock, { left: 0, top: 2, width: L.chanW });
   px(el.gridMsg, { top: 2 + ROW });
@@ -392,9 +395,10 @@ function wake() {
 function setMode(mode) {
   S.mode = mode;
   document.body.classList.toggle('full', mode === 'full');
-  document.body.classList.toggle('settings', mode === 'settings');
+  document.body.classList.toggle('settings', mode === 'settings' || mode === 'themes');
   el.details.hidden = mode !== 'details';
   el.settings.hidden = mode !== 'settings';
+  el.themePick.hidden = mode !== 'themes';
   if (mode !== 'full') hideBanner();
   placeScreen(true);
   syncZoom();
@@ -440,6 +444,7 @@ function renderSettings() {
   el.setRows.replaceChildren(rows);
   const focused = shownSettings()[S.setRow];
   el.setHelp.textContent = focused.options.find(o => o[0] === getSetting(focused.id))[2];
+  if (focused.id === 'theme') el.setHelp.textContent += ' Tap it to see them all.';
 }
 
 function openSettings() {
@@ -468,6 +473,62 @@ function changeSetting(step) {
     }
   }
   if (id === 'warm' && getSetting('warm') !== 'on') stopSurf();
+  renderSettings();
+}
+
+// The theme row opens the picker; left and right on it still step through
+// the themes one at a time (quick on a remote).
+function selectSetting() {
+  if (shownSettings()[S.setRow].id === 'theme') return openThemes();
+  changeSetting(1);
+}
+
+// ---- Theme picker ---------------------------------------------------------------
+// Every theme as a tile with a live preview: the tile's preview carries the
+// theme's own data-theme, so guide.css draws it in that theme's fills,
+// radius, gloss and faces. Pick one to apply it (and see its splash).
+
+const TP_COLS = 3;
+
+function openThemes() {
+  S.tpIndex = Math.max(0, THEMES.findIndex(t => t.id === getSetting('theme')));
+  setMode('themes');
+  renderThemes();
+}
+
+function renderThemes() {
+  const current = getSetting('theme');
+  const tiles = document.createDocumentFragment();
+  THEMES.forEach((t, i) => {
+    const tile = document.createElement('button');
+    tile.type = 'button';
+    tile.className = 'tp' + (i === S.tpIndex ? ' sel' : '');
+    tile.dataset.tp = i;
+    tile.setAttribute('aria-label', t.label + (t.id === current ? ' (in use)' : ''));
+    tile.innerHTML = `<span class="tpPrev" data-theme="${t.id}"><span class="tpName"></span>`
+      + '<span class="tpRow"><i class="k"></i><i class="s"></i><i class="s"></i></span>'
+      + '<span class="tpRow"><i class="c"></i><i class="h"></i><i class="p"></i></span>'
+      + '<span class="tpRow"><i class="c"></i><i class="p"></i><i class="p"></i></span>'
+      + (t.id === current ? '<span class="tpUsing">In use</span>' : '') + '</span>';
+    tile.querySelector('.tpName').textContent = t.label;
+    tiles.append(tile);
+  });
+  el.tpGrid.replaceChildren(tiles);
+  el.tpHelp.textContent = THEMES[S.tpIndex].help;
+}
+
+function moveTheme(delta) {
+  const next = S.tpIndex + delta;
+  if (next < 0 || next >= THEMES.length) return;
+  S.tpIndex = next;
+  renderThemes();
+}
+
+function pickTheme(i) {
+  setSetting('theme', THEMES[i].id);
+  applyTheme(getSetting('theme'));
+  showSplash(getSetting('theme'), { min: 2000 });
+  setMode('settings');
   renderSettings();
 }
 
@@ -714,8 +775,22 @@ function act(action) {
       case 'up': return moveSetting(-1);
       case 'down': return moveSetting(1);
       case 'left': return changeSetting(-1);
-      case 'right': case 'select': return changeSetting(1);
+      case 'right': return changeSetting(1);
+      case 'select': return selectSetting();
       case 'back': case 'info': case 'settings': return setMode('guide');
+    }
+    return;
+  }
+  if (S.mode === 'themes') {
+    switch (action) {
+      case 'up': return moveTheme(-TP_COLS);
+      case 'down': return moveTheme(TP_COLS);
+      case 'left': return moveTheme(-1);
+      case 'right': return moveTheme(1);
+      case 'select': return pickTheme(S.tpIndex);
+      case 'back': case 'info': case 'settings':
+        setMode('settings');
+        return renderSettings();
     }
     return;
   }
@@ -875,12 +950,16 @@ button(el.detWatch, () => { closeDetails(); watch(focusChannel()); });
 button(el.detBack, closeDetails);
 button(el.banFull, toggleFullscreen);
 button(el.setClose, () => setMode('guide'));
-button(el.cog, () => (S.mode === 'settings' ? setMode('guide') : S.mode === 'guide' && S.channels.length ? openSettings() : null));
+button(el.cog, () => (S.mode === 'settings' || S.mode === 'themes' ? setMode('guide') : S.mode === 'guide' && S.channels.length ? openSettings() : null));
 el.setRows.addEventListener('click', e => {
   const node = e.target.closest('[data-row]');
   if (!node) return;
   S.setRow = +node.dataset.row;
-  changeSetting(1);
+  selectSetting();
+});
+el.tpGrid.addEventListener('click', e => {
+  const tile = e.target.closest('[data-tp]');
+  if (tile) pickTheme(+tile.dataset.tp);
 });
 
 // ---- Game controllers ------------------------------------------------------
