@@ -1,0 +1,8 @@
+# One network check (see retro-tv-net.sh); retro-tv-net-check.timer runs it every minute.
+[Unit]
+Description=Retro TV network check
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/retro-tv-net.sh check

@@ -1,6 +1,6 @@
 // Retro TV boot splash: the current theme's picture, centred, nothing else.
 // current-<size>.png are symlinks the theme service points at the theme's
-// splash (splash-cable-*.png or splash-vapor-*.png), rendered by
+// splash (splash-<theme>-*.png, one set per viewer theme), rendered by
 // tools/render-splash from the viewer's own scene code.
 //
 // Three sizes: 640x480 (HDMI into the converter), 720x480 (the Pi's composite

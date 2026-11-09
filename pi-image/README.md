@@ -30,10 +30,10 @@ Where it stands: the script route (step 1, below) works on real hardware; the on
 | Computer | Raspberry Pi 4 Model B. 2 GB is plenty. Power over Ethernet with the official PoE+ HAT (one cable, and the firmware runs its fan), or an ordinary USB-C supply |
 | Card | A 16 GB microSD; the system needs about 3 GB |
 | Screen | Any CRT with a composite input. Any TV with HDMI also works, at 640×480 |
-| Video out | HDMI at 640×480 into an HDMI-to-composite converter (the same kind the [Batocera Pi](../pi/README.md) uses), or the Pi's own composite jack at 720×480i. One setting switches between them |
+| Video out | HDMI at 640×480 into an HDMI-to-composite converter (the same kind the [Batocera Pi](../pi/README.md) uses), or the Pi's own composite jack at 720×480i through a 4-pole 3.5 mm cable (see the display details for which plug carries the video). One setting switches between them |
 | Remote | A "Windows Media Center" (MCE) USB IR receiver and any remote it understands; a universal remote can send power and volume to the TV and everything else to the box |
 | Controller | A Bluetooth game pad, optional |
-| Network | Wired, ideally from a PoE switch. The box needs to reach the ErsatzTV server |
+| Network | Wired from a PoE switch (one cable does power and data), or Wi-Fi. The box needs to reach the ErsatzTV server. Behind a CRT, 2.4 GHz reaches further than 5 GHz |
 
 ## Decisions
 
@@ -57,8 +57,16 @@ Where it stands: the script route (step 1, below) works on real hardware; the on
 - **The theme follows the viewer's setting.** The viewer posts its theme to `/pi/theme` whenever
   it is applied (on every start and on every change). On the box, nginx passes that to a small
   local service (`retro-tv-themed.py`), which records the choice and points Plymouth's images at
-  the matching splash, so the *next* boot already matches. Anywhere else (laptop, phone) the
-  request answers 404 and is ignored.
+  the matching splash, so the *next* boot already matches. Every viewer theme has a rendered
+  boot splash; the service accepts whatever `splash-<theme>-*.png` files are installed. Anywhere else (laptop, phone) the
+  request answers 404 and is ignored. The same service takes the settings screen's **Power
+  off** (`/pi/power`), which shuts Pi OS down cleanly; the row only appears on the box.
+- **Wi-Fi comes from the boot partition, and a watchdog keeps it up.** Raspberry Pi Imager
+  leaves the Wi-Fi name and password in `network-config` on the FAT boot partition, a file nothing
+  rewrites. A small service (`retro-tv-net.sh`) rebuilds NetworkManager's Wi-Fi profiles from it
+  at every boot if they are missing, and a timer checks the link every minute: when the router
+  stops answering over Wi-Fi the radio is reconnected, and after six bad minutes the box reboots.
+  The settings screen shows what the box is connected through and the Wi-Fi signal (`/pi/net`).
 - **Composite video from the Pi itself** is the end state: Pi OS can drive the 3.5 mm jack
   (Batocera cannot). The jack also carries the sound. The alternative is HDMI at 640×480 through
   a converter, exactly like the Batocera Pi's CRT profile, with the same kind of kernel margin
@@ -70,9 +78,11 @@ Where it stands: the script route (step 1, below) works on real hardware; the on
   GPIO header, which is why a USB receiver rather than a 3-wire module. Many MCE receivers also
   have IR *emitter* jacks: a later step can let the box switch the TV on and off itself.
 - **TV power and volume stay with the TV.** A universal remote with "punch-through" sends power
-  and volume to the TV and everything else to the box. The box's own power button on the remote
-  is for later (blank the picture, stop the stream); the Pi cannot be switched on by IR. Power
-  from fully off: the PoE switch's port (if it is managed) or the plug.
+  and volume to the TV and everything else to the box. The box itself is switched off from its
+  settings screen (Power off, pressed twice), and the plug is pulled only once the green light
+  is out: a Pi unplugged while running can lose files, and this one once lost its Wi-Fi profile
+  that way. The Pi cannot be switched on by IR: power from fully off is the PoE switch's port (if
+  it is managed) or the plug.
 - **Read-only system, writable data** (planned for step 2). The root filesystem is mounted
   read-only with an overlay, so pulling the plug can never corrupt the card. A separate writable
   area (`/data`) holds the Chromium profile (the viewer's settings), the theme choice, Bluetooth
@@ -87,10 +97,12 @@ Where it stands: the script route (step 1, below) works on real hardware; the on
 ## How it starts
 
 1. Power → firmware → kernel. Boot text is hidden; Plymouth draws the theme's splash.
-2. nginx starts with the viewer and the ErsatzTV proxy. The theme service starts.
-3. `cage` starts on the console as user `tv` and launches Chromium in kiosk mode on the viewer.
-4. The viewer shows its own animated splash while it loads the listings, then the guide.
-5. The IR receiver's key map is loaded when the receiver is seen (`ir-keytable`), so the remote
+2. The Wi-Fi profiles are checked against the boot partition, then the network comes up:
+   Ethernet when a cable is in, Wi-Fi otherwise.
+3. nginx starts with the viewer and the ErsatzTV proxy. The theme service starts.
+4. `cage` starts on the console as user `tv` and launches Chromium in kiosk mode on the viewer.
+5. The viewer shows its own animated splash while it loads the listings, then the guide.
+6. The IR receiver's key map is loaded when the receiver is seen (`ir-keytable`), so the remote
    works from the first screen.
 
 About 25 seconds from power to SSH on a Pi 4; the guide follows a few seconds later.
@@ -103,20 +115,25 @@ pi-image/
 ├── NOTES.md                       build log: what was tested when, open items
 ├── setup.sh                       turns a fresh Pi OS Lite into the box; run again after changes
 └── config/
-    ├── retro-tv.env.example       the box's settings: server address, display mode, margins, Tailscale
+    ├── retro-tv.env.example       the box's settings: server address, display mode, margins, extra Wi-Fi name, Tailscale
     ├── retro-tv-kiosk.sh          starts Chromium in kiosk mode on the viewer (run by cage)
     ├── retro-tv.service           systemd: cage on the console as user tv
-    ├── retro-tv-themed.py         the theme service behind /pi/theme (records the choice, updates Plymouth)
+    ├── retro-tv-themed.py         the local service behind /pi/theme (records the choice, updates Plymouth) and /pi/power
     ├── retro-tv-themed.service    systemd unit for it
+    ├── retro-tv-net.sh            restores the Wi-Fi profiles from the boot partition; the network check behind /pi/net
+    ├── retro-tv-net-restore.service   runs the restore before NetworkManager at boot
+    ├── retro-tv-net-check.service     one check; retro-tv-net-check.timer runs it every minute
+    ├── retro-tv-net-check.timer
     ├── nginx-pi.conf              the Pi-only additions to the viewer's nginx config (/pi/)
     ├── plymouth/retro-tv/         the boot splash theme: script, config, and the rendered scenes
     └── rc_keymaps/retro-tv-mce.toml   MCE remote buttons → the viewer's keys
 ```
 
-The splash pictures in `config/plymouth/retro-tv/` are generated, not drawn by hand:
-`node tools/render-splash/render.mjs` (from the repo root, after `npm install` in that folder)
-renders both themes at 640×480 (HDMI), 720×480 (composite, non-square pixels) and 1920×1080, and
-the Roku app's icons, from `docker/web/app/js/splash.js`. Re-run it when the scenes change.
+The splash pictures in `config/plymouth/retro-tv/` are generated, not drawn by hand. In
+`tools/render-splash`, after `npm install` and `python fonts.py` (which unpacks the viewer's web
+fonts for the rasterizer), `node render.mjs` renders every theme's scene at 640×480 (HDMI),
+720×480 (composite, non-square pixels) and 1920×1080, and the Roku app's icons, from
+`docker/web/app/js/splash.js`. Re-run it when the scenes change or a theme is added.
 
 ## Building the box, step 1: a stock card plus `setup.sh`
 
@@ -134,7 +151,9 @@ the Roku app's icons, from `docker/web/app/js/splash.js`. Re-run it when the sce
    the edge. Adjust the margins in the same file (a bigger number pulls the picture in from that
    edge) until the frame is just visible on every side, then set `PAGE=guide`. Margins take a
    reboot; the page only `systemctl restart retro-tv`. As a starting point, a 12-inch set
-   through a converter needed left 19, right 21, top 10, bottom 6.
+   through a converter needed left 19, right 21, top 10, bottom 6; the same set on the Pi's own
+   composite output needed left 45, right 37, top 10, bottom 6 (the sides overscan far more
+   than the converter did, the height did not change).
 
 `setup.sh` is written to be safe to run repeatedly: it installs what is missing, rewrites the
 files it owns, and leaves the rest alone. A full install takes about 4 minutes.
@@ -153,8 +172,14 @@ one-file one.
   converter makes 480i from it. The mode is also given for `HDMI-A-2`, so either port works.
 - **Composite:** `dtoverlay=vc4-kms-v3d,composite` and `enable_tvout=1` in `config.txt`, and
   `video=Composite-1:720x480@60ie` on the command line (NTSC). The picture is 720×480 with
-  non-square pixels; the viewer's `?tv` layout is 640×480 and is stretched to fit, which is what
-  a 4:3 CRT expects. Margins work the same way.
+  non-square pixels, shown as 4:3 by the set. The kiosk adds `&screen=4:3` to the viewer's
+  address, and the viewer lays its 640×480 `?tv` page out for a 4:3 screen and stretches it to
+  the 720 pixels (without that, the guide sat in the middle with a black bar at each side).
+  Margins work the same way. The jack is a 4-pole 3.5 mm socket wired left, right,
+  ground, **video on the sleeve**; a camcorder-type TRRS lead has video and right audio the
+  other way round, so on it the Pi's video comes out of the *red* plug. In this mode the Pi 4's HDMI ports are off (the
+  overlay's `composite` option does that), so a screenshot or a monitor for debugging is not an
+  option; SSH is.
 - On a small tube (12 inches) the guide's text is on the small side; the viewer's design units
   make a size bump a CSS change.
 
@@ -193,21 +218,38 @@ survive.
   left, wlroots refuses to start unless `WLR_LIBINPUT_NO_DEVICES=1` is set, so the service sets
   it. The viewer also hides the pointer in `?tv` mode.
 - **No Ethernet link means Wi-Fi, silently.** If the cable is out or the switch port is off, the box
-  comes up on the Wi-Fi network from Imager's settings and nothing on screen says so. One box
-  did exactly that and its Wi-Fi link dropped about 40% of packets in 30-second holes every
-  minute: nginx's connects to the server timed out, and the guide showed "Channel unavailable,
-  retrying…" for a few seconds at a time. Plugging the cable in fixed it at once (NetworkManager
-  prefers Ethernet). To see which path is in use: `ip route | grep default`. Do not pin the Wi-Fi
-  band on a headless box over SSH: a pin that cannot associate leaves it unreachable.
+  comes up on Wi-Fi and nothing on screen said so. One box did exactly that and its 5 GHz link
+  dropped about 40% of packets in 30-second holes every minute: nginx's connects to the server
+  timed out, and the guide showed "Channel unavailable, retrying…" for a few seconds at a time.
+  Plugging the cable in fixed it at once (NetworkManager prefers Ethernet). The settings screen
+  now shows the path and the signal, and the network check reconnects or reboots on its own.
+- **Do not pin the Wi-Fi band over SSH.** Many dual-band routers broadcast two names, such as
+  `Home` and `Home - 5G`; a profile for the 5 GHz name pinned to 2.4 GHz can never associate,
+  and a headless box is then unreachable. Give the 2.4 GHz name as `WIFI_EXTRA_SSID` instead
+  and let NetworkManager choose.
+- **A power cut took the Wi-Fi profile with it.** NetworkManager rewrites a profile's file each
+  time the network connects. One box was unplugged while running on Wi-Fi and came back with no
+  Wi-Fi profile at all, so it booted with no network and no way to say so. Imager's `network-config` on the boot partition survives, and the
+  restore step rebuilds the profiles from it at every boot.
+- **The composite cable's yellow plug gave nothing.** Pi OS was driving the jack (the kernel
+  showed `Composite-1` connected, and a `grim` capture under `cage` showed the guide), but the
+  tube stayed dark. The cable was a camcorder lead, which carries the Pi's video on its red plug:
+  red into the TV's video input, and the picture appeared. A cable sold for the Pi (or a Zune)
+  is wired the Pi's way.
+- **The margin test pattern was never styled.** nginx sends a Content-Security-Policy for the
+  viewer that forbids inline styles, so the pattern page's `<style>` was silently dropped: the
+  image drew at its own 640×480 in the top-left corner with the browser's default 8 px margin.
+  On the 640×480 HDMI mode this was nearly invisible; on composite (720 wide) it was obvious.
+  The style is a separate file now (`overscan.css`) and the image fills the screen.
 - **Sound defaulted to the headphone jack.** PipeWire picks the 3.5 mm jack as the default
   output, so HDMI got silence. The kiosk script makes the HDMI output the default at full volume
   (the jack in composite mode, where it carries the sound).
 
 ## Not yet
 
-- The Pi's own composite output and the IR receiver have not been tried on hardware.
-- A "standby" action for the remote's power button (blank the picture, stop the stream) needs a
-  small viewer change.
+- The IR receiver has not been tried on hardware.
+- A "standby" action for the remote's power button (blank the picture, stop the stream, without
+  shutting down) needs a small viewer change.
 - The box controlling the TV through an IR emitter.
 - Tailscale: a settings-screen switch for it would need a second local endpoint like
   `/pi/theme`.

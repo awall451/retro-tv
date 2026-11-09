@@ -1,0 +1,3 @@
+/* The overscan test pattern fills the screen whatever its pixel size (720x480 on composite). */
+html, body { margin: 0; height: 100%; background: #000; overflow: hidden; cursor: none; }
+img { display: block; width: 100vw; height: 100vh; }

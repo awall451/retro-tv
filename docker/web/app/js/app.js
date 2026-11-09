@@ -23,6 +23,7 @@ const el = {
   detWatch: $('detWatch'), detBack: $('detBack'),
   cog: $('cog'), settings: $('settings'), setRows: $('setRows'), setHelp: $('setHelp'), setClose: $('setClose'),
   themePick: $('themePick'), tpGrid: $('tpGrid'), tpHelp: $('tpHelp'),
+  poweroff: $('poweroff'),
   screen: $('screen'), video: $('video'), tuning: $('tuning'),
   banner: $('banner'), banCh: $('banCh'), banClock: $('banClock'), banTitle: $('banTitle'),
   banEp: $('banEp'), banTime: $('banTime'), banFill: $('banFill'),
@@ -34,6 +35,13 @@ const el = {
 // hides the pointer (the Pi box: a television, no mouse).
 const TV_MODE = new URLSearchParams(location.search).has('tv');
 document.body.classList.toggle('tv', TV_MODE);
+// ?screen=4:3 says the screen shows the whole window as 4:3 whatever its pixel
+// count (the Pi's composite output is 720×480 pixels on a 4:3 tube). The page
+// is then laid out for square pixels and stretched to the real width.
+const SCREEN_SHAPE = (() => {
+  const m = /^(\d+):(\d+)$/.exec(new URLSearchParams(location.search).get('screen') || '');
+  return m && +m[2] ? +m[1] / +m[2] : 0;
+})();
 const LAST_CHANNEL_KEY = 'retro-tv.last-channel';
 const REFRESH_MS = 15 * 60 * 1000;       // re-read the listings this often
 const HIDDEN_STOP_MS = 5 * 60 * 1000;    // stop streaming in a tab hidden this long
@@ -52,6 +60,9 @@ const S = {
   mode: 'guide',               // 'guide' | 'full' | 'details' | 'settings' | 'themes'
   tpIndex: 0,                  // highlighted tile in the theme picker
   setRow: 0,                   // highlighted row on the settings screen
+  net: null,                   // how the Pi box is on the network, from /pi/net (null elsewhere)
+  box: false,                  // running on the Pi box (it answered /pi/net): offers Power off
+  powerArmed: 0,               // timer while "Power off" waits for its second press
   focusCh: 0,                  // index into channels
   focusTime: Date.now(),       // the time position of the highlight
   winStart: floorHalf(Date.now()),
@@ -80,7 +91,13 @@ function fmtRange(a, b) {
 // result is then scaled as one piece to fit the window.
 
 function computeLayout() {
-  const vw = window.innerWidth, vh = window.innerHeight, aspect = vw / vh;
+  let vw = window.innerWidth;
+  const vh = window.innerHeight;
+  // Non-square pixels: lay out as if the window were SCREEN_SHAPE wide, and
+  // stretch the page (applyLayout) by the difference.
+  const stretch = SCREEN_SHAPE ? (vw / vh) / SCREEN_SHAPE : 1;
+  vw /= stretch;
+  const aspect = vw / vh;
   let W, H, portrait = false;
   if (TV_MODE) { W = 640; H = 480; }
   else if (aspect >= 4 / 3) { H = 480; W = Math.min(854, Math.round(H * aspect)); }
@@ -88,7 +105,7 @@ function computeLayout() {
   else { portrait = true; W = 360; H = clamp(Math.round(W / aspect), 560, 820); }
 
   const scale = Math.min(vw / W, vh / H);
-  const L = { W, H, portrait, scale, ox: (vw - W * scale) / 2, oy: (vh - H * scale) / 2 };
+  const L = { W, H, portrait, scale, stretch, ox: (vw - W * scale) / 2, oy: (vh - H * scale) / 2 };
   if (portrait) {
     L.pv = { x: 8, y: 8, w: 344, h: 259 };
     L.info = { x: 8, y: 272, w: 344, h: 152 };
@@ -132,6 +149,10 @@ function px(node, box) {
 
 function applyLayout() {
   const L = S.L = computeLayout();
+  // The whole page is stretched for non-square pixels (see computeLayout); every
+  // fixed-position element then measures against the body's logical size.
+  document.body.style.width = L.stretch === 1 ? '' : `${L.vw}px`;
+  document.body.style.transform = L.stretch === 1 ? '' : `scale(${L.stretch.toFixed(5)}, 1)`;
   const root = document.documentElement.style;
   root.setProperty('--u', `${L.u}px`);
   root.setProperty('--b', `${L.b}px`);
@@ -195,7 +216,12 @@ function pictureShape() {
   const ch = S.channels.find(c => c.id === S.tunedId);
   return ch && wantHd() && ch.hd ? 16 / 9 : 4 / 3;
 }
-const shownSettings = () => SETTINGS.filter(s => s.id !== 'quality' || S.hasHd);
+// The box's "Power off" is an action row at the end of the list, not a stored setting.
+const POWER_ROW = {
+  id: 'power', label: 'Power', action: true,
+  options: [['off', 'Power off', 'Shuts the box down safely. Press twice. Unplug it once the green light has gone out; plugging it back in starts it.']],
+};
+const shownSettings = () => SETTINGS.filter(s => s.id !== 'quality' || S.hasHd).concat(S.box ? [POWER_ROW] : []);
 
 // ---- Where the highlight and the time window may be ----------------------
 
@@ -472,30 +498,69 @@ function syncZoom() {
 function renderSettings() {
   const rows = document.createDocumentFragment();
   shownSettings().forEach((s, i) => {
-    const option = s.options.find(o => o[0] === getSetting(s.id));
+    const option = settingOption(s);
     const label = document.createElement('div'), value = document.createElement('div');
     label.className = 'setLabel';
     label.textContent = s.label;
     value.className = 'setValue';
-    value.textContent = option[1];
+    value.textContent = s.action && S.powerArmed ? 'Press again to power off' : option[1];
     label.dataset.row = value.dataset.row = i;
     if (i === S.setRow) { label.classList.add('sel'); value.classList.add('sel'); }
     rows.append(label, value);
   });
+  if (S.net) {
+    // How the box is on the network (only the Pi box answers /pi/net).
+    const label = document.createElement('div'), value = document.createElement('div');
+    label.className = value.className = 'setInfo';
+    label.textContent = 'Network';
+    value.textContent = netText(S.net);
+    rows.append(label, value);
+  }
   el.setRows.replaceChildren(rows);
   const focused = shownSettings()[S.setRow];
-  el.setHelp.textContent = focused.options.find(o => o[0] === getSetting(focused.id))[2];
+  el.setHelp.textContent = settingOption(focused)[2];
   if (focused.id === 'theme') el.setHelp.textContent += ' Tap it to see them all.';
+}
+
+const settingOption = s => (s.action ? s.options[0] : s.options.find(o => o[0] === getSetting(s.id)));
+
+function netText(n) {
+  if (n.path === 'wired') return 'Wired';
+  if (n.path !== 'wifi') return 'No connection';
+  let text = 'Wi-Fi' + (n.band ? ' ' + n.band : '') + (n.signal != null ? ', ' + n.signal + '%' : '');
+  if (n.fails > 0) text += ', not reaching the router';
+  else if (n.loss > 0) text += ', dropping packets';
+  return text;
 }
 
 function openSettings() {
   S.setRow = 0;
   setMode('settings');
   renderSettings();
+  fetch('/pi/net', { cache: 'no-store' })
+    .then(r => (r.ok ? r.json() : null))
+    .then(n => { S.net = n; S.box = !!n; if (S.mode === 'settings') renderSettings(); })
+    .catch(() => {});
+}
+
+// Power off (the Pi box only, through /pi/power): the first press arms the
+// row, a second press within five seconds asks the box to shut down.
+function powerOff() {
+  if (!S.powerArmed) {
+    S.powerArmed = setTimeout(() => { S.powerArmed = 0; if (S.mode === 'settings') renderSettings(); }, 5000);
+    return renderSettings();
+  }
+  clearTimeout(S.powerArmed);
+  S.powerArmed = 0;
+  fetch('/pi/power', { method: 'POST', body: 'off' })
+    .then(r => { if (!r.ok) throw new Error(r.status); el.poweroff.hidden = false; })
+    .catch(() => renderSettings());
 }
 
 function changeSetting(step) {
-  const id = shownSettings()[S.setRow].id;
+  const row = shownSettings()[S.setRow];
+  if (row.action) return step > 0 ? powerOff() : undefined;
+  const id = row.id;
   cycleSetting(id, step);
   if (id === 'theme') {
     // Reskin at once, and replay the new theme's splash so the change is seen.
@@ -577,6 +642,7 @@ function pickTheme(i) {
 
 function moveSetting(delta) {
   S.setRow = clamp(S.setRow + delta, 0, shownSettings().length - 1);
+  if (S.powerArmed) { clearTimeout(S.powerArmed); S.powerArmed = 0; }   // moving away disarms
   renderSettings();
 }
 

@@ -1,0 +1,15 @@
+# Rebuild the Wi-Fi profiles from the boot partition if they are missing, before
+# NetworkManager reads them (see retro-tv-net.sh).
+[Unit]
+Description=Retro TV network profiles
+DefaultDependencies=no
+After=local-fs.target
+Before=NetworkManager.service network-pre.target
+Wants=network-pre.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/retro-tv-net.sh restore
+
+[Install]
+WantedBy=multi-user.target
