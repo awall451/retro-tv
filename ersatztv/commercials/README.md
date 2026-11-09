@@ -1,7 +1,7 @@
 # Commercials for retro channels
 
 The commercials, trailers and bumpers that play between programmes on our ErsatzTV channels:
-**1,838 clips in 24 sets, plus two small news sets, all from the Internet Archive**, with a record of where every clip came
+**1,823 clips in 24 sets, plus two small news sets, all from the Internet Archive**, with a record of where every clip came
 from, how it was cut, and what we threw out and why. `build.py` rebuilds any set on your machine
 from that record.
 
@@ -25,7 +25,7 @@ link to them, and what you do with them is up to you.
 | `fifties` | 153 | 1950s TV ads (cigarettes, beer, detergent, gasoline, toothpaste…), cut into single ads | `misc1950s-*`, Prelinger `ClassicT1948` I–VIII, `Televisi1960` |
 | `ads2000s` | 28 | 2000s ads, cut into single ads | `2000sCommercials`, `a-bunch-of-2000s-commercials-720p` |
 | `starwars` | 146 | Kenner toy ads 1978–85, Micro Machines, 1977–83 tie-ins, 1997–99 Pepsi / Taco Bell / Episode I spots | single `youtube-*` items, `star-wars-kenner-toy-commercials-trailers-and-more` |
-| `marvel` | 42 | Spider-Man 2 TV spots and tie-ins (2004), Marvel Transformers comic ads, a 1981 Marvel Comics ad, Spider-Man toy and game ads | `spider-man-2-commercials`, `transformers-marvel-comics-commercials-upscaled-60fps`, single items |
+| `marvel` | 27 | Spider-Man 2 TV spots and tie-ins (2004), Marvel Transformers comic ads, a 1981 Marvel Comics ad, Spider-Man toy and game ads | `spider-man-2-commercials`, `transformers-marvel-comics-commercials-upscaled-60fps`, single items |
 | `cars` | 25 | Car ads: 1950s–60s classics, 80s Toyota and Chevrolet, 2000s European ads | `Classic_Car_Commercials_From_The_50s_and_60s_1993_Moon_River_Tape`, `top-10-car-commercials`, single items |
 | `scifi` | 110 | SCI FI Channel breaks 1996–2005: promos, "IF" idents, Sci Fi Friday, and the ads that ran with them | `capture-a-*` "Sci-Fi Channel commercials", `sci-fi-channel-i-am-sci-fi-promos`, `sci-fi-channel-idents-and-bumpers-compiliation` |
 | `discovery` | 41 | Discovery Channel promos (1999), History Channel promos (1999, 2003), a Mail Call promo (2002) | `1999DiscoveryChannelPromos` (1, 2), `February1999HistoryChannelPromos`, `22January2003HistoryChannelPromos`, `history-channel-mail-call-promo-usa-2002` |
@@ -50,6 +50,9 @@ Star Wars films get `starwars` + `90s`.
 The sets added on 2026-11-08 go with channels of the same name (MCU films get `marvel`, Fast & Furious
 `cars`, a Sci-Fi channel `scifi`, and so on); `sixties` and `fifties` go between drama episodes,
 `seventies` with 70s crime films and drive-in movies.
+A small themed set on its own makes every break the same few ads (MCU breaks were six
+Spider-Man 2 spots in a row), so on the channels these sets go with they are mixed with general
+ads of the period: the themed ones then come up about one in four to one in six.
 
 **Quality bar for the 2026-11-08 sets.** Ordinary soft VHS stays. Thrown out: burned-in watermarks
 and running timecode (two Periscope Film uploads, 97 pieces), VHS tracking noise over the whole

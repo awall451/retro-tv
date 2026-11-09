@@ -205,8 +205,13 @@ function placeScreen(animate) {
 // With the HD setting on, the viewer asks for a channel's HD twin where
 // it has one. Nothing else changes: same guide, names and numbers.
 
-const wantHd = () => S.hasHd && getSetting('quality') === 'hd';
-const streamOf = ch => ({ num: wantHd() && ch.hd ? ch.hd : ch.num });
+// If HD could not keep up on this connection (player.js reports it), the
+// viewer drops to Standard for a while, then tries HD again on the next tune.
+const SLOW_SD_MS = 10 * 60 * 1000;
+let sdUntil = 0;
+const slowNow = () => Date.now() < sdUntil;
+const wantHd = () => S.hasHd && getSetting('quality') === 'hd' && !slowNow();
+const streamOf = ch => ({ num: wantHd() && ch.hd ? ch.hd : ch.num, hd: wantHd() && !!ch.hd });
 function pictureShape() {
   const ch = S.channels.find(c => c.id === S.tunedId);
   return ch && wantHd() && ch.hd ? 16 / 9 : 4 / 3;
@@ -411,7 +416,43 @@ const player = new Player(el.video, {
     if (muted) showOsd(SOUND_HINT, 0);
     else hideOsd();
   },
+  // HD cannot keep up on this connection: switch to Standard for a while.
+  onSlow(ch) {
+    if (!ch || ch !== player.channel) return;
+    sdUntil = Date.now() + SLOW_SD_MS;
+    stopSurf();
+    bars.reset();
+    applyLayout();
+    player.tune(ch, { warm: true, stream: ch.num });
+    showOsd('Slow connection: switched to Standard', 5000);
+  },
 });
+
+// ?debug: expose the player (rtvPlayer.stats() in the console) and show a
+// small panel with what the viewer sees: padding, and the "Fill the
+// screen" bar finder's view of the frames. For diagnosing a browser.
+if (new URLSearchParams(location.search).has('debug')) {
+  window.rtvPlayer = player;
+  const panel = document.createElement('pre');
+  panel.id = 'debugPanel';
+  panel.style.cssText = 'position:fixed;left:4px;top:4px;z-index:9;margin:0;padding:6px 8px;max-width:96vw;'
+    + 'background:rgba(0,0,0,.78);color:#9f9;font:11px/1.35 monospace;white-space:pre-wrap;pointer-events:none';
+  document.body.append(panel);
+  setInterval(() => {
+    window.rtvBars = bars;
+    const v = el.video, st = player.stats(), b = bars.last, fs = document.fullscreenElement || document.webkitFullscreenElement;
+    const ago = b.at ? ((Date.now() - b.at) / 1000).toFixed(1) + 's ago' : 'never';
+    panel.textContent = [
+      navigator.userAgent.replace(/^Mozilla\/5\.0 /, '').slice(0, 110),
+      `mode ${S.mode} · picture ${getSetting('picture')} · quality ${getSetting('quality')} · stream ${player.stream || '-'} · ${player.state}`,
+      `window ${innerWidth}x${innerHeight} · visual ${visualViewport ? Math.round(visualViewport.width) + 'x' + Math.round(visualViewport.height) : '-'} · fullscreen ${fs ? fs.id || fs.tagName : 'no'} · dpr ${devicePixelRatio}`,
+      `video ${v.videoWidth}x${v.videoHeight} · box ${Math.round(S.L.bw)}x${Math.round(S.L.bh)} · transform ${v.style.transform || 'none'}`,
+      `bars: ${b.outcome} (${ago}) · lit ${(b.lit * 100).toFixed(0)}% · max ${b.max ?? '-'} · box ${b.box ? `${b.box.left}-${b.box.right} x ${b.box.top}-${b.box.bottom} of 64x48` : '-'}`,
+      `bars found x ${bars.bars.x.toFixed(3)} y ${bars.bars.y.toFixed(3)} · method ${bars.method} · watcher ${bars.timer ? 'running' : 'stopped'}`,
+      `padding: latency ${st.latency == null ? '-' : st.latency.toFixed(1) + 's'} · queued ${st.buffered.toFixed(1)}s · speed ${st.rate} · bw ${st.bandwidth ? (st.bandwidth / 1e6).toFixed(1) + ' Mbps' : '-'}`,
+    ].join('\n');
+  }, 500);
+}
 
 // A real key press or click is what browsers want before they allow sound.
 function wake() {
@@ -528,13 +569,15 @@ function changeSetting(step) {
   }
   if (id === 'picture') syncZoom();
   if (id === 'quality') {
+    sdUntil = 0;   // a choice made by hand ends any automatic drop to Standard
     // Switch the channel being watched to its other stream right away.
     const ch = tunedChannel();
     stopSurf();
     if (ch && player.channel) {
       bars.reset();
       applyLayout();
-      player.tune(ch, { stream: streamOf(ch).num });
+      const st = streamOf(ch);
+      player.tune(ch, { stream: st.num, watchSlow: st.hd });
     }
   }
   if (id === 'warm' && getSetting('warm') !== 'on') stopSurf();
@@ -644,7 +687,7 @@ function tune(ch, direction = 0) {
   const warm = warmer.isReady(stream);
   warmer.release(stream);
   bars.reset();
-  player.tune(ch, { warm, stream: stream.num });
+  player.tune(ch, { warm, stream: stream.num, watchSlow: stream.hd });
   if (direction) surf(direction);
   else stopSurf();
 }
@@ -1134,7 +1177,7 @@ document.addEventListener('visibilitychange', () => {
   if (suspendedId) {
     const ch = S.channels.find(c => c.id === suspendedId);
     suspendedId = null;
-    if (ch) player.tune(ch, { stream: streamOf(ch).num });
+    if (ch) { const st = streamOf(ch); player.tune(ch, { stream: st.num, watchSlow: st.hd }); }
   }
   if (Date.now() - S.loadedAt > 60000) refresh();
   render();
