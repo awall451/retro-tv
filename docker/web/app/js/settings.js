@@ -60,3 +60,13 @@ export function cycleSetting(id, step = 1) {
   try { localStorage.setItem(KEY, JSON.stringify(values)); } catch { /* private mode */ }
   return values[id];
 }
+
+// Set a setting to a given choice (the theme picker) and remember it.
+export function setSetting(id, value) {
+  if (!values) load();
+  const s = SETTINGS.find(x => x.id === id);
+  if (!s.options.some(o => o[0] === value)) return values[id];
+  values[id] = value;
+  try { localStorage.setItem(KEY, JSON.stringify(values)); } catch { /* private mode */ }
+  return values[id];
+}

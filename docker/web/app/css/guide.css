@@ -146,7 +146,9 @@
    the Theme setting puts one on <html> as data-theme. Token names keep the
    Cable theme's words (--navy, --yellow) whatever the color actually is. */
 
-:root {
+/* Also on every [data-theme] element (the theme picker's previews), so the
+   derived tokens below are worked out again from that element's own colors. */
+:root, [data-theme] {
   --navy: #0a1240;      /* page background, text on yellow */
   --program: #0f2a7a;   /* programme cells */
   --channel: #1c3fa8;   /* channel-name cells */
@@ -191,7 +193,7 @@
 
 /* Vaporwave: purple cells, pink where Cable is yellow, cyan for accent
    text (pink and magenta text smear on a composite CRT; cyan holds up). */
-:root[data-theme="vapor"] {
+[data-theme="vapor"] {
   --navy: #0d0624;
   --program: #2a0a4e;
   --channel: #4a1278;
@@ -206,7 +208,7 @@
 
 /* Digital Cable (2000s digital cable guide): black and deep blue, glossy
    rounded bars, a light-blue highlight that glows. */
-:root[data-theme="digital"] {
+[data-theme="digital"] {
   --navy: #000814; --program: #163d86; --channel: #22262f; --timebar: #3f4855;
   --yellow: #4aa3ff; --soft: #b9d6ff; --white: #ffffff; --gap: #000814;
   --ink-accent: #8fc8ff; --splash-bg: #000208;
@@ -225,7 +227,7 @@
 
 /* Satellite (early-2000s satellite receiver): navy into purple, rounded
    channel tabs, gold highlight, a bold italic-feeling face. */
-:root[data-theme="satellite"] {
+[data-theme="satellite"] {
   --navy: #0b0828; --program: #1b2766; --channel: #2c1a6e; --timebar: #43349a;
   --yellow: #ffce5c; --soft: #c9cff5; --white: #ffffff; --gap: #0b0828;
   --ink-accent: #ffce5c; --splash-bg: #05041a;
@@ -245,7 +247,7 @@
 
 /* DVR (1999-2005 hard-disk recorder): soft blues, everything rounded,
    white pills with dark text, a green highlight, a friendly face. */
-:root[data-theme="dvr"] {
+[data-theme="dvr"] {
   --navy: #173a80; --program: #e9f0fb; --channel: #ffffff; --timebar: #ffd54a;
   --yellow: #7ed957; --soft: #e3ecff; --white: #ffffff; --gap: #23559f;
   --ink-accent: #ffd54a; --splash-bg: #173a80;
@@ -261,7 +263,7 @@
 
 /* Media Center (2005 living-room PC): glassy blue, see-through tiles,
    a green glowing highlight, a thin face. */
-:root[data-theme="mediacenter"] {
+[data-theme="mediacenter"] {
   --navy: #031a3a; --program: #0d3d70; --channel: #14497f; --timebar: #08356a;
   --yellow: #3fae32; --soft: #b7e0ff; --white: #ffffff; --gap: #062a55;
   --ink-accent: #9ff07e; --splash-bg: #031a3a;
@@ -281,7 +283,7 @@
 
 /* Aqua (Y2K desktop): light pinstripes, white rounded cells, brushed-metal
    tabs, a blue gel highlight; dark text throughout. */
-:root[data-theme="aqua"] {
+[data-theme="aqua"] {
   --navy: #e3e7ec; --program: #f4f6f9; --channel: #c9ced5; --timebar: #c9ced5;
   --yellow: #2a95ef; --soft: #4c5868; --white: #1d2a3a; --gap: #ffffff;
   --ink-accent: #1f78c8; --splash-bg: #e3e7ec;
@@ -300,7 +302,7 @@
 
 /* Set-Top Web (late-90s internet box): purple and black, chunky square
    bevelled buttons, a gold highlight, uppercase. */
-:root[data-theme="settop"] {
+[data-theme="settop"] {
   --navy: #12082a; --program: #3a2468; --channel: #52348e; --timebar: #6a4aa8;
   --yellow: #ffbe3c; --soft: #d9c8ff; --white: #ffffff; --gap: #07020f;
   --ink-accent: #ffbe3c; --splash-bg: #07020f;
@@ -315,7 +317,7 @@
 
 /* Listings Channel (early-90s listings channel): deep blue boxes, a red
    time bar, big pixel lettering. */
-:root[data-theme="listings"] {
+[data-theme="listings"] {
   --navy: #00125a; --program: #1c2e8a; --channel: #3d5fd1; --timebar: #b3001b;
   --yellow: #ffe14d; --soft: #9fd0ff; --white: #ffffff; --gap: #000000;
   --ink-accent: #ffe14d; --splash-bg: #00125a;
@@ -451,6 +453,55 @@ body.settings #cog { color: var(--ink-accent); }
   font-size: 15px; font-weight: 400; line-height: 20px; color: var(--soft);
 }
 #setButtons { flex: none; align-self: flex-start; display: flex; background: var(--gap); border: 2px solid var(--gap); }
+
+/* ---- Theme picker (over the grid) ---------------------------------- */
+/* Each tile's preview carries its own data-theme, so it is drawn with that
+   theme's tokens: fills, radius, gloss, faces. */
+
+#themePick {
+  position: absolute; left: 0; right: 0; bottom: 0; box-sizing: border-box; z-index: 2;
+  background: var(--navy); border-top: 2px solid var(--gap);
+  padding: 8px 8px 6px; display: flex; flex-direction: column; gap: 6px;
+}
+#tpTitle { flex: none; font-size: 16px; color: var(--ink-accent); }
+#tpGrid {
+  flex: 1 1 0; min-height: 0;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); gap: 6px;
+}
+#tpHelp {
+  flex: none; height: 18px; line-height: 18px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  font-size: 13px; font-weight: 400; color: var(--soft);
+}
+.tp {
+  position: relative; min-width: 0; min-height: 0; margin: 0; padding: 0; cursor: pointer;
+  border: 3px solid transparent; border-radius: 6px; background: none; font: inherit;
+}
+.tp.sel { border-color: var(--yellow); }
+.tp:focus { outline: none; }
+.tpPrev {
+  position: absolute; inset: 0; overflow: hidden; border-radius: 3px; box-sizing: border-box;
+  background: var(--band) top / 100% 45% no-repeat, var(--stage-bg);
+  display: flex; flex-direction: column; justify-content: flex-end; gap: 3px; padding: 4px 5px;
+  font-family: var(--font); color: var(--white); text-align: left;
+}
+.tpName {
+  font-family: var(--font-display); font-weight: var(--display-weight);
+  font-size: 14px; line-height: 15px; text-transform: var(--case); letter-spacing: var(--track);
+  margin-bottom: auto; padding-right: 40px; overflow: hidden;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+}
+.tpRow { display: flex; gap: 2px; height: 11px; }
+.tpRow > i { display: block; min-width: 0; border-radius: min(var(--r), 5px); box-shadow: var(--cell-shadow); }
+.tpRow > .c { flex: 2; background: var(--fill-channel); border-radius: min(var(--r-chan), 5px); }
+.tpRow > .p { flex: 3; background: var(--fill-program); }
+.tpRow > .s { flex: 3; background: var(--fill-slot); }
+.tpRow > .k { flex: 2; background: var(--fill-clock); }
+.tpRow > .h { flex: 3; background: var(--fill-sel); box-shadow: var(--sel-shadow); }
+.tpUsing {
+  position: absolute; right: 4px; top: 4px; padding: 0 5px; height: 15px; line-height: 15px;
+  font-size: 11px; font-weight: 700; border-radius: 3px;
+  background: var(--fill-sel); color: var(--sel-text);
+}
 
 /* ---- Show details (over the grid) --------------------------------- */
 
