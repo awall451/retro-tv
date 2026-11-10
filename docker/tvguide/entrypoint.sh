@@ -59,16 +59,11 @@ sleep 3
 # wall clock, which jitters; the output is forced to a constant frame rate so
 # the next encoder does not duplicate and drop frames to even it out (that
 # showed as juddering motion on every device).
-# The sound is stamped with the wall clock too, as it arrives, and resampled to
-# follow those stamps: with PulseAudio's own sample-count clock the sound
-# drifted ahead of the picture by ~2.5 ms a minute (a third of a second after
-# two and a half hours).
 log "encoding ${W}x${H} at ${FPS} fps, ${BITRATE}"
 ffmpeg -hide_banner -loglevel warning -nostdin \
   -thread_queue_size 1024 -f x11grab -framerate "$FPS" -video_size "${W}x${H}" -draw_mouse 0 -i "$DISPLAY_NUM" \
-  -thread_queue_size 1024 -use_wallclock_as_timestamps 1 -f pulse -i tv.monitor \
+  -thread_queue_size 1024 -f pulse -i tv.monitor \
   -map 0:v -map 1:a \
-  -af aresample=async=1000:min_hard_comp=0.100 \
   -fps_mode cfr -r "$FPS" \
   -c:v libx264 -preset veryfast -profile:v main -pix_fmt yuv420p \
   -g $((FPS * 2)) -keyint_min $((FPS * 2)) -sc_threshold 0 \
