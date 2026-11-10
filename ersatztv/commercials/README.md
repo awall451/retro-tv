@@ -1,7 +1,7 @@
 # Commercials for retro channels
 
 The commercials, trailers and bumpers that play between programmes on our ErsatzTV channels:
-**1,823 clips in 24 sets, plus two small news sets, all from the Internet Archive**, with a record of where every clip came
+**2,026 clips in 26 sets, plus four content sets (CNN, newsreels, The Weather Channel, infomercials), all from the Internet Archive**, with a record of where every clip came
 from, how it was cut, and what we threw out and why. `build.py` rebuilds any set on your machine
 from that record.
 
@@ -37,8 +37,12 @@ link to them, and what you do with them is up to you.
 | `ads2010s` | 6 | Late-2000s / early-2010s ads | `jingles-from-your-childhood-2000s2010s-nostalgic-commercials-parts-1-and-2` |
 | `apple` | 102 | Apple ads: 1984, iMac colours, iPod silhouettes, Get a Mac (US and UK), iPhone 4 and iCloud | `AppleAds`, `apple_getamac`, `apple_ipoditunes`, `apple-1984`, `apple-colors`, single items |
 | `travel` | 49 | Travel Channel breaks (2005, 2007) and 1958–65 airline ads (Eastern, Northwest Orient) | `capture-a-537`, `capture-a-557`, `EasternAirlines1965` (+ ads 2–4), `northwestorient1958` |
-| `cnn` (news) | 12 | CNN's launch day (1 June 1980, four parts) and CNN Headline News recordings, 1985–1997, whole tapes | `CNN_pt._1_6-1-1980` … `pt._4`, `headline-news-*`, `capture-a-*` "CNN Headline News" |
-| `newsreels` (news) | 31 | Universal Newsreel stories, 1933–1964: flights, rockets, sport, ceremonies (nothing on wars or disasters) | collection `universal_newsreels` |
+| `cnn` (news) | 71 | CNN, whole tapes: launch day (1 June 1980), Headline News 1985–2004, and 1984–2000 shows (Showbiz Today, Larry King Live, Crossfire, Moneyline, Business Day, Living in the '90s, Style with Elsa Klensch, NewsDay, The World Today), the 1984 eclipse and the 1990 Hubble launch; no sports, no disaster coverage | `CNN_pt._1_6-1-1980` … `pt._4`, `headline-news-*`, `capture-a-*` CNN recordings, `youtube-*` "CNN \| <show> \| <date>" uploads |
+| `newsreels` (news) | 294 | Universal Newsreel stories and a few full issues, 1933–1967: flights, rockets, inventions, ceremonies, fashion, cities; picked away from war, crime, disasters and sport | collection `universal_newsreels` |
+| `weather` (content) | 22 | The Weather Channel 1982–2006 (whole hours, local forecasts, the 1987 "Everyday Weather" series, two documentaries) and two Weather Network local forecasts | `The_Weather_Channel_5-2-1982`, `weather-channel-1989`, `weather-channel-*`, `everydayweather*`, `thechase1995`, `capture-a-*` |
+| `infomercials` (content) | 66 | Infomercials 1983–1999: Flowbee, George Foreman grill, Ronco, Don Lapre, Susan Powter, Video Professor, Time Life and K-Tel music collections, Philips CD-i, Amiga CDTV, Apple Lisa, and short "Infomercial Hell" spots | single items, `TheVistaGroup-*`, `random-infomercial-grab-bag-1999`, `youtube-collection-1990s-infomercial-hell` |
+| `albums` | 23 | Album and record-club ads: K-Tel reels (cut into single ads), Ronco, Columbia House, Time Life Music | `K-telCommercials`, single items |
+| `tech` | 180 | Technology ads 1977–1999: Radio Shack/Tandy, IBM PS/2, Commodore, Macintosh, Windows 95/98, AOL, Pentium, Walkman, VCRs, CED players, TVs, 90s game consoles (split by decade on our server: 80s / 90s) | `radio-shack-video-radioshackcatalogs.org`, `IBMTVAdsCollection`, `windows-95-commercial-collection`, collection `computercommercials`, single items |
 
 `python3 build.py OUT --list` prints the same with download sizes. The full build downloads
 about 20 GB and keeps about 13 GB.
