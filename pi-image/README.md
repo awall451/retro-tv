@@ -58,7 +58,9 @@ Where it stands: the script route (step 1, below) works on real hardware; the on
   it is applied (on every start and on every change). On the box, nginx passes that to a small
   local service (`retro-tv-themed.py`), which records the choice and points Plymouth's images at
   the matching splash, so the *next* boot already matches. Every viewer theme has a rendered
-  boot splash; the service accepts whatever `splash-<theme>-*.png` files are installed. Anywhere else (laptop, phone) the
+  boot splash; the service accepts whatever `splash-<theme>-*.png` files are installed. Plymouth
+  draws from the initramfs on Pi OS, so the service rebuilds it afterwards: once, 20 seconds
+  after the last change, at the lowest CPU and disk priority, for the running kernel only. Anywhere else (laptop, phone) the
   request answers 404 and is ignored. The same service takes the settings screen's **Power
   off** (`/pi/power`), which shuts Pi OS down cleanly; the row only appears on the box.
 - **Wi-Fi comes from the boot partition, and a watchdog keeps it up.** Raspberry Pi Imager
@@ -241,6 +243,11 @@ survive.
   image drew at its own 640×480 in the top-left corner with the browser's default 8 px margin.
   On the 640×480 HDMI mode this was nearly invisible; on composite (720 wide) it was obvious.
   The style is a separate file now (`overscan.css`) and the image fills the screen.
+- **Flipping through themes made the box crawl.** Each theme change rebuilt the initramfs at
+  once, for every installed kernel, at normal priority, and several presses in a row ran several
+  rebuilds at the same time (the service had burned six minutes of CPU in an afternoon). Now the
+  rebuild waits for 20 quiet seconds, runs once under `nice` and `ionice`, and only for the
+  kernel this Pi boots; it takes about 15 seconds and the guide does not notice.
 - **Sound defaulted to the headphone jack.** PipeWire picks the 3.5 mm jack as the default
   output, so HDMI got silence. The kiosk script makes the HDMI output the default at full volume
   (the jack in composite mode, where it carries the sound).

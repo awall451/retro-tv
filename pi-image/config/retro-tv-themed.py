@@ -5,8 +5,10 @@ A tiny local web service on 127.0.0.1:8412 that the viewer talks to through
 nginx (/pi/theme, /pi/power). The viewer posts its theme id whenever it
 applies one; this records the choice in /data/retro-tv/theme and
 points the Plymouth theme's images at the matching splash, so the next boot
-shows it. If Plymouth runs from the initramfs on this system, the initramfs is
-rebuilt in the background so the change gets in. The settings screen's
+shows it. Plymouth runs from the initramfs on Pi OS, so the initramfs is
+rebuilt afterwards: once, at low priority, for the running kernel only, and
+only after 20 s without further changes (flipping through themes used to
+start one heavy rebuild per press and make the box crawl). The settings screen's
 "Power off" row posts to /pi/power, and the box shuts down cleanly.
 
   POST /pi/theme   body: the theme id        -> 204
@@ -20,6 +22,7 @@ import glob
 import os
 import subprocess
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 POWER = {"off": "poweroff", "reboot": "reboot"}
@@ -65,11 +68,42 @@ def point_plymouth(theme: str) -> None:
         os.replace(tmp, link)
 
 
-def rebuild_initramfs() -> None:
-    # Only when the boot partition carries an initramfs (Plymouth then draws from it).
-    if glob.glob("/boot/firmware/initramfs*"):
-        subprocess.run(["update-initramfs", "-u"], check=False,
+REBUILD_QUIET = 20.0            # seconds without a change before the initramfs is rebuilt
+_rebuild_at = 0.0               # when the next rebuild is due (monotonic), 0 = none pending
+_rebuild_lock = threading.Lock()
+_rebuild_thread = None
+
+
+def schedule_rebuild() -> None:
+    """Rebuild the initramfs once things have been quiet for REBUILD_QUIET seconds."""
+    global _rebuild_at, _rebuild_thread
+    if not glob.glob("/boot/firmware/initramfs*"):
+        return                  # Plymouth draws from the root filesystem here: nothing to do
+    with _rebuild_lock:
+        _rebuild_at = time.monotonic() + REBUILD_QUIET
+        if _rebuild_thread is None or not _rebuild_thread.is_alive():
+            _rebuild_thread = threading.Thread(target=_rebuild_worker, daemon=True)
+            _rebuild_thread.start()
+
+
+def _rebuild_worker() -> None:
+    global _rebuild_at
+    while True:
+        with _rebuild_lock:
+            due = _rebuild_at
+        wait = due - time.monotonic()
+        if wait > 0:
+            time.sleep(wait)
+            continue
+        with _rebuild_lock:
+            _rebuild_at = 0.0
+        # Low priority, and only the kernel this Pi runs (-u alone does every installed one).
+        subprocess.run(["nice", "-n", "19", "ionice", "-c", "3", "update-initramfs", "-u",
+                        "-k", os.uname().release], check=False,
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        with _rebuild_lock:
+            if not _rebuild_at:
+                return          # nothing changed meanwhile
 
 
 def set_theme(theme: str) -> bool:
@@ -82,7 +116,7 @@ def set_theme(theme: str) -> bool:
             f.write(theme + "\n")
         os.replace(STATE + ".tmp", STATE)
         point_plymouth(theme)
-    threading.Thread(target=rebuild_initramfs, daemon=True).start()
+    schedule_rebuild()
     return True
 
 
