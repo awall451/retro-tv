@@ -51,12 +51,26 @@ body.fallback { font-weight: 700; }   /* Arimo needs its bold to read like the o
   transform-origin: 0 0; background: var(--bg); overflow: hidden;
 }
 
-/* ---- The top: the promo channel, black until it plays ------------------------- */
-#top { position: absolute; left: 0; top: 0; width: 640px; height: var(--top-h); background: #000; }
-/* The whole picture, between black bars; a crop to fill the area was tried and
-   looked worse. */
+/* ---- The top half: video on one side, a promo card on the other ------------------
+   As the channel did it: a 4:3 video box the full height of the area on one
+   side and text on the other, on the grid's blue; the sides swap now and
+   then (#top.flip). */
+#top {
+  position: absolute; left: 0; top: 0; width: 640px; height: var(--top-h);
+  background: var(--bg); display: flex;
+}
+#top.flip { flex-direction: row-reverse; }
+#promoBox { flex: none; width: calc(var(--top-h) * 4 / 3); height: 100%; background: #000; }
 #promo { display: block; width: 100%; height: 100%; object-fit: contain; background: #000; }
 #promo:not(.on) { visibility: hidden; }
+#card {
+  flex: 1; min-width: 0; box-sizing: border-box; padding: 22px 14px 0 16px;
+  font-size: 22px; line-height: 26px; color: var(--text);
+  text-shadow: 1px 0 0 var(--ink), -1px 0 0 var(--ink), 0 1px 0 var(--ink), 0 -1px 0 var(--ink), 2px 2px 0 var(--ink), 3px 3px 0 var(--ink);
+}
+#card .line { display: block; margin-bottom: 14px; overflow: hidden; }
+#card .hi { color: var(--yellow); }
+#card .title { font-size: 26px; line-height: 29px; max-height: 87px; }   /* up to three lines */
 
 /* ---- The grid --------------------------------------------------------------------- */
 #grid {

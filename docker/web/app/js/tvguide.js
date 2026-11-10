@@ -31,14 +31,20 @@ const REFRESH_MS = 10 * 60 * 1000;         // listings re-read this often
 
 const PROMO = (params.get('promo') || '').trim();   // a channel number, or nothing
 
+const CARD_SECONDS = 12;                   // a promo card stays this long
+const FLIP_MINUTES = 4;                    // video and card swap sides this often
+const CARD_HORIZON = 6 * HALF_HOUR;        // cards promote shows starting within three hours
+const TOP_PAUSE_SECONDS = 4;               // the grid parks on the first channels at the top of every pass
+
 const $ = id => document.getElementById(id);
-const el = { stage: $('stage'), clock: $('clock'), times: $('times'), rows: $('rows'), viewport: $('viewport'), grid: $('grid'), promo: $('promo') };
+const el = { stage: $('stage'), clock: $('clock'), times: $('times'), rows: $('rows'), viewport: $('viewport'), grid: $('grid'), top: $('top'), promo: $('promo'), card: $('card') };
 
 let guide = null;            // { channels, … } from loadGuide
 let windowStart = 0;         // the first column's time
 let cycleHeight = 0;         // height of one pass through all channels
 let offset = 0;              // current scroll position in px
 let lastFrame = 0;
+let pauseUntil = 0;          // while the grid is parked at the top of a pass (ms timestamp)
 
 // ---- Fitting the 640x480 page to the screen ------------------------------------
 
@@ -208,9 +214,13 @@ function tick() {
 }
 
 function frame(ts) {
-  if (lastFrame && cycleHeight) {
+  if (lastFrame && cycleHeight && ts >= pauseUntil) {
     offset += (ts - lastFrame) / 1000 * (ROW_H / ROW_SECONDS);
-    if (offset >= cycleHeight) offset -= cycleHeight;
+    if (offset >= cycleHeight) {
+      // Back at channel 1: park for a moment before rolling again.
+      offset = 0;
+      pauseUntil = ts + TOP_PAUSE_SECONDS * 1000;
+    }
     el.rows.style.transform = `translateY(${(-Math.round(offset))}px)`;
   }
   lastFrame = ts;
@@ -221,9 +231,17 @@ function frame(ts) {
 
 async function refresh() {
   try {
+    const first = !guide;
     guide = await loadGuide();
     message('');
     rebuild();
+    cardQueue = [];                    // cards are rebuilt from the fresh listings
+    if (first) {
+      // The listings have just arrived: start at channel 1 and park there first.
+      offset = 0;
+      el.rows.style.transform = 'translateY(0px)';
+      pauseUntil = performance.now() + TOP_PAUSE_SECONDS * 1000;
+    }
   } catch (err) {
     if (!guide) message('Listings are not available right now.');
     console.warn('TV Guide: could not load the listings', err);
@@ -254,6 +272,58 @@ function startPromo() {
   promoPlayer.tune({ num: PROMO, name: 'Promos' }, { stream: PROMO });
 }
 
+// ---- Promo cards ---------------------------------------------------------------------
+// The text side of the top half: "coming up" cards built from the listings,
+// the way the channel's text ads read: the channel, the show in quotes with
+// its rating, when, and the channel number. A fresh card every CARD_SECONDS,
+// drawn from what starts in the next few hours, movies first.
+
+let cardQueue = [];
+
+function whenText(t) {
+  const d = new Date(t), now = new Date();
+  const time = `${hour12(d)}:${pad(d.getMinutes())} ${d.getHours() < 12 ? 'AM' : 'PM'}`;
+  if (d.toDateString() === now.toDateString()) return `${d.getHours() >= 17 ? 'Tonight' : 'Today'} ${time}`;
+  const tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1);
+  if (d.toDateString() === tomorrow.toDateString()) return `Tomorrow ${time}`;
+  return `${d.toLocaleDateString(undefined, { weekday: 'long' })} ${time}`;
+}
+
+function buildCards() {
+  if (!guide) return [];
+  const now = Date.now(), cards = [];
+  for (const ch of guide.channels) {
+    for (const p of ch.progs) {
+      if (p.start < now - HALF_HOUR || p.start > now + CARD_HORIZON) continue;
+      if (p.stop - p.start < 20 * 60 * 1000) continue;            // not the shorts and bumpers
+      cards.push({ ch, p, weight: p.movie ? 3 : 1 });
+    }
+  }
+  // Weighted shuffle: movies come up about three times as often.
+  for (const c of cards) c.key = -Math.log(Math.random()) / c.weight;
+  return cards.sort((a, b) => a.key - b.key);
+}
+
+function showCard() {
+  if (!guide) return;
+  if (!cardQueue.length) cardQueue = buildCards();
+  const c = cardQueue.shift();
+  if (!c) { el.card.replaceChildren(); return; }
+  const { ch, p } = c;
+  const title = p.movie ? `&ldquo;${escapeHtml(p.title)}&rdquo;` : escapeHtml(p.title);
+  const rating = p.rating ? ' ' + ratingHtml(p.rating) : '';
+  const started = p.start <= Date.now();
+  el.card.innerHTML =
+    `<span class="line hi">${escapeHtml(ch.name.toUpperCase())}</span>` +
+    `<span class="line title">${title}${rating}</span>` +
+    `<span class="line hi">${started ? 'Now Showing' : escapeHtml(whenText(p.start))}</span>` +
+    `<span class="line hi">Channel ${escapeHtml(ch.num)}</span>`;
+}
+
+function flipSides() {
+  el.top.classList.toggle('flip');
+}
+
 // ---- Start --------------------------------------------------------------------------
 
 // Is the Amiga font there? If not, the page styles itself for the fallback.
@@ -270,6 +340,8 @@ message('Loading listings…');
 tick();
 setInterval(tick, 250);
 requestAnimationFrame(frame);
-refresh();
+refresh().then(showCard);
 setInterval(refresh, REFRESH_MS);
+setInterval(showCard, CARD_SECONDS * 1000);
+setInterval(flipSides, FLIP_MINUTES * 60 * 1000);
 startPromo();
