@@ -59,11 +59,14 @@ sleep 3
 # wall clock, which jitters; the output is forced to a constant frame rate so
 # the next encoder does not duplicate and drop frames to even it out (that
 # showed as juddering motion on every device).
+# Chromium shows the promo's picture about 0.2 s after it plays the sound
+# (software compositing), so the sound is delayed by AUDIO_DELAY_MS to match.
 log "encoding ${W}x${H} at ${FPS} fps, ${BITRATE}"
 ffmpeg -hide_banner -loglevel warning -nostdin \
   -thread_queue_size 1024 -f x11grab -framerate "$FPS" -video_size "${W}x${H}" -draw_mouse 0 -i "$DISPLAY_NUM" \
   -thread_queue_size 1024 -f pulse -i tv.monitor \
   -map 0:v -map 1:a \
+  -af "adelay=${AUDIO_DELAY_MS:-200}:all=1" \
   -fps_mode cfr -r "$FPS" \
   -c:v libx264 -preset veryfast -profile:v main -pix_fmt yuv420p \
   -g $((FPS * 2)) -keyint_min $((FPS * 2)) -sc_threshold 0 \
