@@ -221,7 +221,10 @@ function frame(ts) {
       offset = 0;
       pauseUntil = ts + TOP_PAUSE_SECONDS * 1000;
     }
-    el.rows.style.transform = `translateY(${(-Math.round(offset))}px)`;
+    // Fractional pixels on purpose: whole-pixel steps at 0.9 px a frame stand
+    // still every eighth frame, which reads as judder once the page is
+    // captured as video. Sub-pixel motion is smooth at any frame rate.
+    el.rows.style.transform = `translate3d(0, ${(-offset).toFixed(3)}px, 0)`;
   }
   lastFrame = ts;
   requestAnimationFrame(frame);
@@ -239,7 +242,7 @@ async function refresh() {
     if (first) {
       // The listings have just arrived: start at channel 1 and park there first.
       offset = 0;
-      el.rows.style.transform = 'translateY(0px)';
+      el.rows.style.transform = 'translate3d(0, 0, 0)';
       pauseUntil = performance.now() + TOP_PAUSE_SECONDS * 1000;
     }
   } catch (err) {
