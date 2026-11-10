@@ -11,6 +11,13 @@ stays a description anyone can use. Newest first.
   checked on the composite framebuffer (`screen=4:3` stretch applies; the stage needed
   `transform-origin: 0 0`). Top half black until the promo clips exist (phase 2); phase 3 is the
   container that streams the page, phase 4 the ErsatzTV channel (handoff to that session).
+- Then made exact: the channel ran the Amiga "Prevue Grid" software until 2000, and the fan
+  recreation at github.com/rickz0rz/guide (MIT) records its measurements: colours #000030 /
+  #000051 / #263383 / #CBD100 / #AAAAAA, columns 144/172/172/208 at 716 wide, time bar 34,
+  rows 56, 25 pt text, grey-and-black bevels, triangle arrows, one pixel per frame. Applied at
+  640/716 scale. The PrevueGrid font (Rudy Valencia, 2014, no stated licence) fetched from that
+  repository with the user's OK; the page falls back to Arimo Bold if the file is missing.
+  Parentheses in that font draw as square brackets: that is how the Amiga drew them.
 
 ## 2026-11-09: no network at all, then composite
 

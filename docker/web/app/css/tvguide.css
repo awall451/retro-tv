@@ -1,106 +1,135 @@
-/* The TV Guide Channel page, as it looked around 1999: video on top, the
-   listings grid scrolling underneath. Designed at 640x480 (#stage) and
-   scaled to the window by the script; on the composite output the body is
-   also stretched for the picture's non-square pixels. */
+/* The TV Guide Channel page: the Amiga "Prevue Grid" look the channel still
+   ran in 1999. Colours and proportions follow the measurements the Prevue
+   fan community made of the real output (background #000030, rows #000051,
+   time bar #263383, yellow #CBD100, text #AAAAAA, a 144/172/172/208 column
+   layout at 716 wide), scaled to this page's 640x480 design. The script
+   scales #stage to the window and, on the composite output, stretches it. */
 
+/* The listings font: "PrevueGrid", a TrueType conversion of the Amiga
+   listings font (ratings and CC are glyphs in its private-use range).
+   Until the file is present the browser falls back to Arimo Bold. */
+@font-face {
+  font-family: "PrevueGrid"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("/fonts/PrevueGrid.ttf") format("truetype");
+}
 @font-face {
   font-family: "Arimo"; font-style: normal; font-weight: 700; font-display: swap;
   src: url("/fonts/arimo-latin-700-normal.woff2") format("woff2");
 }
-@font-face {
-  font-family: "Arimo"; font-style: normal; font-weight: 400; font-display: swap;
-  src: url("/fonts/arimo-latin-400-normal.woff2") format("woff2");
-}
 
 :root {
-  /* The 1999 palette: a purple-blue grid, yellow timeline, white listings. */
-  --bg: #121257;            /* behind everything */
-  --head: #23237f;          /* the time row */
-  --cell: #34349c;          /* programme cells */
-  --cell-alt: #2b2b8e;      /* every other channel row */
-  --chan: #1d1d74;          /* the channel column */
-  --line: #8d8de0;          /* cell edges, the lighter bevel */
-  --line-dark: #0b0b3a;     /* cell edges, the shadow side */
-  --yellow: #ffe24a;
-  --white: #ffffff;
-  --shadow: 1px 1px 0 #000, 1px 1px 2px rgba(0, 0, 0, .8);   /* the soft SD drop shadow */
+  --bg: #000030;            /* behind everything, and between the frames */
+  --row: #000051;           /* listing rows */
+  --bar: #263383;           /* the time bar and the clock box */
+  --yellow: #cbd100;        /* channel numbers, call signs, the times */
+  --text: #aaaaaa;          /* listings */
+  --ink: #111111;           /* outlines and shadows */
+  --hi: #aaaaaa;            /* bevel highlight (top and left): the same grey as the text */
+  --lo: #000000;            /* bevel shadow (bottom and right) */
 
-  --top-h: 262px;           /* the promo area; the grid takes the rest of 480 */
-  --chan-w: 96px;           /* channel column */
-  --head-h: 34px;
-  --row-h: 61px;            /* three rows fill the grid area */
+  /* 716-wide measurements scaled by 640/716 (0.894). */
+  --margin: 9px;            /* the grid does not reach the picture's edge */
+  --chan-w: 129px;          /* channel column (144) */
+  --col-w: 154px;           /* half-hour column (172) */
+  --last-w: 186px;          /* the last column is wider (208): room for the arrows */
+  --bar-h: 31px;            /* time bar (34) */
+  --row-h: 53px;            /* a two-line row: three fit under the bar */
+  --top-h: 289px;           /* promos above; the grid takes the lower 40% */
+  --font: 24px;             /* 25 pt at 716; the Amiga font runs small for its size */
+  --line: 23px;
 }
 
 html, body {
   margin: 0; height: 100%; overflow: hidden; background: #000;
   -webkit-user-select: none; user-select: none; cursor: none;
 }
-body {
-  font-family: "Arimo", Arial, Helvetica, sans-serif; font-weight: 700; color: var(--white);
-}
+body { font-family: "PrevueGrid", "Arimo", Arial, Helvetica, sans-serif; font-weight: 400; color: var(--text); }
+body.fallback { font-weight: 700; }   /* Arimo needs its bold to read like the original */
 
 #stage {
   position: absolute; left: 0; top: 0; width: 640px; height: 480px;
   transform-origin: 0 0; background: var(--bg); overflow: hidden;
 }
 
-/* ---- The top half: promos, or black until there are any -------------------- */
+/* ---- The top: promos, black until there are any -------------------------------- */
 #top { position: absolute; left: 0; top: 0; width: 640px; height: var(--top-h); background: #000; }
 #promo { display: block; width: 100%; height: 100%; object-fit: contain; background: #000; }
 #promo:not(.on) { visibility: hidden; }
 
-/* ---- The grid ---------------------------------------------------------------- */
+/* ---- The grid --------------------------------------------------------------------- */
 #grid {
-  position: absolute; left: 0; top: var(--top-h); width: 640px; bottom: 0;
+  position: absolute; left: var(--margin); right: var(--margin); top: var(--top-h); bottom: 0;
   background: var(--bg); overflow: hidden;
 }
-#header { position: absolute; left: 0; top: 0; width: 640px; height: var(--head-h); display: flex; }
-#clock { width: var(--chan-w); flex: none; background: var(--head); color: var(--white); font-size: 15px; }
+#header { position: absolute; left: 0; right: 0; top: 0; height: var(--bar-h); display: flex; }
+#clock { width: var(--chan-w); flex: none; color: var(--yellow); }
 #times { flex: 1; display: flex; }
-#times .cell { flex: 1; background: var(--head); color: var(--yellow); font-size: 16px; letter-spacing: .5px; }
+#times .cell { width: var(--col-w); flex: none; color: var(--yellow); }
+#times .cell:last-child { width: var(--last-w); }
+#header .cell { background: var(--bar); font-size: var(--font); }
 
-#viewport { position: absolute; left: 0; top: var(--head-h); width: 640px; bottom: 0; overflow: hidden; }
-#rows { position: absolute; left: 0; top: 0; width: 640px; will-change: transform; }
+#viewport { position: absolute; left: 0; right: 0; top: var(--bar-h); bottom: 0; overflow: hidden; }
+#rows { position: absolute; left: 0; top: 0; right: 0; will-change: transform; }
 
 .row { position: relative; height: var(--row-h); display: flex; }
-.row.alt .prog { background: var(--cell-alt); }
-.chan { width: var(--chan-w); flex: none; background: var(--chan); text-align: center; }
-.chan .num { display: block; color: var(--yellow); font-size: 20px; line-height: 26px; margin-top: 6px; }
-.chan .name { display: block; color: var(--white); font-size: 13px; line-height: 16px; letter-spacing: .5px; }
+.chan {
+  width: var(--chan-w); flex: none; background: var(--row); text-align: center;
+  color: var(--yellow); font-size: var(--font); line-height: var(--line); padding-top: 3px;
+}
+.chan .num, .chan .name { display: block; white-space: nowrap; overflow: hidden; }
 .progs { flex: 1; position: relative; }
 .prog {
   position: absolute; top: 0; height: 100%; box-sizing: border-box;
-  background: var(--cell); padding: 6px 7px 0 8px;
-  font-size: 15px; line-height: 19px; overflow: hidden;
+  background: var(--row); padding: 3px 6px 0 7px;
+  font-size: var(--font); line-height: var(--line); overflow: hidden;
 }
-.prog.gap { color: #c9c9ee; }
-.prog .text {
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-  max-height: 38px; word-break: break-word;
-}
+.prog .text { max-height: calc(2 * var(--line)); overflow: hidden; word-break: break-word; }   /* two lines, cut, no ellipsis: the Amiga just stopped */
+.prog.gap .text { color: var(--text); }
+/* Movie ratings: a boxed abbreviation, as the Amiga font drew them. */
 .prog .rating {
-  display: inline-block; vertical-align: 1px; margin: 0 3px;
-  padding: 0 3px; border-radius: 2px; background: var(--yellow); color: #1d1d74;
-  font-size: 10px; line-height: 13px; letter-spacing: .3px; text-shadow: none;
+  display: inline-block; vertical-align: 2px; margin: 0 4px 0 2px; padding: 0 3px;
+  border: 1px solid var(--text); font-size: 13px; line-height: 15px; letter-spacing: .5px;
 }
-.prog .year, .prog .at { color: #d9d9ff; }
-.prog .arrow { color: var(--yellow); }
-.prog .arrow.left { float: left; margin: 0 4px 0 -4px; }
-.prog .arrow.right { position: absolute; right: 4px; bottom: 4px; }
+/* With the real font the rating is a glyph of its own and needs no box. */
+body:not(.fallback) .prog .rating { border: 0; padding: 0; font-size: var(--font); line-height: inherit; vertical-align: 0; letter-spacing: 0; }
 
-/* Every cell: a one-pixel bevel, light at the top and left, dark at the bottom
-   and right, which is what the real grid's cells looked like after the CRT. */
+/* Arrows: grey triangles with a black edge, the row's full height, at the
+   cell's left or right. Double arrows mean more than half an hour over. */
+.prog .arrow {
+  position: absolute; top: 4px; bottom: 4px; width: 14px;
+  background: no-repeat center / 100% 100%;
+}
+.prog .arrow.left { left: 3px; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 50' preserveAspectRatio='none'><path d='M15 0 L0 25 L15 50 Z' fill='%23111111'/><path d='M14 2 L2 25 L14 48 Z' fill='%23aaaaaa'/></svg>"); }
+.prog .arrow.right { right: 3px; background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 50' preserveAspectRatio='none'><path d='M1 0 L16 25 L1 50 Z' fill='%23111111'/><path d='M2 2 L15 25 L2 48 Z' fill='%23aaaaaa'/></svg>"); }
+.prog .arrow.double { width: 22px; }
+.prog .arrow.left.double { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 50' preserveAspectRatio='none'><path d='M15 0 L0 25 L15 50 Z' fill='%23111111'/><path d='M14 2 L2 25 L14 48 Z' fill='%23aaaaaa'/><path d='M23 0 L8 25 L23 50 Z' fill='%23111111'/><path d='M22 2 L10 25 L22 48 Z' fill='%23aaaaaa'/></svg>"); }
+.prog .arrow.right.double { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 50' preserveAspectRatio='none'><path d='M1 0 L16 25 L1 50 Z' fill='%23111111'/><path d='M2 2 L15 25 L2 48 Z' fill='%23aaaaaa'/><path d='M9 0 L24 25 L9 50 Z' fill='%23111111'/><path d='M10 2 L23 25 L10 48 Z' fill='%23aaaaaa'/></svg>"); }
+.prog.has-left .text { padding-left: 14px; }
+.prog.has-left.left-double .text { padding-left: 22px; }
+.prog.has-right .text { padding-right: 14px; }
+.prog.has-right.right-double .text { padding-right: 22px; }
+
+/* Every box has the Amiga's 3-D frame: a light top-left edge, a black
+   bottom-right edge, two pixels each, set inside a one-pixel gap of
+   background so the frames read as separate blocks. */
 .cell, .chan, .prog {
   box-sizing: border-box;
-  border-top: 1px solid var(--line); border-left: 1px solid var(--line);
-  border-bottom: 1px solid var(--line-dark); border-right: 1px solid var(--line-dark);
-  text-shadow: var(--shadow);
+  border: 2px solid; border-color: var(--hi) var(--lo) var(--lo) var(--hi);
+  outline: 1px solid #000; outline-offset: -1px;   /* the black line around every frame */
 }
 .cell { display: flex; align-items: center; justify-content: center; }
 
+/* The heavy Amiga drop shadow: a black outline and a copy two pixels down and right. */
+.cell, .chan, .prog {
+  text-shadow:
+    1px 0 0 var(--ink), -1px 0 0 var(--ink), 0 1px 0 var(--ink), 0 -1px 0 var(--ink),
+    2px 2px 0 var(--ink), 3px 3px 0 var(--ink);
+}
+
 /* A message while the listings load or when they cannot be read. */
 #msg {
-  position: absolute; left: var(--chan-w); right: 0; top: var(--head-h); bottom: 0;
+  position: absolute; left: var(--chan-w); right: 0; top: var(--bar-h); bottom: 0;
   display: flex; align-items: center; justify-content: center; text-align: center;
-  padding: 0 24px; font-size: 16px; color: #d9d9ff; text-shadow: var(--shadow);
+  padding: 0 24px; font-size: var(--font); color: var(--text);
+  text-shadow: 2px 2px 0 var(--ink);
 }

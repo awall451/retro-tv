@@ -1,0 +1,9 @@
+PrevueGrid.ttf and PrevueGrid-Pixelated.ttf
+(c) 2014 Rudy Valencia. A TrueType conversion of the Prevue Channel / TV Guide
+Channel listings font (the Amiga "Prevue Grid" software), published by its
+author on the Prevue Guide forums (ariweinstein.com, "New Prevue Fonts",
+April 2014) without stated licence terms, and redistributed in the MIT-licensed
+recreation at https://github.com/rickz0rz/guide, where these files come from.
+Used here for the TV Guide Channel page (tvguide.html) of a private project.
+The rating badges (NR, G, PG, PG-13, NC-17, R, ADULT, TV-Y … TV-MA) are glyphs
+at U+F008 to U+F015, closed captions at U+F01C.

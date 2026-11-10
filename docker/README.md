@@ -211,11 +211,16 @@ copies of every channel".
 ### The TV Guide Channel page
 
 `tvguide.html` is a second page on the same server: the scrolling listings channel of the late
-1990s, drawn from the same channel list and guide data. Half-hour columns, a 90-minute window,
-every channel scrolling past in turn, a clock with seconds, movies in quotes with their rating and
-year. The top half is reserved for promos and is black until a clips list exists. It takes the
-same `?tv` and `&screen=4:3` parameters as the guide. The [Pi box](../pi-image/README.md) can show
-it as its page (`PAGE=tvguide`), and the plan is to turn it into a real channel on the server.
+1990s, drawn from the same channel list and guide data. It follows the Amiga "Prevue Grid"
+software the channel ran until 2000, as the Prevue fan community measured it: navy rows and a
+brighter time bar, yellow channel numbers and times, grey listings with a heavy black shadow,
+bevelled frames, triangle arrows for shows running past the 90-minute window, "No Data" in the
+holes, and the PrevueGrid font, a fan conversion of the Amiga lettering whose rating badges are
+glyphs of their own (`fonts/PrevueGrid-NOTICE.txt`). Every channel scrolls past in turn, about two
+seconds a row, under a clock with seconds. The top half is reserved for promos and is black until
+a clips list exists. It takes the same `?tv` and `&screen=4:3` parameters as the guide. The
+[Pi box](../pi-image/README.md) can show it as its page (`PAGE=tvguide`), and the plan is to turn
+it into a real channel on the server.
 
 ## Good to know
 
@@ -292,7 +297,7 @@ docker/
 │       ├── js/theme-boot.js  puts the saved theme on <html> before the first paint
 │       ├── js/splash.js      the splash scenes and the perspective floor grid
 │       ├── js/app.js         the guide, the three screens, every input
-│       ├── fonts/            Cabin, Audiowide, Mr Dafoe (SIL Open Font License)
+│       ├── fonts/            the themes' fonts (SIL Open Font License) and PrevueGrid for the TV Guide page (see its NOTICE)
 │       └── vendor/           hls.js 1.7.3 (Apache-2.0), served from here, not a CDN
 ├── notes/                    hand-over notes to the Pi side
 ├── design/mockup.html        the approved design

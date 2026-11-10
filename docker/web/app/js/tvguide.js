@@ -21,8 +21,8 @@ const SCREEN_SHAPE = (() => {
 const W = 640, H = 480;
 const COLUMNS = 3;                         // half hours across
 const WINDOW = COLUMNS * HALF_HOUR;
-const ROW_H = 61;                          // matches --row-h in tvguide.css
-const ROW_SECONDS = 2.6;                   // one channel row scrolls past in this time
+const ROW_H = 53;                          // matches --row-h in tvguide.css
+const ROW_SECONDS = 2.0;                   // one channel row scrolls past in this time (the Amiga did a pixel a frame)
 const REFRESH_MS = 10 * 60 * 1000;         // listings re-read this often
 
 const $ = id => document.getElementById(id);
@@ -88,20 +88,36 @@ function escapeHtml(s) {
 // What a cell says: movies in quotes with their rating and year, as the
 // channel printed them; shows by title; a start time in brackets when the
 // programme does not begin on the half hour.
+// The Amiga font keeps the rating badges as glyphs of its own; the browser's
+// fallback font shows the abbreviation in a box instead (tvguide.css).
+const RATING_GLYPH = {
+  NR: '', G: '', PG: '', 'PG-13': '', 'NC-17': '', R: '',
+  ADULT: '', 'TV-Y': '', 'TV-Y7': '', 'TV-G': '', 'TV-PG': '',
+  'TV-14': '', 'TV-M': '', 'TV-MA': '',
+};
+const realFont = () => !document.body.classList.contains('fallback');
+
+function ratingHtml(rating) {
+  const key = rating.toUpperCase().replace(/\s+/g, '');
+  const glyph = RATING_GLYPH[key];
+  if (glyph && realFont()) return `<span class="rating">${glyph}</span>`;
+  return `<span class="rating">${escapeHtml(rating.replace(/^TV-?/i, 'TV'))}</span>`;
+}
+
 function cellHtml(cell, from, to) {
   const p = cell.items[0];
   const parts = [];
-  if (cell.start < from) parts.push('<span class="arrow left">&#9668;</span>');
-  if (cell.start > from && cell.start % HALF_HOUR !== 0) parts.push(`<span class="at">${startText(cell.start)}</span> `);
+  if (cell.start > from && cell.start % HALF_HOUR !== 0) parts.push(`${startText(cell.start)} `);
   if (p && p.movie) {
     parts.push(`&ldquo;${escapeHtml(cell.title)}&rdquo;`);
-    if (p.rating) parts.push(`<span class="rating">${escapeHtml(p.rating)}</span>`);
-    if (p.year) parts.push(` <span class="year">(${p.year})</span>`);
+    if (p.rating) parts.push(ratingHtml(p.rating));
+    if (p.year) parts.push(` (${p.year})`);
   } else {
     parts.push(escapeHtml(cell.title));
   }
   let html = `<div class="text">${parts.join('')}</div>`;
-  if (cell.stop > to) html += '<span class="arrow right">&#9658;&#9658;</span>';
+  if (cell.start < from) html += `<span class="arrow left${cell.start < from - HALF_HOUR ? ' double' : ''}"></span>`;
+  if (cell.stop > to) html += `<span class="arrow right${cell.stop > to + HALF_HOUR ? ' double' : ''}"></span>`;
   return html;
 }
 
@@ -132,16 +148,18 @@ function renderRow(ch, index) {
   const cells = ch.cells.filter(c => c.stop > from && c.start < to);
   const covered = [];
   for (const c of cells) {
-    if (c.start > t) covered.push({ gap: true, title: 'No information', items: [], start: t, stop: c.start });
+    if (c.start > t) covered.push({ gap: true, title: 'No Data', items: [], start: t, stop: c.start });
     covered.push(c);
     t = c.stop;
   }
-  if (t < to) covered.push({ gap: true, title: 'No information', items: [], start: t, stop: to });
+  if (t < to) covered.push({ gap: true, title: 'No Data', items: [], start: t, stop: to });
   for (const c of covered) {
     const a = Math.max(c.start, from), b = Math.min(c.stop, to);
     if (b <= a) continue;
     const d = document.createElement('div');
-    d.className = 'prog' + (c.gap ? ' gap' : '');
+    d.className = 'prog' + (c.gap ? ' gap' : '')
+      + (c.start < from ? ' has-left' + (c.start < from - HALF_HOUR ? ' left-double' : '') : '')
+      + (c.stop > to ? ' has-right' + (c.stop > to + HALF_HOUR ? ' right-double' : '') : '');
     d.style.left = `${((a - from) / WINDOW * 100).toFixed(3)}%`;
     d.style.width = `${((b - a) / WINDOW * 100).toFixed(3)}%`;
     d.innerHTML = cellHtml(c, from, to);
@@ -207,6 +225,13 @@ async function refresh() {
 }
 
 // ---- Start --------------------------------------------------------------------------
+
+// Is the Amiga font there? If not, the page styles itself for the fallback.
+document.fonts.load('22px "PrevueGrid"').then(list => {
+  const ok = list.length > 0 && document.fonts.check('22px "PrevueGrid"');
+  document.body.classList.toggle('fallback', !ok);
+  if (guide) renderRows();
+}).catch(() => document.body.classList.add('fallback'));
 
 fit();
 window.addEventListener('resize', fit);
