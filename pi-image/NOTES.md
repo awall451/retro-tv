@@ -23,6 +23,12 @@ stays a description anyone can use. Newest first.
   crop to fill the area was tried and the user preferred this). Tried with an existing channel
   on the box: picture and sound (the jack) work. The real promo channel (infomercials, promos, commercials) is for the ErsatzTV session to
   assemble; until then any channel number works as a stand-in.
+- Then split like the original (the user's screenshots show text left / video right in 1996 and
+  the reverse in 1999): a 4:3 video box one side, a promo card the other, swapping every four
+  minutes; cards are "coming up" items from the listings (channel, "title" with rating, Tonight
+  9:55 PM / Tomorrow / weekday, Channel N), movies weighted three to one, a new one every 12 s.
+  Also the grid now parks on channel 1 for 4 s at the top of every pass and the first pass only
+  starts once the listings are in (it used to roll off the first channels while still loading).
 
 ## 2026-11-09: no network at all, then composite
 
