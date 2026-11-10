@@ -217,10 +217,12 @@ brighter time bar, yellow channel numbers and times, grey listings with a heavy 
 bevelled frames, triangle arrows for shows running past the 90-minute window, "No Data" in the
 holes, and the PrevueGrid font, a fan conversion of the Amiga lettering whose rating badges are
 glyphs of their own (`fonts/PrevueGrid-NOTICE.txt`). Every channel scrolls past in turn, about two
-seconds a row, under a clock with seconds. The top half is reserved for promos and is black until
-a clips list exists. It takes the same `?tv` and `&screen=4:3` parameters as the guide. The
-[Pi box](../pi-image/README.md) can show it as its page (`PAGE=tvguide`), and the plan is to turn
-it into a real channel on the server.
+seconds a row, under a clock with seconds. The top half plays a channel's live stream:
+`&promo=<channel number>` names it, so the promos,
+commercials and infomercials are a channel curated on the server like everything else, and the
+page stores nothing. Without it the top half is black. It takes the same `?tv` and `&screen=4:3`
+parameters as the guide. The [Pi box](../pi-image/README.md) can show it as its page
+(`PAGE=tvguide`, `TVGUIDE_PROMO=`), and the plan is to turn it into a real channel on the server.
 
 ## Good to know
 

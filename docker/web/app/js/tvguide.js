@@ -2,15 +2,19 @@
 // the same channel list and XMLTV as the guide viewer (data.js). The grid
 // shows a 90-minute window in half-hour columns and scrolls through every
 // channel, top to bottom, round and round, while a clock with seconds ticks
-// in the corner. The top half is for promos (a later step); it is black
-// until then.
+// in the corner. The top half plays a channel's live stream: the promos,
+// commercials and infomercials the real channel ran up there come from a
+// channel on the server, so they are curated like everything else and
+// nothing is stored here. Without a promo channel the top half stays black.
 //
 //   tvguide.html            the page, scaled to fit the window
 //   tvguide.html?tv         the same, meant for a TV: no pointer, 640x480 scaled to the screen
 //   …&screen=4:3            the screen shows the window as 4:3 whatever its pixel
 //                           count (the Pi's composite output): stretch to match
+//   …&promo=<number>        the channel whose stream plays in the top half
 
 import { HALF_HOUR, loadGuide } from './data.js';
+import { Player } from './player.js';
 
 const params = new URLSearchParams(location.search);
 const SCREEN_SHAPE = (() => {
@@ -25,8 +29,10 @@ const ROW_H = 53;                          // matches --row-h in tvguide.css
 const ROW_SECONDS = 2.0;                   // one channel row scrolls past in this time (the Amiga did a pixel a frame)
 const REFRESH_MS = 10 * 60 * 1000;         // listings re-read this often
 
+const PROMO = (params.get('promo') || '').trim();   // a channel number, or nothing
+
 const $ = id => document.getElementById(id);
-const el = { stage: $('stage'), clock: $('clock'), times: $('times'), rows: $('rows'), viewport: $('viewport'), grid: $('grid') };
+const el = { stage: $('stage'), clock: $('clock'), times: $('times'), rows: $('rows'), viewport: $('viewport'), grid: $('grid'), promo: $('promo') };
 
 let guide = null;            // { channels, … } from loadGuide
 let windowStart = 0;         // the first column's time
@@ -224,6 +230,30 @@ async function refresh() {
   }
 }
 
+// ---- The top half -----------------------------------------------------------------
+// The promo channel plays through the viewer's own player (hls.js, padded
+// against dips). The picture is shown once it is really playing; while the
+// stream is tuning or down the top half is simply black, as the real
+// channel's was between ads.
+
+let promoPlayer = null;
+
+function startPromo() {
+  if (!PROMO || !/^\d+(\.\d+)?$/.test(PROMO)) return;
+  promoPlayer = new Player(el.promo, {
+    onState(state) { el.promo.classList.toggle('on', state === 'playing'); },
+    onMuted(muted) {
+      // A desktop browser refuses sound before the first key or click; the
+      // TV's kiosk allows it. Either way the first input turns the sound on.
+      if (!muted) return;
+      const unmute = () => { promoPlayer.unmute(); window.removeEventListener('keydown', unmute); window.removeEventListener('pointerdown', unmute); };
+      window.addEventListener('keydown', unmute);
+      window.addEventListener('pointerdown', unmute);
+    },
+  });
+  promoPlayer.tune({ num: PROMO, name: 'Promos' }, { stream: PROMO });
+}
+
 // ---- Start --------------------------------------------------------------------------
 
 // Is the Amiga font there? If not, the page styles itself for the fallback.
@@ -242,3 +272,4 @@ setInterval(tick, 250);
 requestAnimationFrame(frame);
 refresh();
 setInterval(refresh, REFRESH_MS);
+startPromo();

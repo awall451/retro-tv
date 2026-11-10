@@ -51,8 +51,10 @@ body.fallback { font-weight: 700; }   /* Arimo needs its bold to read like the o
   transform-origin: 0 0; background: var(--bg); overflow: hidden;
 }
 
-/* ---- The top: promos, black until there are any -------------------------------- */
+/* ---- The top: the promo channel, black until it plays ------------------------- */
 #top { position: absolute; left: 0; top: 0; width: 640px; height: var(--top-h); background: #000; }
+/* The whole picture, between black bars; a crop to fill the area was tried and
+   looked worse. */
 #promo { display: block; width: 100%; height: 100%; object-fit: contain; background: #000; }
 #promo:not(.on) { visibility: hidden; }
 

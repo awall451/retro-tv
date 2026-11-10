@@ -18,6 +18,11 @@ stays a description anyone can use. Newest first.
   640/716 scale. The PrevueGrid font (Rudy Valencia, 2014, no stated licence) fetched from that
   repository with the user's OK; the page falls back to Arimo Bold if the file is missing.
   Parentheses in that font draw as square brackets: that is how the Amiga drew them.
+- Phase 2, the top half: it plays an ErsatzTV channel's stream through the viewer's player
+  (`&promo=<number>`, `TVGUIDE_PROMO` in the env), the whole picture between black bars (a
+  crop to fill the area was tried and the user preferred this). Tried with an existing channel
+  on the box: picture and sound (the jack) work. The real promo channel (infomercials, promos, commercials) is for the ErsatzTV session to
+  assemble; until then any channel number works as a stand-in.
 
 ## 2026-11-09: no network at all, then composite
 

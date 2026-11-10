@@ -152,7 +152,8 @@ fonts for the rasterizer), `node render.mjs` renders every theme's scene at 640Ã
    `sudo pi-image/setup.sh` and reboot: the viewer shows a test pattern with a white frame at
    the edge. Adjust the margins in the same file (a bigger number pulls the picture in from that
    edge) until the frame is just visible on every side, then set `PAGE=guide` (or `tvguide`
-   for the scrolling listings page). Margins take a
+   for the scrolling listings page, with `TVGUIDE_PROMO=` naming the channel that plays in its
+   top half). Margins take a
    reboot; the page only `systemctl restart retro-tv`. As a starting point, a 12-inch set
    through a converter needed left 19, right 21, top 10, bottom 6; the same set on the Pi's own
    composite output needed left 45, right 37, top 10, bottom 6 (the sides overscan far more

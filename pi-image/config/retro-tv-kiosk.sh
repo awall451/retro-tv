@@ -17,6 +17,8 @@ esac
 # The Pi's composite output is 720x480 pixels shown as 4:3: tell the viewer so
 # it lays out for a 4:3 screen and stretches to the pixel width.
 [ "$PAGE" != overscan ] && [ "$DISPLAY_MODE" = composite ] && URL="$URL&screen=4:3"
+# The listings page plays a channel in its top half (promos, infomercials).
+[ "$PAGE" = tvguide ] && [ -n "$TVGUIDE_PROMO" ] && URL="$URL&promo=$TVGUIDE_PROMO"
 
 # cage starts every output at the display's own preferred mode (the
 # HDMI-to-composite converter claims 1280x720), whatever the kernel command
