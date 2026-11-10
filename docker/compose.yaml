@@ -15,8 +15,10 @@ services:
     # VIEWER_BIND=0.0.0.0 also opens it to the local network.
     ports:
       - "${VIEWER_BIND:-127.0.0.1}:${VIEWER_PORT:-8410}:8080"
-    # Docker's built-in bridge: one container needs no network of its own.
-    network_mode: bridge
+    # A network of its own, so the TV Guide generator below can reach it by
+    # name (the default bridge has no names).
+    networks:
+      - retro
     read_only: true
     tmpfs:
       - /tmp
@@ -25,3 +27,37 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
+
+  # The TV Guide Channel generator: renders tvguide.html from the viewer
+  # above and streams it as live HLS for ErsatzTV to carry as a channel.
+  # Off by default; start it with:  docker compose --profile tvguide up -d
+  # See tvguide/README.md.
+  tvguide:
+    container_name: retro-tv-tvguide
+    profiles: ["tvguide"]
+    build: ./tvguide
+    image: retro-tv-tvguide:local
+    restart: unless-stopped
+    depends_on:
+      - web
+    environment:
+      VIEWER_URL: http://web:8080
+      TVGUIDE_PROMO: ${TVGUIDE_PROMO:-}
+      TVGUIDE_FPS: ${TVGUIDE_FPS:-30}
+      TVGUIDE_BITRATE: ${TVGUIDE_BITRATE:-1800k}
+    # Where ErsatzTV fetches the stream: http://<this machine>:8412/live.m3u8
+    # (TVGUIDE_BIND=0.0.0.0 when ErsatzTV runs elsewhere or in its own container).
+    ports:
+      - "${TVGUIDE_BIND:-127.0.0.1}:${TVGUIDE_PORT:-8412}:8082"
+    networks:
+      - retro
+    tmpfs:
+      - /tmp:size=512m
+      - /out:size=256m
+    shm_size: 256m
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  retro:
+    name: retro-tv

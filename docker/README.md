@@ -225,7 +225,8 @@ curated on the server like everything else and the page stores nothing; without 
 black. The text side cycles "coming up" cards built from the listings, a fresh one every twelve
 seconds: the channel, the show in quotes with its rating, when it is on, the channel number. It
 takes the same `?tv` and `&screen=4:3` parameters as the guide. The [Pi box](../pi-image/README.md) can show it as its page
-(`PAGE=tvguide`, `TVGUIDE_PROMO=`), and the plan is to turn it into a real channel on the server.
+(`PAGE=tvguide`, `TVGUIDE_PROMO=`), and [tvguide/](tvguide/README.md) is the generator that
+streams it, so ErsatzTV can carry it as a channel of its own.
 
 ## Good to know
 
@@ -282,9 +283,10 @@ ffprobe "$B/iptv/channel/1.m3u8?mode=segmenter"           # h264 640x480 + aac
 
 ```
 docker/
-├── compose.yaml              the viewer: one read-only container, port on loopback
+├── compose.yaml              the viewer (one read-only container, port on loopback) and the TV Guide generator (profile "tvguide")
 ├── compose.uplink.yaml       add-on for hosts whose containers cannot route out
 ├── .env.example              copy to .env
+├── tvguide/                  the TV Guide Channel generator: the page rendered and streamed as HLS for ErsatzTV
 ├── web/
 │   ├── Dockerfile            pinned nginx (unprivileged) + the app
 │   ├── nginx.conf.template   static files and the read-only /iptv/ proxy

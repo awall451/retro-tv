@@ -29,6 +29,15 @@ stays a description anyone can use. Newest first.
   9:55 PM / Tomorrow / weekday, Channel N), movies weighted three to one, a new one every 12 s.
   Also the grid now parks on channel 1 for 4 s at the top of every pass and the first pass only
   starts once the listings are in (it used to roll off the first channels while still loading).
+- Phase 3, the generator (`docker/tvguide`): Xvfb + Chromium + PulseAudio null sink + ffmpeg
+  x11grab → HLS, served by python http.server, as a compose profile beside the viewer (which
+  moved from the default bridge to a named network so the generator can reach it by name).
+  Smoke-tested on the box itself with the same commands (xvfb and ffmpeg installed for 10 minutes,
+  then purged): clean 640×480 H.264 30 fps + AAC segments, a frame pulled from a segment was the
+  page exactly. Load 9.5 on the Pi while it ran, so it is not for the box; eregion runs it. The
+  test's second Chromium played the promo audio through the TV speaker (no `pactl` on the box
+  for the null sink), heard as an echo for 45 s. Phase 4 is the ErsatzTV side: see
+  docker/tvguide/README.md, "The ErsatzTV side".
 
 ## 2026-11-09: no network at all, then composite
 
