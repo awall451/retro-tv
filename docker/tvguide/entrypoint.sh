@@ -55,12 +55,16 @@ sleep 3
 # ---- capture and encode --------------------------------------------------------------------
 # Progressive 640x480 at FPS; ErsatzTV transcodes it again into the channel's
 # own profile, so this only has to be clean, not small. Two-second keyframes,
-# 4 s segments, the last eight kept.
+# 4 s segments, the last eight kept. The screen grab stamps frames with the
+# wall clock, which jitters; the output is forced to a constant frame rate so
+# the next encoder does not duplicate and drop frames to even it out (that
+# showed as juddering motion on every device).
 log "encoding ${W}x${H} at ${FPS} fps, ${BITRATE}"
 ffmpeg -hide_banner -loglevel warning -nostdin \
-  -f x11grab -framerate "$FPS" -video_size "${W}x${H}" -draw_mouse 0 -i "$DISPLAY_NUM" \
-  -f pulse -i tv.monitor \
+  -thread_queue_size 1024 -f x11grab -framerate "$FPS" -video_size "${W}x${H}" -draw_mouse 0 -i "$DISPLAY_NUM" \
+  -thread_queue_size 1024 -f pulse -i tv.monitor \
   -map 0:v -map 1:a \
+  -fps_mode cfr -r "$FPS" \
   -c:v libx264 -preset veryfast -profile:v main -pix_fmt yuv420p \
   -g $((FPS * 2)) -keyint_min $((FPS * 2)) -sc_threshold 0 \
   -b:v "$BITRATE" -maxrate "$BITRATE" -bufsize "$((${BITRATE%k} * 2))k" \
