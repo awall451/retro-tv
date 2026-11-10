@@ -208,6 +208,15 @@ channels unless they skip the `HD` group (filter the M3U, or show only the chann
 normal channels are in). More on twins: [`../ersatztv/README.md`](../ersatztv/README.md), "HD
 copies of every channel".
 
+### The TV Guide Channel page
+
+`tvguide.html` is a second page on the same server: the scrolling listings channel of the late
+1990s, drawn from the same channel list and guide data. Half-hour columns, a 90-minute window,
+every channel scrolling past in turn, a clock with seconds, movies in quotes with their rating and
+year. The top half is reserved for promos and is black until a clips list exists. It takes the
+same `?tv` and `&screen=4:3` parameters as the guide. The [Pi box](../pi-image/README.md) can show
+it as its page (`PAGE=tvguide`), and the plan is to turn it into a real channel on the server.
+
 ## Good to know
 
 - **One stream while watching.** Each stream is a live transcode on the server. Highlighting
@@ -272,6 +281,7 @@ docker/
 │   ├── uplink/               the uplink's nginx config (same image)
 │   └── app/
 │       ├── index.html
+│       ├── tvguide.html      the TV Guide Channel page (below), with css/tvguide.css and js/tvguide.js
 │       ├── css/guide.css     colors, type, the 2 px grid
 │       ├── js/data.js        reads the channel list and listings
 │       ├── js/player.js      the one video player (hls.js, or Safari's own)

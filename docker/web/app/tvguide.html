@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TV Guide Channel</title>
+<!-- The listings channel: the late-1990s TV Guide Channel look, drawn from the
+     same guide data as the viewer. Promos play in the top half; the grid
+     scrolls through every channel underneath. Add ?tv for the 640x480 layout
+     and &screen=4:3 on a 720x480 composite picture (see js/tvguide.js). -->
+<link rel="icon" href="/favicon.svg">
+<link rel="stylesheet" href="/css/tvguide.css">
+</head>
+<body>
+<div id="stage">
+  <div id="top">
+    <video id="promo" muted playsinline></video>
+  </div>
+  <div id="grid">
+    <div id="header">
+      <div id="clock" class="cell head">--:--:--</div>
+      <div id="times"></div>
+    </div>
+    <div id="viewport">
+      <div id="rows"></div>
+    </div>
+  </div>
+</div>
+<script type="module" src="/js/tvguide.js"></script>
+</body>
+</html>

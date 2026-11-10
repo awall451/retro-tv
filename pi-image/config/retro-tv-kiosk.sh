@@ -10,7 +10,8 @@ DISPLAY_MODE=hdmi480
 PAGE=guide
 [ -r /etc/retro-tv.env ] && . /etc/retro-tv.env
 case "$PAGE" in
-    overscan) URL="http://127.0.0.1:8410/overscan.html" ;;   # the margin test pattern
+    overscan) URL="http://127.0.0.1:8410/overscan.html" ;;      # the margin test pattern
+    tvguide)  URL="http://127.0.0.1:8410/tvguide.html?tv" ;;    # the scrolling listings channel page
     *)        URL="http://127.0.0.1:8410/?tv" ;;
 esac
 # The Pi's composite output is 720x480 pixels shown as 4:3: tell the viewer so

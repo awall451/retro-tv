@@ -3,6 +3,15 @@
 Working notes for this particular box, kept apart from the [README](README.md) so that page
 stays a description anyone can use. Newest first.
 
+## 2026-11-09, evening: the TV Guide Channel page
+
+- Phase 1 of the listings channel: `tvguide.html` in the viewer, the 1999 TV Guide Channel look
+  from live guide data (90-minute window, scrolling rows, clock with seconds, movies in quotes
+  with rating and year, call-sign style channel labels). The box shows it with `PAGE=tvguide`;
+  checked on the composite framebuffer (`screen=4:3` stretch applies; the stage needed
+  `transform-origin: 0 0`). Top half black until the promo clips exist (phase 2); phase 3 is the
+  container that streams the page, phase 4 the ErsatzTV channel (handoff to that session).
+
 ## 2026-11-09: no network at all, then composite
 
 - Moved to the TV on Wi-Fi only and the 3.5 mm composite cable: no picture (expected, the box
