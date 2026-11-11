@@ -4,6 +4,12 @@ Channel listings font (the Amiga "Prevue Grid" software), published by its
 author on the Prevue Guide forums (ariweinstein.com, "New Prevue Fonts",
 April 2014) without stated licence terms, and redistributed in the MIT-licensed
 recreation at https://github.com/rickz0rz/guide, where these files come from.
-Used here for the TV Guide Channel page (tvguide.html) of a private project.
+Used here for the TV Guide Channel page (tvguide.html).
+
+These two font files are NOT ours and are NOT covered by this repository's MIT
+License. We do not own them and claim no rights in them; all rights stay with
+their author. They are included as found, for a non-commercial hobby project.
+If you are the author and want them removed, open an issue and they will be.
+
 The rating badges (NR, G, PG, PG-13, NC-17, R, ADULT, TV-Y … TV-MA) are glyphs
 at U+F008 to U+F015, closed captions at U+F01C.

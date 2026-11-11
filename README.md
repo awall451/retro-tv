@@ -91,3 +91,12 @@ read-only `/iptv/` paths get through.
   screens. The CRT boxes hide that group; the browser app and the Roku offer Standard / HD.
 - Work lands on `main`; features are built on `feat/*` branches and merged when they run on the
   real hardware.
+
+## License
+
+The code and documentation in this repository are released under the [MIT License](LICENSE).
+
+Files that come from other projects keep their own terms, which sit next to them: the fonts
+(`*-LICENSE-OFL.txt` in the `fonts/` folders) and hls.js (`docker/web/app/vendor/hls.js-LICENSE`).
+The Prevue Grid font is not ours and has no stated licence; see
+`docker/web/app/fonts/PrevueGrid-NOTICE.txt`. No TV programmes, commercials or games are included.

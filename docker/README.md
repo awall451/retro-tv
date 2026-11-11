@@ -314,8 +314,7 @@ docker/
 │       ├── fonts/            the themes' fonts (SIL Open Font License) and PrevueGrid for the TV Guide page (see its NOTICE)
 │       └── vendor/           hls.js 1.7.3 (Apache-2.0), served from here, not a CDN
 ├── notes/                    hand-over notes to the Pi side
-├── design/mockup.html        the approved design
-└── HANDOFF.md                the original brief
+└── design/mockup.html        the approved design
 ```
 
 No build step: the app is plain HTML, CSS and JavaScript modules.

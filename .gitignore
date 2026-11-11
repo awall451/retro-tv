@@ -39,3 +39,6 @@ docker/.env
 pi-image/retro-tv.env
 # TTF copies of the viewer fonts, made by tools/render-splash/fonts.py
 tools/render-splash/fonts/ttf/
+
+# Local-only notes: machine names, addresses, working briefs. Never committed.
+/local/
