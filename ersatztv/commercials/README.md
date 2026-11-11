@@ -109,6 +109,32 @@ Two tab-separated files, readable in any spreadsheet:
 | `reason` | why it was rejected |
 | `label` | what the ad is, where we wrote it down. Read off one frame, so it names the brand or the toy only where it was legible; most pieces have no label yet |
 
+## Guide titles for the content sets
+
+ErsatzTV names a local video after its file, so a channel that plays these clips as programmes
+shows `capture-a-6954_CaptureA_6954` or `K-telCommercials_009_61s` in the guide. An `.nfo` file
+with the same name as the clip fixes that: it gives the clip a title, a year and a description.
+
+**`guide-titles.tsv`** has one row per clip of the five sets that appear in a guide (`cnn`,
+`newsreels`, `weather`, `infomercials`, `albums`; 489 clips): `set`, `clip`, `title`, `year`,
+`date` (release date, newsreels only) and `plot` (the description). Titles were written from the
+Archive item titles: programme name and air date for CNN ("Larry King Live (November 7, 1991)"),
+the story headline and year for newsreels ("Kennedy Elected (1960)"), the product for
+infomercials ("Flowbee (1988)").
+
+```bash
+python3 make-nfo.py ~/commercials            # write the .nfo files next to the clips
+python3 make-nfo.py ~/commercials --check    # only list clips that have no title yet
+```
+
+Then scan the library in ErsatzTV, wait for the scan to end, and reset the playouts of the
+channels that play these sets. The guide changes when the playout is rebuilt.
+
+One thing to know before writing an `.nfo` by hand: ErsatzTV turns folder names into tags only
+for a video that has no `.nfo`. With one, the tags come from the file. The collections in this
+kit are built on those tags (`tag:cnn` …), so `make-nfo.py` writes `<tag>filler</tag>` and
+`<tag><set></tag>` into every file. Leave them out and the clip drops out of its collection.
+
 ## How the sets were made, and how to make your own
 
 1. **Find sources.** Search the Internet Archive for `commercials 1985`, `TV spots`, a brand or a
