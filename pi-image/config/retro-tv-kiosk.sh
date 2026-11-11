@@ -40,12 +40,17 @@ fi
 # carries the video). PipeWire's own default is the jack. Full volume here;
 # the TV's remote sets the loudness.
 if command -v wpctl >/dev/null 2>&1; then
+    # The jack shows up as "Headphones" on some builds and as "Built-in Audio"
+    # on others (Trixie); in composite mode it is also the only sink there is.
     case "$DISPLAY_MODE" in
-        composite) want="Headphones" ;;
+        composite) want="Headphones|Built-in|bcm2835" ;;
         *)         want="HDMI" ;;
     esac
     for _ in 1 2 3 4 5 6 7 8 9 10; do
-        sink=$(wpctl status 2>/dev/null | sed -n '/Sinks:/,/Sources:/p' | grep -i "$want" | grep -oE '[0-9]+\.' | head -1 | tr -d .)
+        sinks=$(wpctl status 2>/dev/null | sed -n '/Sinks:/,/Sources:/p')
+        sink=$(echo "$sinks" | grep -iE "$want" | grep -oE '[0-9]+\.' | head -1 | tr -d .)
+        # Nothing matched but there is exactly one sink: that is the one.
+        [ -z "$sink" ] && [ "$(echo "$sinks" | grep -cE '^ *│ +\*? *[0-9]+\.')" = 1 ] && sink=$(echo "$sinks" | grep -oE '[0-9]+\.' | head -1 | tr -d .)
         [ -n "$sink" ] && break
         sleep 1
     done
