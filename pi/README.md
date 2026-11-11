@@ -76,8 +76,11 @@ the whole setup can be rebuilt from a blank card.
 7. **Shaders and profiles**: copy `pi/shaders/configs/*` to `/userdata/shaders/configs/`,
    `pi/shaders/crt/*.glslp` to `/userdata/shaders/crt/`, `pi/display-profiles/*` to
    `/userdata/system/display-profiles/`, its `ports/*` to `/userdata/roms/ports/`, `pi/kodi-skin/*`
-   to `/userdata/system/display-profiles/kodi-skin/`, `pi/scripts/*` to `/userdata/system/scripts/`
-   (executable). Run `apply.sh hdmi` once.
+   to `/userdata/system/display-profiles/kodi-skin/`, `pi/scripts/*` to `/userdata/system/scripts/`.
+   Every `.sh` must be executable on the Pi, the two Ports entries included; a copy from Windows
+   drops the bit, so finish with
+   `chmod +x /userdata/system/display-profiles/*.sh /userdata/roms/ports/*.sh /userdata/system/scripts/*.sh`.
+   Run `apply.sh hdmi` once.
 8. **Live TV**: enable IPTV Simple Client in Kodi and point it at
    `http://<server-ip>:8409/iptv/channels.m3u` and `/iptv/xmltv.xml`. Switching to either profile
    then applies the Kodi settings below.
@@ -135,8 +138,9 @@ margins are hardware DRM properties set on the kernel command line from
   `make_kodi_skin.sh`, which reads each group's PVR client id from Kodi's TV database to build
   the `pvr://channels/tv/<group>@<id>/` paths the guide is opened with; before the groups exist
   (first run) Home → TV opens the guide on its last group.
-  Caveat: the server's XMLTV currently carries no programmes for the twins, so in HD the grid is
-  empty until that is added on the server side; the channels themselves play.
+  The HD grid needs the server to list each twin in its XMLTV (in ErsatzTV: Show In EPG on, see
+  [HD copies of every channel](../ersatztv/README.md#hd-copies-of-every-channel-twins)); a twin
+  without it plays but has an empty row.
 - **Controller** ([`kodi-skin/livetv-controller.xml`](kodi-skin/livetv-controller.xml)): Cross/A
   pauses or switches to the highlighted channel; Circle/B opens the guide with the show still
   playing (hold to stop); Square/X shows controls or details; Triangle/Y opens Settings.
@@ -169,7 +173,7 @@ margins are hardware DRM properties set on the kernel command line from
 | `display-profiles/make_crt_theme.sh` | Builds the Carbon CRT theme (`/userdata/themes/es-theme-carbon-crt`) |
 | `display-profiles/make_bcc_compact_css.py`, `make_bcc_layout.py` | Control Center stylesheet and layout |
 | `display-profiles/make_kodi_skin.sh` + `kodi-skin/` | Builds and enables the retro Kodi skin: `crt` (4:3, big bold fonts; screens in `kodi-skin/`) or `hdmi` (16:9; screens in `kodi-skin/hdmi/`). Stops cleanly and falls back to stock Estuary if a Batocera update changed Estuary |
-| `display-profiles/kodi_tv_settings.py` | Kodi live-TV settings, controller map, the HD group filter (`--groups` refreshes only the groups) |
+| `display-profiles/kodi_tv_settings.py` | Kodi live-TV settings (every channel group loaded, the server's channel numbers, guide refresh) and the controller map |
 | `display-profiles/overscan-test.png` | The margin test pattern (bands 8 px apart) |
 | `scripts/` | `/userdata/system/scripts/`: Batocera's per-launch hooks |
 | `shaders/configs/trinitron-hdmi`, `trinitron-crt` | `/userdata/shaders/configs/`: the two shader sets |
@@ -188,6 +192,7 @@ Copy files over with `scp -i ~/.ssh/<key> <file> root@<pi-ip>:<path>`.
 | Wrong profile | Pick the other Ports entry; both work on either TV |
 | Controller won't connect | Airplane mode: `batocera-planemode disable`, then `/etc/init.d/S32bluetooth restart` |
 | New channels with an empty guide | Close Kodi, move `Database/Epg16.db` and IPTV Simple's two cache files aside, start Kodi |
+| Channels renumbered on the server, Kodi keeps old numbers | Close Kodi, move `Database/TV*.db` and `Database/Epg*.db` aside, start Kodi: it imports the list again |
 | `/userdata` on the card, not the SSD | `findmnt /userdata`; check `sharedevice=DEV <UUID>` and `lsblk -f` |
 
 More, with the reasons, in [Reference](../docs/reference.html).

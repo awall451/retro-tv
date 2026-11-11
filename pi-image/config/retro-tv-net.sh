@@ -11,7 +11,11 @@
 #                             box is connected through to /run/retro-tv/net.json, which
 #                             the viewer shows on its settings screen (/pi/net). On
 #                             Wi-Fi it pings the gateway: after two failed checks the
-#                             radio is reconnected, after six the box reboots.
+#                             radio is reconnected, after six the box reboots. If the
+#                             network is still gone after that reboot, the next one
+#                             waits 30 minutes and every later one two hours, so a
+#                             router that is off overnight costs a few reboots, not
+#                             one every ten minutes.
 #
 # Why: NetworkManager keeps its profiles in files it rewrites whenever a network
 # connects. One box lost its only Wi-Fi profile to a power cut during such a
@@ -24,6 +28,7 @@ PROFILES=/etc/NetworkManager/system-connections
 STATE_DIR=/run/retro-tv
 STATUS=$STATE_DIR/net.json
 FAILS=$STATE_DIR/net.fails
+REBOOTS=/data/retro-tv/net.reboots     # watchdog reboots in a row; on disk, so it outlives them
 WIFI_EXTRA_SSID=
 [ -r /etc/retro-tv.env ] && . /etc/retro-tv.env
 
@@ -106,6 +111,7 @@ check() {
     elif [ "$dev" != wlan0 ]; then
         write_status wired "" "" null 0 0
         echo 0 > "$FAILS"
+        [ -e "$REBOOTS" ] && rm -f "$REBOOTS"
         return 0
     else
         # the active network, from the last scan (no new scan: it would stall the stream)
@@ -118,7 +124,7 @@ check() {
             fails=$((fails + 1)); echo "$fails" > "$FAILS"
             write_status wifi "$ssid" "$band" "${signal:-null}" "$lost" "$fails"
             log "Wi-Fi $ssid ($band, ${signal:-?}%): gateway unreachable (check $fails)"
-            if [ "$fails" -eq 2 ] || [ "$fails" -eq 4 ]; then
+            if [ "$fails" -eq 2 ] || [ "$fails" -eq 4 ] || [ $((fails % 10)) -eq 0 ]; then
                 log "reconnecting the radio"
                 nmcli device disconnect wlan0 >/dev/null 2>&1; sleep 2; nmcli device connect wlan0 >/dev/null 2>&1
             fi
@@ -127,13 +133,21 @@ check() {
             [ $(( $(date +%M) % 10 )) -eq 0 ] && log "Wi-Fi $ssid ($band, ${signal:-?}%), $lost% loss to the gateway"
             write_status wifi "$ssid" "$band" "${signal:-null}" "$lost" 0
             echo 0 > "$FAILS"
+            [ -e "$REBOOTS" ] && rm -f "$REBOOTS"
             return 0
         fi
     fi
-    # Six failed minutes in a row, and not just booted: start over.
-    if [ "$fails" -ge 6 ] && [ "$(cut -d. -f1 /proc/uptime)" -ge 600 ]; then
-        log "no network for $fails minutes: rebooting"
+    # Six failed minutes in a row, and not just booted: start over. A reboot that
+    # did not bring the network back is not worth repeating every ten minutes, so
+    # the wait grows: 6 minutes, then 30, then 120 for every one after.
+    local reboots=0 limit=6
+    [ -f "$REBOOTS" ] && reboots=$(cat "$REBOOTS" 2>/dev/null)
+    [[ "$reboots" =~ ^[0-9]+$ ]] || reboots=0
+    case "$reboots" in 0) limit=6 ;; 1) limit=30 ;; *) limit=120 ;; esac
+    if [ "$fails" -ge "$limit" ] && [ "$(cut -d. -f1 /proc/uptime)" -ge 600 ]; then
+        log "no network for $fails minutes: rebooting (reboot $((reboots + 1)) in a row)"
         echo 0 > "$FAILS"
+        mkdir -p "${REBOOTS%/*}" && echo $((reboots + 1)) > "$REBOOTS" && sync
         systemctl reboot
     fi
 }

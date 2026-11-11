@@ -42,7 +42,7 @@ case "$DISPLAY_MODE" in hdmi480|composite) ;; *) echo "DISPLAY_MODE must be hdmi
 log "packages"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -q
-pkgs=(cage wlr-randr nginx-light plymouth plymouth-themes ir-keytable python3 rsync bluez pipewire-audio)
+pkgs=(cage wlr-randr nginx-light plymouth plymouth-themes ir-keytable python3 python3-yaml rsync bluez pipewire-audio)
 if apt-cache show chromium >/dev/null 2>&1; then pkgs+=(chromium); else pkgs+=(chromium-browser); fi
 apt-get install -y -q --no-install-recommends "${pkgs[@]}"
 
@@ -61,15 +61,33 @@ log "viewer -> $APP, nginx on 127.0.0.1:8410"
 mkdir -p "$APP"
 rsync -a --delete "$REPO/docker/web/app/" "$APP/"
 cp "$HERE"/config/www/* "$APP/"          # the box's own pages (the overscan test pattern)
+# The site is the template with its closing brace taken off and the include put
+# in before it. It is built aside and the old one kept, so a template that no
+# longer ends the way this expects cannot leave nginx unable to start.
+SITE=/etc/nginx/sites-available/retro-tv
 sed -e 's|listen 8080;|listen 127.0.0.1:8410;|' \
     -e "s|root /usr/share/nginx/html;|root $APP;|" \
     -e "s|\${ERSATZTV_URL}|$ERSATZTV_URL|g" \
-    "$REPO/docker/web/nginx.conf.template" | sed '$ d' > /etc/nginx/sites-available/retro-tv
-printf '\n  include /etc/nginx/retro-tv-pi.conf;\n}\n' >> /etc/nginx/sites-available/retro-tv
+    "$REPO/docker/web/nginx.conf.template" |
+    awk '{ line[NR] = $0 }
+         END { n = NR
+               while (n > 0 && line[n] ~ /^[[:space:]]*$/) n--          # blank lines at the end
+               if (n == 0 || line[n] !~ /^[[:space:]]*}[[:space:]]*$/) exit 1
+               for (i = 1; i < n; i++) print line[i]
+               print ""; print "  include /etc/nginx/retro-tv-pi.conf;"; print "}" }' > "$SITE.new" ||
+    { rm -f "$SITE.new"; echo "docker/web/nginx.conf.template does not end with a closing brace" >&2; exit 1; }
+[ -f "$SITE" ] && cp -p "$SITE" "$SITE.prev"
+mv -f "$SITE.new" "$SITE"
+chmod 644 "$SITE"
 install -m 644 "$HERE/config/nginx-pi.conf" /etc/nginx/retro-tv-pi.conf
-ln -sf /etc/nginx/sites-available/retro-tv /etc/nginx/sites-enabled/retro-tv
+ln -sf "$SITE" /etc/nginx/sites-enabled/retro-tv
 rm -f /etc/nginx/sites-enabled/default
-nginx -t
+if ! nginx -t; then
+    [ -f "$SITE.prev" ] && mv -f "$SITE.prev" "$SITE"
+    echo "nginx rejected the new site; the previous one is back in place" >&2
+    exit 1
+fi
+rm -f "$SITE.prev"
 systemctl enable nginx
 systemctl restart nginx
 

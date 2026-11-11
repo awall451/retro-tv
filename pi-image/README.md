@@ -67,7 +67,8 @@ Where it stands: the script route (step 1, below) works on real hardware; the on
   leaves the Wi-Fi name and password in `network-config` on the FAT boot partition, a file nothing
   rewrites. A small service (`retro-tv-net.sh`) rebuilds NetworkManager's Wi-Fi profiles from it
   at every boot if they are missing, and a timer checks the link every minute: when the router
-  stops answering over Wi-Fi the radio is reconnected, and after six bad minutes the box reboots.
+  stops answering over Wi-Fi the radio is reconnected, and after six bad minutes the box reboots
+  (then waits 30 minutes, then two hours, before trying another reboot while the network stays away).
   The settings screen shows what the box is connected through and the Wi-Fi signal (`/pi/net`).
 - **Composite video from the Pi itself** is the end state: Pi OS can drive the 3.5 mm jack
   (Batocera cannot). The jack also carries the sound. The alternative is HDMI at 640×480 through
