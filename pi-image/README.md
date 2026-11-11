@@ -253,7 +253,14 @@ survive.
   kernel this Pi boots; it takes about 15 seconds and the guide does not notice.
 - **Sound defaulted to the headphone jack.** PipeWire picks the 3.5 mm jack as the default
   output, so HDMI got silence. The kiosk script makes the HDMI output the default at full volume
-  (the jack in composite mode, where it carries the sound).
+  (the jack in composite mode, where it carries the sound). On Trixie the jack is called
+  "Built-in Audio", not "Headphones"; the script accepts either.
+- **Logging in over SSH turned the TV down.** Each login by the admin user started a second
+  PipeWire and WirePlumber for that user, and the second WirePlumber put the sound card back to
+  its default level, 40 %. The picture carried on and the sound dropped, until the next reboot
+  or kiosk restart. `setup.sh` now lets the sound services start for the kiosk user only
+  (drop-ins under `/etc/systemd/user/`). To check: `wpctl get-volume @DEFAULT_AUDIO_SINK@` as
+  the kiosk user says 1.00, before and after a fresh SSH login.
 
 ## Not yet
 

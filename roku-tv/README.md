@@ -22,7 +22,7 @@ Roku remote has no digits).
 
 | Remote | In the guide | Watching |
 |---|---|---|
-| Arrows | Move the highlight (Up from the top row reaches the settings cog) | Up / Down change channel; Left / Right pick a button on the channel bar |
+| Arrows | Move the highlight; hold Up / Down to go faster. Up from the top row reaches the settings cog (Up again wraps to the last channel); Down on the last channel wraps to the first | Up / Down change channel; Left / Right pick a button on the channel bar |
 | OK | Watch the highlighted channel | Show the channel bar, or press its highlighted button |
 | Play / Pause | Show details | Sound on / off |
 | Replay or `*` | Settings | |
@@ -35,7 +35,7 @@ twin, see `../ersatztv/README.md`), and the **TV server** address. They are kept
 each Roku has its own.
 
 On first start it asks for the ErsatzTV address (`<server-ip>:8409`). It remembers that and the
-last channel watched. If the server stops answering, the guide's message says how to change the
+last channel watched, which starts playing in the corner box the next time the app opens. If the server stops answering, the guide's message says how to change the
 address (Replay).
 
 **The splash.** Roku shows the app's start-up picture itself, and that one is fixed at install:

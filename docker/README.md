@@ -108,9 +108,10 @@ Keep it on the tailnet. Do not publish it to the internet (no Funnel, no port fo
 | Show details | I | X / Square | Right-click or long-press |
 | Back (guide ⇄ picture) | Esc or Backspace | B / Circle | Tap the picture, then **Guide** |
 | Channel up / down while watching | Page Up / Page Down, or Up / Down | R1 / L1, or D-pad | **Ch +** / **Ch −** on the banner |
-| Page through channels in the guide | Page Up / Page Down | R1 / L1 | Drag |
+| Page through channels in the guide | Page Up / Page Down | L1 / R1 | Drag |
 | Go to a channel by number | Type the number | | |
 | Channel banner while watching | Enter | A / Cross | Click or tap the picture |
+| Use the banner's buttons | Left / Right, then Enter | D-pad left / right, then A / Cross | Click or tap them |
 | Sound on / off | M | | **Mute** on the banner |
 | Browser full screen | F | | **Full screen** on the banner, or double-click the picture |
 | Settings | S | Y / Triangle, or Start | The cog, top right of the guide |
@@ -119,11 +120,17 @@ Keep it on the tailnet. Do not publish it to the internet (no Funnel, no port fo
 - Select always tunes the channel and goes straight to the picture, even on a show that has not
   started yet: you get what is on now, like a real TV.
 - Up and Down keep your place in time. They never jump back to "now".
+- Down on the last channel wraps round to the first, and Up on the first to the last. Holding Up
+  or Down speeds up the longer it is held, and stops at the end of the list.
+- The right shoulder button always heads for higher channel numbers: a page down in the guide,
+  channel up while watching.
 - Short programmes that share a title (cartoon shorts) are drawn as one cell per half hour. The
   details screen lists them one by one.
 - Times are shown in the viewing device's own time zone.
-- The page remembers the last channel and highlights it next time. It does not start playing by
-  itself.
+- The page remembers the last channel. Next time it opens on the guide with that channel already
+  playing in the corner box, like a television being switched on (the first channel on a first
+  visit). A browser that will not play sound before a key press or click starts it muted and
+  says so. A tab opened in the background waits until it is looked at.
 - **The splash.** Opening or reloading the page shows the theme's splash for about 2½ seconds
   while the listings load: a little television for Cable, a sunset over a scrolling grid for
   Vaporwave, and a scene in each newer theme's style (a glowing orb, a dish in orbit, a friendly

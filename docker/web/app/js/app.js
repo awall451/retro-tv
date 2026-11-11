@@ -68,6 +68,7 @@ const S = {
   winStart: floorHalf(Date.now()),
   rowTop: 0,                   // first channel row on screen
   tunedId: null,               // id of the channel being watched
+  banBtn: 0,                   // highlighted button on the channel bar
   L: null,                     // current layout numbers
 };
 
@@ -697,7 +698,22 @@ function watch(ch) {
   if (!ch) return;
   if (S.tunedId !== ch.id || player.state === 'idle' || player.state === 'error') tune(ch);
   setMode('full');
+  S.banBtn = 0;
   showBanner();
+}
+
+// Start of a visit: the channel watched last time (the first one on a first
+// visit) starts playing in the corner box, like a television being switched
+// on. The guide stays up. A tab opened in the background waits until it is
+// looked at, so it does not hold a stream on the server unseen.
+let startPending = false;
+function autoStart() {
+  const ch = focusChannel();
+  if (!ch || S.tunedId) return;
+  if (document.hidden) { startPending = true; return; }
+  startPending = false;
+  tune(ch);
+  render();
 }
 
 // Channel up and down while watching.
@@ -735,9 +751,22 @@ function fillBanner() {
   el.banTime.textContent = p ? fmtRange(p.start, p.stop) + (p.rating ? ` · ${p.rating}` : '') : '';
   el.banFill.style.width = p ? `${clamp((now - p.start) / (p.stop - p.start), 0, 1) * 100}%` : '0';
 }
+// The bar's buttons, for keys and controllers: left and right move the
+// highlight, Select presses it. (Full screen means nothing on the TV box.)
+const banButtons = () => [el.banGuide, el.banDown, el.banUp, el.banMute, el.banFull].filter(b => !(TV_MODE && b === el.banFull));
+function markBanButton() {
+  const list = banButtons();
+  S.banBtn = clamp(S.banBtn, 0, list.length - 1);
+  for (const b of [el.banGuide, el.banDown, el.banUp, el.banMute, el.banFull]) b.classList.toggle('sel', b === list[S.banBtn]);
+}
+function moveBanButton(delta) {
+  const n = banButtons().length;
+  S.banBtn = ((S.banBtn + delta) % n + n) % n;
+}
 function showBanner() {
   if (S.mode !== 'full' || !tunedChannel()) return;
   fillBanner();
+  markBanButton();
   el.banner.hidden = false;
   clearTimeout(bannerTimer);
   bannerTimer = setTimeout(hideBanner, BANNER_MS);
@@ -808,9 +837,34 @@ for (const name of ['fullscreenchange', 'webkitfullscreenchange']) {
 // ---- Moving around the guide ---------------------------------------------
 
 // Up and down keep the time position; they never jump back to "now".
-function moveRow(delta) {
-  S.focusCh = clamp(S.focusCh + delta, 0, S.channels.length - 1);
+// A fresh press at either end of the list wraps round to the other end; a
+// held key stops at the end instead of flying past it.
+function moveRow(delta, repeat = false) {
+  const last = S.channels.length - 1;
+  if (!repeat && delta > 0 && S.focusCh === last) S.focusCh = 0;
+  else if (!repeat && delta < 0 && S.focusCh === 0) S.focusCh = last;
+  else S.focusCh = clamp(S.focusCh + delta, 0, last);
   render();
+}
+
+// Holding up or down: the highlight speeds up the longer the key is held.
+// Keyboards, remotes and controllers repeat at very different rates, so the
+// speed is set in rows a second, and this says how many rows the repeat that
+// just arrived is worth (never fewer than one).
+const HOLD_RATES = [[2500, 30], [1000, 18], [0, 9]];   // held this long (ms): rows a second
+let hold = { action: '', since: 0, last: 0, owed: 0 };
+function heldRows(action, repeat) {
+  const now = performance.now();
+  if (!repeat || hold.action !== action || now - hold.last > 600) {
+    hold = { action, since: now, last: now, owed: 0 };
+    return 1;
+  }
+  const rate = HOLD_RATES.find(([ms]) => now - hold.since >= ms)[1];
+  hold.owed += rate * (now - hold.last) / 1000;
+  hold.last = now;
+  const rows = Math.max(1, Math.floor(hold.owed));
+  hold.owed = Math.max(0, hold.owed - rows);
+  return rows;
 }
 
 function moveTime(dir) {
@@ -866,7 +920,7 @@ function commitDigits() {
 
 // ---- One place where every input ends up ---------------------------------
 
-function act(action) {
+function act(action, repeat = false) {
   if (isSplashShowing()) return;       // nothing moves under the splash
   if (!S.channels.length) {
     if (action === 'refresh') refresh(true);
@@ -905,12 +959,12 @@ function act(action) {
   }
   if (S.mode === 'guide') {
     switch (action) {
-      case 'up': return moveRow(-1);
-      case 'down': return moveRow(1);
+      case 'up': return moveRow(-heldRows(action, repeat), repeat);
+      case 'down': return moveRow(heldRows(action, repeat), repeat);
       case 'left': return moveTime(-1);
       case 'right': return moveTime(1);
-      case 'chUp': return moveRow(-S.L.rows);
-      case 'chDown': return moveRow(S.L.rows);
+      case 'chUp': case 'padL': return moveRow(-S.L.rows, repeat);
+      case 'chDown': case 'padR': return moveRow(S.L.rows, repeat);
       case 'select': return watch(focusChannel());
       case 'info': return openDetails();
       case 'settings': return openSettings();
@@ -920,12 +974,16 @@ function act(action) {
     }
   } else if (S.mode === 'full') {
     switch (action) {
-      case 'up': case 'chUp': return stepChannel(1);
-      case 'down': case 'chDown': return stepChannel(-1);
+      case 'up': case 'chUp': case 'padR': return stepChannel(1);
+      case 'down': case 'chDown': case 'padL': return stepChannel(-1);
       case 'back': return openGuide();
-      case 'select': case 'info':
-        return el.banner.hidden ? showBanner() : hideBanner();
-      case 'left': case 'right': return showBanner();
+      case 'info': return el.banner.hidden ? showBanner() : hideBanner();
+      case 'select':
+        // The bar's highlighted button; with the bar away, bring it up first.
+        return el.banner.hidden ? showBanner() : banButtons()[S.banBtn].click();
+      case 'left': case 'right':
+        if (!el.banner.hidden) moveBanButton(action === 'left' ? -1 : 1);
+        return showBanner();
     }
   } else {
     switch (action) {
@@ -952,7 +1010,7 @@ window.addEventListener('keydown', e => {
   if (!action) return;
   e.preventDefault();
   if (action !== 'mute') wake();
-  act(action);
+  act(action, e.repeat);
 });
 
 // ---- Mouse and touch -------------------------------------------------------
@@ -1073,11 +1131,13 @@ el.tpGrid.addEventListener('click', e => {
 
 // ---- Game controllers ------------------------------------------------------
 // Standard mapping: A/Cross select, B/Circle back, X/Square info, D-pad or
-// left stick to move, shoulders for channel down/up. A pad shows up only
-// after its first button press on the page.
+// left stick to move. The shoulders: in the guide the left one is a page up
+// and the right one a page down; while watching, left is channel down and
+// right is channel up (the right shoulder always heads for higher channel
+// numbers). A pad shows up only after its first button press on the page.
 
-const PAD_BUTTONS = { 0: 'select', 1: 'back', 2: 'info', 3: 'settings', 4: 'chDown', 5: 'chUp', 9: 'settings', 12: 'up', 13: 'down', 14: 'left', 15: 'right' };
-const PAD_REPEATS = new Set(['up', 'down', 'left', 'right', 'chUp', 'chDown']);
+const PAD_BUTTONS = { 0: 'select', 1: 'back', 2: 'info', 3: 'settings', 4: 'padL', 5: 'padR', 9: 'settings', 12: 'up', 13: 'down', 14: 'left', 15: 'right' };
+const PAD_REPEATS = new Set(['up', 'down', 'left', 'right', 'padL', 'padR']);
 const padHeld = new Map();   // action -> time of next repeat
 
 function pollPads(now) {
@@ -1098,7 +1158,7 @@ function pollPads(now) {
       act(action);
     } else if (PAD_REPEATS.has(action) && now >= next) {
       padHeld.set(action, now + 110);
-      act(action);
+      act(action, true);
     }
   }
   for (const action of padHeld.keys()) if (!down.has(action)) padHeld.delete(action);
@@ -1133,6 +1193,7 @@ async function refresh(manual = false) {
     S.focusCh = at >= 0 ? at : (first ? 0 : S.focusCh);
     el.gridMsg.hidden = true;
     render();
+    if (first) autoStart();
     if (manual) showOsd('Guide updated', 1500);
   } catch (err) {
     console.error('guide refresh failed:', err);
@@ -1174,6 +1235,7 @@ document.addEventListener('visibilitychange', () => {
     return;
   }
   clearTimeout(hiddenTimer);
+  if (startPending) autoStart();
   if (suspendedId) {
     const ch = S.channels.find(c => c.id === suspendedId);
     suspendedId = null;

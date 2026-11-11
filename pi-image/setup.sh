@@ -54,6 +54,18 @@ mkdir -p "$DATA/chromium" "$DATA/retro-tv"
 chown -R tv:tv "$DATA/chromium"
 loginctl enable-linger tv
 
+# Sound belongs to the kiosk user alone. Any other login (the admin user over
+# SSH) would start a PipeWire and WirePlumber of its own, and that second
+# WirePlumber sets the sound card back to its default level (40 %) under the
+# kiosk's feet: the TV goes quiet each time somebody logs in. These drop-ins
+# let the sound services start for tv and nobody else.
+for unit in pipewire.service pipewire.socket pipewire-pulse.service pipewire-pulse.socket \
+            wireplumber.service filter-chain.service; do
+    install -d "/etc/systemd/user/$unit.d"
+    printf '# Written by retro-tv setup.sh: sound runs for the kiosk user only.\n[Unit]\nConditionUser=tv\n' \
+        > "/etc/systemd/user/$unit.d/retro-tv.conf"
+done
+
 # ---- the viewer, served by this box ---------------------------------------------
 # The same files and nginx rules as the laptop container (docker/web); only the
 # port, the root and the ErsatzTV address are filled in, and /pi/ is added.

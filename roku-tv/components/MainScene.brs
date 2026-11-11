@@ -4,10 +4,12 @@
 ' viewer's 853x480 design units and scaled by K = 2.25 to fill 1920x1080.
 '
 ' Remote, mapped to the viewer's keyboard actions:
-'   Guide     arrows move, OK watches, Play/Pause opens show details,
+'   Guide     arrows move (held Up / Down speed up; Down on the last channel
+'             wraps to the first), OK watches, Play/Pause opens show details,
 '             Replay (or *) opens settings, Up from the top row selects the
-'             settings cog, Rewind / Fast-forward page through channels,
-'             Back returns to the picture (or leaves the app).
+'             settings cog (Up again wraps to the last channel), Rewind /
+'             Fast-forward page through channels, Back returns to the
+'             picture (or leaves the app).
 '   Watching  Up / Down change channel, OK shows the channel bar (then
 '             activates its highlighted button; Left / Right pick one),
 '             Back opens the guide.
@@ -112,6 +114,10 @@ sub init()
     m.top.findNode("tickTimer").observeField("fire", "onTick")
     m.top.findNode("refreshTimer").observeField("fire", "refresh")
     m.top.findNode("retryTimer").observeField("fire", "refresh")
+    m.holdTimer = m.top.findNode("holdTimer")
+    m.holdTimer.observeField("fire", "onHoldTick")
+    m.holdDir = 0
+    m.holdTicks = 0
     m.top.findNode("tickTimer").control = "start"
     m.top.findNode("refreshTimer").control = "start"
     m.playRetry = CreateObject("roSGNode", "Timer")
@@ -548,6 +554,9 @@ sub onGuideData()
         return
     end if
     m.gridMsgBox.visible = false
+    ' Start of a visit: the channel watched last time (the first one on a
+    ' first visit) starts playing in the corner box. The guide stays up.
+    if first and m.S.tuned < 0 then tune(m.S.focusCh)
     render()
 end sub
 
@@ -1257,9 +1266,46 @@ end sub
 
 ' ---- moving around the guide ------------------------------------------------------
 
-sub moveRow(delta as integer)
-    m.S.focusCh = clampI(m.S.focusCh + delta, 0, m.S.channels.Count() - 1)
+' wrap: a press at either end of the list goes round to the other end (a
+' held key does not: it stops at the end).
+sub moveRow(delta as integer, wrap as boolean)
+    lastCh = m.S.channels.Count() - 1
+    target = m.S.focusCh + delta
+    if wrap and delta > 0 and m.S.focusCh = lastCh then
+        target = 0
+    else if wrap and delta < 0 and m.S.focusCh = 0 then
+        target = lastCh
+    end if
+    m.S.focusCh = clampI(target, 0, lastCh)
     render()
+end sub
+
+' Holding Up or Down in the guide: the remote sends one press and one
+' release, so a timer does the repeating, faster the longer the key is held
+' (about 8 rows a second, then 16, then 25).
+sub startHold(dir as integer)
+    m.holdDir = dir
+    m.holdTicks = 0
+    m.holdTimer.control = "stop"
+    m.holdTimer.control = "start"
+end sub
+
+sub stopHold()
+    m.holdDir = 0
+    m.holdTimer.control = "stop"
+end sub
+
+sub onHoldTick()
+    if m.holdDir = 0 or m.S.mode <> "guide" or m.S.cog then
+        stopHold()
+        return
+    end if
+    m.holdTicks = m.holdTicks + 1
+    if m.holdTicks < 4 then return        ' a short press is one row
+    rowsNow = 1
+    if m.holdTicks > 12 then rowsNow = 2
+    if m.holdTicks > 24 then rowsNow = 3
+    moveRow(m.holdDir * rowsNow, false)
 end sub
 
 sub moveTime(dir as integer)
@@ -1287,6 +1333,7 @@ end sub
 ' ---- remote -------------------------------------------------------------------------
 
 function onKeyEvent(key as string, press as boolean) as boolean
+    if m.holdDir <> 0 then stopHold()      ' any release or new press ends a held Up / Down
     if not press then return false
     if m.splash <> invalid and m.splash.visible then return true   ' nothing moves under the splash
     S = m.S
@@ -1345,6 +1392,10 @@ function onKeyEvent(key as string, press as boolean) as boolean
             else if key = "down" or key = "back" then
                 S.cog = false
                 render()
+            else if key = "up" then
+                ' Up again from the cog: round to the last channel.
+                S.cog = false
+                moveRow(-1, true)
             end if
             return true
         end if
@@ -1353,18 +1404,20 @@ function onKeyEvent(key as string, press as boolean) as boolean
                 S.cog = true
                 render()
             else
-                moveRow(-1)
+                moveRow(-1, false)
+                startHold(-1)
             end if
         else if key = "down" then
-            moveRow(1)
+            moveRow(1, true)
+            startHold(1)
         else if key = "left" then
             moveTime(-1)
         else if key = "right" then
             moveTime(1)
         else if key = "rewind" then
-            moveRow(-m.lay.rows)
+            moveRow(-m.lay.rows, true)
         else if key = "fastforward" then
-            moveRow(m.lay.rows)
+            moveRow(m.lay.rows, true)
         else if key = "OK" then
             watch(S.focusCh)
         else if key = "play" then

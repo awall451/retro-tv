@@ -123,10 +123,22 @@ stays a description anyone can use. Newest first.
 ## Open items
 
 - Plymouth boot splash: not yet confirmed on the tube (seen over HDMI only).
-- Sound on the composite jack: not yet confirmed on the tube.
+- Sound on the composite jack: confirmed on the tube (2026-11-11).
 - The IR receiver when it arrives: `ir-keytable -t` to check the codes, then the key map.
 - Whether Plymouth on Pi OS runs from the initramfs (then a theme change also regenerates it in
   the background, which the theme service already does if it finds one).
 - Standby action, IR emitter to the TV, Tailscale sign-in, font sizes on the 12-inch tube: see
   "Not yet" in the README.
 - Step 2 (`pi-gen`): build machine is a Linux laptop or WSL.
+
+## 2026-11-11: the TV went quiet after every SSH login
+
+- Sound was at 40 % instead of full. Two causes, one after the other. First, the kiosk's
+  full-volume step looked for a sink called "Headphones"; on Trixie the jack is "Built-in Audio
+  Stereo", so the step never ran. The kiosk script now matches either name.
+- Second, with that fixed, the level still fell back to 40 % whenever the admin user logged in
+  over SSH: the login started that user's own PipeWire and WirePlumber, and the second
+  WirePlumber reset the card. `setup.sh` now writes `ConditionUser=tv` drop-ins for the sound
+  units under `/etc/systemd/user/`, so only the kiosk user runs them.
+- Check: `wpctl get-volume @DEFAULT_AUDIO_SINK@` as the kiosk user says 1.00 after a reboot and
+  after a fresh SSH login.

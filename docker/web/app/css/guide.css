@@ -613,7 +613,7 @@ body.full #screen { overflow: visible; }
 #banner.narrow #banClock { align-self: start; font-size: calc(14 * var(--b)); }
 #banner.narrow #banButtons {
   justify-self: stretch; margin: 0 calc(-14 * var(--b));
-  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
   border-top: calc(2 * var(--b)) solid var(--lines);
 }
 #banner.narrow .btn {
@@ -622,6 +622,9 @@ body.full #screen { overflow: visible; }
   height: calc(36 * var(--b)); line-height: calc(36 * var(--b)); font-size: calc(14 * var(--b));
 }
 #banner.narrow .btn:last-child { border-right: 0; }
+/* The TV box is always full screen: no button for it. */
+body.tv #banFull { display: none; }
+body.tv #banner.narrow #banMute { border-right: 0; }
 
 #osd {
   position: fixed; box-sizing: border-box; background: var(--navy); color: var(--ink-accent);
