@@ -1,7 +1,7 @@
 # Commercials for retro channels
 
 The commercials, trailers and bumpers that play between programmes on our ErsatzTV channels:
-**2,754 clips in 28 sets, plus four content sets (CNN, newsreels, The Weather Channel, infomercials), all from the Internet Archive**, with a record of where every clip came
+**3,022 clips in 29 sets, plus four content sets (CNN, newsreels, The Weather Channel, infomercials), all from the Internet Archive**, with a record of where every clip came
 from, how it was cut, and what we threw out and why. `build.py` rebuilds any set on your machine
 from that record.
 
@@ -45,6 +45,7 @@ link to them, and what you do with them is up to you.
 | `tech` | 180 | Technology ads 1977–1999: Radio Shack/Tandy, IBM PS/2, Commodore, Macintosh, Windows 95/98, AOL, Pentium, Walkman, VCRs, CED players, TVs, 90s game consoles (split by decade on our server: 80s / 90s) | `radio-shack-video-radioshackcatalogs.org`, `IBMTVAdsCollection`, `windows-95-commercial-collection`, collection `computercommercials`, single items |
 | `nick` | 276 | Nickelodeon breaks 1985–2007 off air (bumpers, Nicktoons/SNICK promos, splat IDs and the ads that ran with them), plus 15 Nick-branded spots that sat in `90s` | `youtube-8rQYE-JXmss`, `youtube-KbXrTqspSDY`, `capture-a-*` "Nickelodeon commercials", single items |
 | `cartoonnetwork` | 452 | Cartoon Network: 1995 checkerboard-era IDs and promos, Powerhouse-era bumpers (1998–2004, every third kept), 2001–2002 off-air breaks | `The_Cartoon_Network_Powerhouse_Era_Bumpers_Collection`, `PrimalScreenAtlantaReuploads`, `yt-5s.com-cartoon-network-*`, `capture-a-*` "Cartoon Network commercials" |
+| `disney` | 268 | Disney Channel 1997–2003 promos and bumpers (DCOM premieres, Zoog Disney, "Magical World of Disney"); the channel ran no commercials then | `capture-a-*` "Disney Channel promos", `zoog-disney-2000-12-31-*`, `vhs_Commercials_Disney_Channel_1998`, `disney-channel-commercials-september-27-2002*` |
 
 `python3 build.py OUT --list` prints the same with download sizes. The full build downloads
 about 20 GB and keeps about 13 GB.
