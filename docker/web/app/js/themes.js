@@ -38,8 +38,10 @@ export const THEMES = [
     help: 'A late-90s internet box on the TV: purple and black, chunky bevelled buttons, everything in capitals.',
   },
   {
-    id: 'listings', label: 'Listings Channel', splash: 'listings', color: '#00125a',
-    help: 'The early-90s listings channel: deep blue boxes, a red time bar, big pixel lettering.',
+    // The id is still "listings" (the theme this one replaced), so a device
+    // that had it chosen, and the box's boot splash files, carry over.
+    id: 'listings', label: 'TV Guide', splash: 'listings', color: '#000030',
+    help: 'The scrolling TV Guide Channel of the late 90s, as on channel 1: dark blue boxes in 3-D frames, yellow channels and times, grey listings in the Amiga font.',
   },
 ];
 

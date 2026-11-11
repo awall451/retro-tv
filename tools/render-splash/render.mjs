@@ -33,6 +33,7 @@ const fonts = [
   path.join(repo, 'roku-tv/fonts/Cabin-Bold.ttf'),
   path.join(repo, 'roku-tv/fonts/Audiowide-Regular.ttf'),
   path.join(here, 'fonts/MrDafoe-Regular.ttf'),
+  path.join(repo, 'docker/web/app/fonts/PrevueGrid.ttf'),
 ].filter(fs.existsSync);
 
 // The scenes pick fonts by CSS class (the rules are in guide.css under #splash);
@@ -42,7 +43,7 @@ const FAMILIES = {
   cabin: ['Cabin', 700], disp: ['Audiowide'], script: ['Mr Dafoe'],
   arimo: ['Arimo', 700], exo: ['Exo 2', 800], nunito: ['Nunito', 900],
   osans: ['Open Sans', 300], lato: ['Lato', 900], archivo: ['Archivo Black'],
-  chakra: ['Chakra Petch', 400], vt: ['VT323'],
+  chakra: ['Chakra Petch', 400], pv: ['PrevueGrid'],
 };
 const withFonts = svg => svg.replace(/class="([a-z]+)"/g, (m, c) => {
   const f = FAMILIES[c];

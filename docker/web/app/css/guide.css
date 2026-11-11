@@ -54,7 +54,7 @@
 }
 
 /* Faces of the 2026-11 themes (Digital Cable, Satellite, DVR, Media Center,
-   Aqua, Set-Top Web, Listings Channel): Latin only, loaded when a theme uses them. */
+   Aqua, Set-Top Web): Latin only, loaded when a theme uses them. */
 @font-face {
   font-family: "Arimo"; font-style: normal; font-weight: 400; font-display: swap;
   src: url("/fonts/arimo-latin-400-normal.woff2") format("woff2");
@@ -135,10 +135,11 @@
   src: url("/fonts/chakra-petch-latin-700-normal.woff2") format("woff2");
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
+/* The TV Guide theme's face: the Amiga listings font of the real channel
+   (not ours: see fonts/PrevueGrid-NOTICE.txt). css/tvguide.css uses the same file. */
 @font-face {
-  font-family: "VT323"; font-style: normal; font-weight: 400; font-display: swap;
-  src: url("/fonts/vt323-latin-400-normal.woff2") format("woff2");
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  font-family: "PrevueGrid"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("/fonts/PrevueGrid.ttf") format("truetype");
 }
 
 /* ---- Themes ---------------------------------------------------------- */
@@ -191,6 +192,9 @@
   --lines: var(--gap);            /* the frame behind settings rows and button groups;
                                      transparent in the rounded themes, so no box shows */
   --track: normal;
+  --chan-text: var(--text);       /* channel names; yellow in the TV Guide theme */
+  --chan-case: var(--case);
+  --ink-shadow: none;             /* a hard shadow under all lettering (TV Guide theme) */
 }
 
 /* Vaporwave: purple cells, pink where Cable is yellow, cyan for accent
@@ -322,24 +326,52 @@
   --frame: 4px ridge #8f7bc0;
 }
 
-/* Listings Channel (early-90s listings channel): deep blue boxes, a red
-   time bar, big pixel lettering. */
+/* TV Guide (the scrolling listings channel of the late 1990s, as on our
+   channel 1): the colours, frames, lettering and font of css/tvguide.css.
+   Background #000030, boxes #000051, the time bar #263383, yellow #cbd100
+   for channels and times, grey #aaaaaa listings, every box in the Amiga's
+   3-D frame (a black line, then a light top-left and a black bottom-right
+   edge) and every letter over a heavy black shadow. The highlight, which
+   the channel never had, is the yellow as a solid box. */
 [data-theme="listings"] {
-  --navy: #00125a; --program: #1c2e8a; --channel: #3d5fd1; --timebar: #b3001b;
-  --yellow: #ffe14d; --soft: #9fd0ff; --white: #ffffff; --gap: #000000;
-  --ink-accent: #ffe14d; --splash-bg: #00125a;
-  --font: "VT323", "Courier New", monospace; --font-display: var(--font); --display-weight: 400;
-  --band: linear-gradient(180deg, #2a2a2a 0%, #0a0a0a 100%);
-  --sel-text: #00125a; --cell-font: 20px; --case: uppercase; --track: 1px;
+  --navy: #000030; --program: #000051; --channel: #000051; --timebar: #263383;
+  --yellow: #cbd100; --soft: #aaaaaa; --white: #aaaaaa; --gap: #000030;
+  --ink-accent: #cbd100; --splash-bg: #000030;
+  --font: "PrevueGrid", "Arimo", Arial, Helvetica, sans-serif; --font-display: var(--font); --display-weight: 400;
+  --text: #aaaaaa; --slot-text: #cbd100; --chan-text: #cbd100; --chan-case: uppercase;
+  --fill-clock: #263383; --clock-text: #cbd100; --sel-text: #000030;
+  --cell-font: 21px;
+  --cell-shadow: inset 0 0 0 1px #000, inset 2px 2px 0 #aaaaaa, inset -2px -2px 0 #000;
+  --sel-shadow: inset 0 0 0 1px #000, inset 2px 2px 0 #f4f7a0, inset -2px -2px 0 #000;
+  --ink-shadow: 1px 0 0 #111, -1px 0 0 #111, 0 1px 0 #111, 0 -1px 0 #111, 2px 2px 0 #111, 3px 3px 0 #111;
+  --frame: 2px solid #aaaaaa;
 }
-/* VT323 has one weight; never a faux bold. */
-:root[data-theme="listings"] body { font-weight: 400; }
-/* VT323 sets small for its size: the details beside the picture go up a step. */
-:root[data-theme="listings"] #info .ch { font-size: 20px; }
-:root[data-theme="listings"] #info .title { font-size: 28px; }
-:root[data-theme="listings"] #info .ep, :root[data-theme="listings"] #info .time { font-size: 21px; }
-:root[data-theme="listings"] #info .plot { font-size: 19px; line-height: 20px; }
-:root[data-theme="listings"] #previewFrame { font-size: 17px; }
+/* The font has one weight: never a faux bold (the other themes' previews
+   in the theme picker keep their own weights). */
+:root[data-theme="listings"] body,
+:root[data-theme="listings"] body *:not(.tpPrev):not(.tpPrev *) { font-weight: 400 !important; }
+/* Dark lettering on the yellow highlight carries no shadow. */
+:root[data-theme="listings"] .sel { text-shadow: none; }
+/* The frame's two edges, as on every box. */
+:root[data-theme="listings"] #previewFrame { border-color: #aaaaaa #000 #000 #aaaaaa; font-size: 16px; }
+/* The font is wide and sets small for its size: the cells sit a pixel high,
+   and the details beside the picture go up a step. */
+:root[data-theme="listings"] .cell { line-height: 26px; padding: 0 6px; }
+:root[data-theme="listings"] .cell.clock, :root[data-theme="listings"] .cell.slot { text-align: center; }
+/* The narrow first column: a size down, so "Wed 4:12 PM" and most channel names fit. */
+:root[data-theme="listings"] .cell.chan { font-size: 18px; padding: 0 5px; }
+:root[data-theme="listings"] .cell.clock { font-size: 17px; padding: 0 2px; }
+:root[data-theme="listings"] #info .ch { font-size: 21px; }
+:root[data-theme="listings"] #info .title { font-size: 25px; margin: 3px 0; }
+:root[data-theme="listings"] #info .ep, :root[data-theme="listings"] #info .time { font-size: 20px; }
+:root[data-theme="listings"] #info .time { color: var(--yellow); }
+:root[data-theme="listings"] #info .plot { font-size: 18px; line-height: 20px; }
+:root[data-theme="listings"] #gridMsg, :root[data-theme="listings"] .btn,
+:root[data-theme="listings"] #setRows > div { font-size: 19px; }
+:root[data-theme="listings"] #setTitle, :root[data-theme="listings"] #tpTitle,
+:root[data-theme="listings"] #detMeta { font-size: 20px; }
+:root[data-theme="listings"] #setHelp, :root[data-theme="listings"] #detText { font-size: 18px; }
+:root[data-theme="listings"] #tpHelp { font-size: 16px; }
 
 html, body {
   margin: 0; height: 100%; overflow: hidden; background: #000;
@@ -348,6 +380,7 @@ html, body {
 body {
   transform-origin: 0 0;          /* stretched by the script for non-square pixels (?screen=) */
   font-family: var(--font); font-weight: 700; color: var(--white);
+  text-shadow: var(--ink-shadow);
   -webkit-user-select: none; user-select: none;
   touch-action: none; -webkit-tap-highlight-color: transparent;
   -webkit-text-size-adjust: 100%; text-size-adjust: 100%;
@@ -402,7 +435,7 @@ body.tv, body.tv * { cursor: none !important; }
 }
 .cell.clock { background: var(--fill-clock); color: var(--clock-text); }
 .cell.slot { background: var(--fill-slot); color: var(--slot-text); }
-.cell.chan { background: var(--fill-channel); cursor: pointer; border-radius: var(--r-chan); }
+.cell.chan { background: var(--fill-channel); color: var(--chan-text); text-transform: var(--chan-case); cursor: pointer; border-radius: var(--r-chan); }
 .cell.show { background: var(--fill-program); cursor: pointer; }
 .cell.none { color: var(--soft); }
 .cell.narrow { padding: 0; color: transparent; }
@@ -492,6 +525,7 @@ body.settings #cog { color: var(--ink-accent); }
   background: var(--band) top / 100% 45% no-repeat, var(--stage-bg);
   display: flex; flex-direction: column; justify-content: flex-end; gap: 3px; padding: 4px 5px;
   font-family: var(--font); color: var(--white); text-align: left;
+  text-shadow: var(--ink-shadow);   /* this tile's own, not the page's */
 }
 .tpName {
   font-family: var(--font-display); font-weight: var(--display-weight);
@@ -509,7 +543,7 @@ body.settings #cog { color: var(--ink-accent); }
 .tpUsing {
   position: absolute; right: 4px; top: 4px; padding: 0 5px; height: 15px; line-height: 15px;
   font-size: 11px; font-weight: 700; border-radius: 3px;
-  background: var(--fill-sel); color: var(--sel-text);
+  background: var(--fill-sel); color: var(--sel-text); text-shadow: none;
 }
 
 /* ---- Show details (over the grid) --------------------------------- */
@@ -666,7 +700,7 @@ body.tv #banner.narrow #banMute { border-right: 0; }
    nothing shows at the edges but the scene. */
 
 #splash {
-  position: fixed; inset: 0; background: var(--splash-bg);
+  position: fixed; inset: 0; background: var(--splash-bg); text-shadow: none;
   transition: opacity 450ms ease-out;
 }
 #splash.fade { opacity: 0; pointer-events: none; }
@@ -687,7 +721,7 @@ body.tv #banner.narrow #banMute { border-right: 0; }
 #splash .lato { font-family: "Lato", Arial, sans-serif; font-weight: 900; }
 #splash .archivo { font-family: "Archivo Black", "Arial Black", Impact, sans-serif; }
 #splash .chakra { font-family: "Chakra Petch", Arial, sans-serif; font-weight: 400; }
-#splash .vt { font-family: "VT323", "Courier New", monospace; }
+#splash .pv { font-family: "PrevueGrid", "Arimo", Arial, sans-serif; }
 /* Lettering appears once its font is in (or after a short wait). */
 #splash:not(.ready) text { visibility: hidden; }
 @media (prefers-reduced-motion: no-preference) {

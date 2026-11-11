@@ -312,33 +312,56 @@ function settopSvg() {
     + '</svg>';
 }
 
-// Listings Channel: a promo up top, the red bar, the listings grid below.
+// ---- TV Guide: the scrolling listings channel ------------------------------------
+// The page of css/tvguide.css as a still: the promo box and a "coming up"
+// card on the dark blue above, the time bar and three listing rows below,
+// every box in the Amiga's 3-D frame and every letter over its black shadow.
+// Straight quotes: the font has no curly ones, and the PNG renderer
+// (tools/render-splash) would set the whole line in another face.
+const PV_INK = '#111111';
+// Lettering with the heavy shadow: a black outline, and a copy down and right.
+function pvText(x, y, size, fill, text, anchor = 'start') {
+  const at = (dx, dy, color) => `<text class="pv" x="${x + dx}" y="${y + dy}" font-size="${size}" fill="${color}" text-anchor="${anchor}">${text}</text>`;
+  return [[1, 0], [-1, 0], [0, 1], [0, -1], [2, 2], [3, 3]].map(([dx, dy]) => at(dx, dy, PV_INK)).join('') + at(0, 0, fill);
+}
+// A framed box: a black line, a light top-left edge, a black bottom-right edge.
+function pvBox(x, y, w, h, fill) {
+  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#000"/>`
+    + `<rect x="${x + 1}" y="${y + 1}" width="${w - 2}" height="${h - 2}" fill="#aaaaaa"/>`
+    + `<rect x="${x + 2}" y="${y + 2}" width="${w - 3}" height="${h - 3}" fill="#000"/>`
+    + `<rect x="${x + 2}" y="${y + 2}" width="${w - 4}" height="${h - 4}" fill="${fill}"/>`;
+}
 function listingsSvg() {
-  const rows = [['37 MCU', [['Iron Man', 2], ['Iron Man 2', 1]]], ['39 SCI-FI', [['Stargate SG-1', 2], ['Fringe', 1]]],
-    ['42 SPEED', [['Initial D', 1], ['MF Ghost', 1], ['Dirt Every Day', 1]]], ['44 MARATHON', [['The Terminator', 3]]],
-    ['46 DISCOVERY', [['Planet Earth', 2], ['Mail Call', 1]]]];
-  let grid = '', y = 260;
-  for (const [ch, cells] of rows) {
-    grid += `<rect x="${-PAD}" y="${y}" width="${PAD + 120}" height="34" fill="#3d5fd1"/><text class="vt" x="8" y="${y + 24}" font-size="22" fill="#fff">${ch}</text>`;
-    let x = 122;
-    for (const [t, span] of cells) {
-      const w = span * 172 - 2 + (x + span * 172 >= 638 ? PAD : 0);
-      grid += `<rect x="${x}" y="${y}" width="${w}" height="34" fill="#1c2e8a"/><text class="vt" x="${x + 8}" y="${y + 24}" font-size="22" fill="#fff">${t.toUpperCase()}</text>`;
-      x += span * 172;
+  const YEL = '#cbd100', GREY = '#aaaaaa', ROW = '#000051', BAR = '#263383';
+  const X0 = 9, CH = 129, COL = [154, 154, 186], TOP = 289, BARH = 31, ROWH = 53;
+  const colX = n => X0 + CH + COL.slice(0, n).reduce((a, b) => a + b, 0);
+  let g = pvBox(X0, TOP, CH, BARH, BAR) + pvText(X0 + CH / 2, TOP + 23, 24, YEL, '8:00:00', 'middle');
+  ['8:00 PM', '8:30 PM', '9:00 PM'].forEach((t, n) => {
+    g += pvBox(colX(n), TOP, COL[n], BARH, BAR) + pvText(colX(n) + COL[n] / 2, TOP + 23, 24, YEL, t, 'middle');
+  });
+  const rows = [['2', 'TOONAMI', [['Sailor Moon', 1], ['Dragon Ball Z', 2]]],
+    ['3', 'SITCOMS', [['Cheers', 1], ['Frasier', 1], ['Seinfeld', 1]]],
+    ['4', 'ACTION', [['&quot;Die Hard&quot; [1988]', 3]]]];
+  rows.forEach(([num, name, cells], r) => {
+    const y = TOP + BARH + r * ROWH;
+    g += pvBox(X0, y, CH, ROWH, ROW) + pvText(X0 + CH / 2, y + 22, 24, YEL, num, 'middle') + pvText(X0 + CH / 2, y + 45, 24, YEL, name, 'middle');
+    let n = 0;
+    for (const [title, span] of cells) {
+      const w = COL.slice(n, n + span).reduce((a, b) => a + b, 0);
+      g += pvBox(colX(n), y, w, ROWH, ROW) + pvText(colX(n) + 9, y + 22, 24, GREY, title);
+      n += span;
     }
-    y += 36;
-  }
+  });
   return open
-    + '<defs><linearGradient id="ls-top" gradientUnits="userSpaceOnUse" x1="0" y1="-420" x2="0" y2="226"><stop offset="0" stop-color="#2a2a2a"/><stop offset="1" stop-color="#0a0a0a"/></linearGradient></defs>'
-    + back('#000')
-    + `<rect x="${-PAD}" y="${-PAD}" width="${W + 2 * PAD}" height="${PAD + 226}" fill="url(#ls-top)"/>`
-    + '<text class="vt" x="324" y="104" font-size="72" letter-spacing="4" fill="#b3001b" text-anchor="middle">RETRO TV</text>'
-    + '<text class="vt" x="320" y="100" font-size="72" letter-spacing="4" fill="#ffe14d" text-anchor="middle">RETRO TV</text>'
-    + '<text class="vt" x="320" y="140" font-size="28" letter-spacing="3" fill="#fff" text-anchor="middle">THE ALL-LISTINGS CHANNEL</text>'
-    + '<text class="vt" x="320" y="172" font-size="21" fill="#9fd0ff" text-anchor="middle">Stay tuned for local weather</text>'
-    + `<rect x="${-PAD}" y="228" width="${W + 2 * PAD}" height="30" fill="#b3001b"/>`
-    + '<text class="vt" x="10" y="250" font-size="22" fill="#fff">SUNDAY 8:00 PM      SCROLLING LISTINGS      CH 1-57</text>'
-    + grid
+    + back('#000030')
+    + '<rect x="0" y="0" width="385" height="289" fill="#000"/>'
+    + pvText(192, 132, 64, YEL, 'RETRO TV', 'middle')
+    + pvText(192, 176, 24, GREY, 'please stand by', 'middle')
+    + pvText(401, 44, 22, YEL, 'RETRO TV')
+    + pvText(401, 84, 26, GREY, '&quot;The Guide&quot;')
+    + pvText(401, 124, 22, YEL, 'Tonight 8:00 PM')
+    + pvText(401, 164, 22, YEL, 'Channel 1')
+    + g
     + '</svg>';
 }
 
@@ -350,7 +373,7 @@ export const SCENES = {
   mediacenter: { svg: mediacenterSvg, fonts: ['300 50px "Open Sans"', '400 16px "Open Sans"', '600 20px "Open Sans"'] },
   aqua: { svg: aquaSvg, fonts: ['900 54px Lato', '400 17px Lato', '700 15px Lato'] },
   settop: { svg: settopSvg, fonts: ['52px "Archivo Black"', '18px "Chakra Petch"'] },
-  listings: { svg: listingsSvg, fonts: ['72px VT323'] },
+  listings: { svg: listingsSvg, fonts: ['24px PrevueGrid'] },
   vapor: {
     svg: vaporSvg,
     fonts: ['88px Audiowide', '58px "Mr Dafoe"'],
