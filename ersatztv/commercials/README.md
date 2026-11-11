@@ -1,7 +1,7 @@
 # Commercials for retro channels
 
 The commercials, trailers and bumpers that play between programmes on our ErsatzTV channels:
-**2,026 clips in 26 sets, plus four content sets (CNN, newsreels, The Weather Channel, infomercials), all from the Internet Archive**, with a record of where every clip came
+**2,754 clips in 28 sets, plus four content sets (CNN, newsreels, The Weather Channel, infomercials), all from the Internet Archive**, with a record of where every clip came
 from, how it was cut, and what we threw out and why. `build.py` rebuilds any set on your machine
 from that record.
 
@@ -43,6 +43,8 @@ link to them, and what you do with them is up to you.
 | `infomercials` (content) | 66 | Infomercials 1983–1999: Flowbee, George Foreman grill, Ronco, Don Lapre, Susan Powter, Video Professor, Time Life and K-Tel music collections, Philips CD-i, Amiga CDTV, Apple Lisa, and short "Infomercial Hell" spots | single items, `TheVistaGroup-*`, `random-infomercial-grab-bag-1999`, `youtube-collection-1990s-infomercial-hell` |
 | `albums` | 23 | Album and record-club ads: K-Tel reels (cut into single ads), Ronco, Columbia House, Time Life Music | `K-telCommercials`, single items |
 | `tech` | 180 | Technology ads 1977–1999: Radio Shack/Tandy, IBM PS/2, Commodore, Macintosh, Windows 95/98, AOL, Pentium, Walkman, VCRs, CED players, TVs, 90s game consoles (split by decade on our server: 80s / 90s) | `radio-shack-video-radioshackcatalogs.org`, `IBMTVAdsCollection`, `windows-95-commercial-collection`, collection `computercommercials`, single items |
+| `nick` | 276 | Nickelodeon breaks 1985–2007 off air (bumpers, Nicktoons/SNICK promos, splat IDs and the ads that ran with them), plus 15 Nick-branded spots that sat in `90s` | `youtube-8rQYE-JXmss`, `youtube-KbXrTqspSDY`, `capture-a-*` "Nickelodeon commercials", single items |
+| `cartoonnetwork` | 452 | Cartoon Network: 1995 checkerboard-era IDs and promos, Powerhouse-era bumpers (1998–2004, every third kept), 2001–2002 off-air breaks | `The_Cartoon_Network_Powerhouse_Era_Bumpers_Collection`, `PrimalScreenAtlantaReuploads`, `yt-5s.com-cartoon-network-*`, `capture-a-*` "Cartoon Network commercials" |
 
 `python3 build.py OUT --list` prints the same with download sizes. The full build downloads
 about 20 GB and keeps about 13 GB.
@@ -61,7 +63,7 @@ ads of the period: the themed ones then come up about one in four to one in six.
 **Quality bar for the 2026-11-08 sets.** Ordinary soft VHS stays. Thrown out: burned-in watermarks
 and running timecode (two Periscope Film uploads, 97 pieces), VHS tracking noise over the whole
 picture, VCR on-screen displays, black or title-card pieces, pieces over about two minutes, and
-software demo videos that never aired. Two sources were mislabelled (one "2000s/2010s ads" item is
+software demo videos that never aired. The Powerhouse bumper reel was cut by hand, not by `build.py`: black frames inside its bumpers made the usual split produce fragments, so it was cut only at black gaps of 0.3 s or more, pieces under 10 s joined to the next (the catalog lists the result). Two sources were mislabelled (one "2000s/2010s ads" item is
 Steamboat Willie).
 
 ## Rebuilding a set
