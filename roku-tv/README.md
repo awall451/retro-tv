@@ -48,18 +48,24 @@ sunset over the grid). Both are stills of the scenes the browser viewer draws, r
 
 No Roku account or store review is needed for your own Roku.
 
+You need a computer with `git`, `bash` and `zip` (and `curl` if the script is to do the upload),
+and an ErsatzTV server of your own on the same home network as the Roku
+([how the channels are built](../ersatztv/README.md)). Get the code with
+`git clone https://github.com/awall451/retro-tv.git` and work in its `roku-tv/` folder.
+
 1. **Developer mode.** On the Roku remote press **Home ×3, Up ×2, Right, Left, Right, Left,
    Right**. Accept the agreement, choose a password, and let it restart. The screen shows the
    Roku's address (`http://<roku-ip>`).
-2. **Install.** From this folder:
-   ```bash
-   ROKU_IP=<roku-ip> ROKU_DEV_PASSWORD=<password> ./install.sh
-   ```
-   or put the two lines in `roku-tv/.env` (git-ignored) and run `./install.sh`. It zips the app
-   and uploads it; "Install Success" means it is on the Roku and starts at once. Re-run it after
-   every change.
-   Without the script: open `http://<roku-ip>` in a browser, sign in as `rokudev`, upload
-   `out/retro-tv.zip`, press Install.
+2. **Build and install.** The app is a plain zip of this folder's files; nothing is compiled.
+   - **By hand:** `./install.sh` builds `out/retro-tv.zip`. Open `http://<roku-ip>` in a browser,
+     sign in as `rokudev` with your password, choose the zip, press **Install**.
+   - **In one go:** give the script the Roku's address and password and it uploads too:
+     ```bash
+     ROKU_IP=<roku-ip> ROKU_DEV_PASSWORD=<password> ./install.sh
+     ```
+     or put those two lines in `roku-tv/.env` (git-ignored) and run `./install.sh`.
+
+   "Install Success" means it is on the Roku and starts at once. Do the same after every change.
 3. **Debug output.** `telnet <roku-ip> 8085` shows the app's log and any BrightScript error with
    its line number.
 

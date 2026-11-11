@@ -1,21 +1,26 @@
 #!/usr/bin/env bash
-# Zip the app and sideload it onto a Roku in developer mode.
+# Zip the app and, if it knows where the Roku is, sideload it.
 #
-#   ROKU_IP=<roku-ip> ROKU_DEV_PASSWORD=<password> ./install.sh
+#   ./install.sh                                                 # only builds out/retro-tv.zip
+#   ROKU_IP=<roku-ip> ROKU_DEV_PASSWORD=<password> ./install.sh  # builds and uploads
 #
-# or put those two lines in roku-tv/.env (git-ignored). The password is the
+# The two values can also sit in roku-tv/.env (git-ignored). The password is the
 # one you chose when you turned on developer mode; the user is "rokudev".
+# Needs zip, and curl for the upload.
 set -euo pipefail
 cd "$(dirname "$0")"
 
 if [[ -f .env ]]; then set -a; . ./.env; set +a; fi
-: "${ROKU_IP:?set ROKU_IP (the Roku address on your network)}"
-: "${ROKU_DEV_PASSWORD:?set ROKU_DEV_PASSWORD (chosen when enabling developer mode)}"
-
 mkdir -p out
 rm -f out/retro-tv.zip
 zip -qr out/retro-tv.zip manifest source components images fonts -x "fonts/*.txt"
 echo "Built out/retro-tv.zip ($(du -h out/retro-tv.zip | cut -f1))"
+
+if [[ -z "${ROKU_IP:-}" || -z "${ROKU_DEV_PASSWORD:-}" ]]; then
+  echo "ROKU_IP and ROKU_DEV_PASSWORD are not both set, so nothing was uploaded."
+  echo "Upload the zip yourself: open http://<roku-ip> in a browser, sign in as rokudev, Install."
+  exit 0
+fi
 
 reply=$(curl -sS --digest -u "rokudev:${ROKU_DEV_PASSWORD}" \
   -F "mysubmit=Install" -F "archive=@out/retro-tv.zip" \
