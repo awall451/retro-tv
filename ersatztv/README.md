@@ -21,6 +21,7 @@ watches these channels (see `../pi/`); so does the browser viewer (`../docker/`)
 | `lineups.example.json` | Example channel lineups (a few of ours) |
 | `build-queries.py` | Turns a lineups file into ErsatzTV smart collection queries |
 | `check-chapters.py` | Lists episodes a commercial-break channel would drop (see "Chapter marks") |
+| `chapters/add-chapters.py` | Finds the original ad breaks in episodes that have no chapter marks and writes them into the files ([`chapters/README.md`](chapters/README.md)) |
 
 Addresses are placeholders: `<server-ip>` is the machine running ErsatzTV (port 8409).
 
@@ -133,6 +134,8 @@ preset picks which chapter ends become breaks: `point` is seconds into the progr
 - **A file with no chapter marks gets all its ad time in one block after it.** That is fine for a
   film; for an hour-long episode it means about 14 minutes of ads at the end. If you would rather
   not, put unchaptered films on a channel without commercials.
+  To give such files their breaks back, see [`chapters/`](chapters/README.md): a script for the
+  machine that holds the files finds the fades where the ads were and writes them in as chapters.
 - **A file whose chapter marks all fail the expression is dropped from the schedule, but its ad
   time stays**: we had 30-minute slots of nothing but bumpers. Lupin the 3rd has marks only at
   the opening and ending credits; Record of Lodoss War season 2 the same. Before putting a show
