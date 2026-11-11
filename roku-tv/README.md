@@ -13,10 +13,11 @@ The ErsatzTV channels on a Roku, with the same look as the browser viewer (`../d
 full-screen live TV and a channel bar along the bottom. It talks to ErsatzTV directly, so it
 works on the home network only (a Roku cannot join a tailnet).
 
-<table><tr><td align="center"><img src="images/splash_fhd.png" width="400"><br><sub>Splash and channel icon, Cable theme</sub></td><td align="center"><img src="images/splash_vapor_fhd.png" width="400"><br><sub>Vaporwave theme</sub></td><td align="center"><img src="images/icon_focus_fhd.png" width="400"><br><sub>The home-screen tile</sub></td></tr></table>
+<table><tr><td align="center"><img src="images/splash_fhd.png" width="400"><br><sub>Splash and channel icon, Cable theme</sub></td><td align="center"><img src="images/splash_vapor_fhd.jpg" width="400"><br><sub>Vaporwave theme</sub></td><td align="center"><img src="images/icon_focus_fhd.png" width="400"><br><sub>The home-screen tile</sub></td></tr></table>
 
 **What it has:** the guide grid with the picture in the corner box, show details, settings, the
-channel bar while watching, Standard/HD, and the two themes with their splash screens. Not here,
+channel bar while watching, Standard/HD, and all nine themes with their splash screens and the
+theme picker. Not here,
 on purpose: the viewer's fast-flipping warm-up, "Fill the screen" and typing a channel number (a
 Roku remote has no digits).
 
@@ -29,8 +30,9 @@ Roku remote has no digits).
 | Rewind / Fast-forward | Page through channels | Channel down / up |
 | Back | Back to the picture (or leave the app) | Back to the guide |
 
-**Settings** (Replay or `*`): **Theme** (Cable or Vaporwave: the whole guide recolours at once and
-the new theme's splash plays for two seconds), **Quality** (Standard or HD; HD needs the channel's
+**Settings** (Replay or `*`): **Theme** (OK opens the picker: all nine themes as tiles in their own
+colours and faces; arrows move, OK takes one, the whole guide changes at once and the new theme's
+splash plays for two seconds), **Quality** (Standard or HD; HD needs the channel's
 twin, see `../ersatztv/README.md`), and the **TV server** address. They are kept on the Roku, so
 each Roku has its own.
 
@@ -40,9 +42,16 @@ address (Replay).
 
 **The splash.** Roku shows the app's start-up picture itself, and that one is fixed at install:
 the Cable television. The app then shows the current theme's splash for two seconds over the
-loading guide (the Cable one continues the start-up picture without a cut; Vaporwave is the
-sunset over the grid). Both are stills of the scenes the browser viewer draws, rendered from
-`../docker/web/app/js/splash.js`.
+loading guide (the Cable one continues the start-up picture without a cut). They are stills of
+the scenes the browser viewer draws, rendered from `../docker/web/app/js/splash.js`.
+
+**The themes on a Roku.** A Roku draws flat, square rectangles and has no CSS, so the themes are
+the viewer's in colour, type and layout, with two differences. Where the viewer has a gradient,
+the Roku has its middle colour (a light shade toward the bottom of the rounded cells stands in
+for the gloss); glows and see-through tiles are left out. Rounded cells, the Set-Top Web bevel
+and the TV Guide frames are small stretchable pictures (`images/*.9.png`). Cable, Vaporwave,
+Set-Top Web and TV Guide come out the same as in the browser; Digital Cable, Satellite, DVR,
+Media Center and Aqua are close.
 
 ## Installing it on your Roku (sideloading)
 
@@ -77,9 +86,10 @@ Only one sideloaded app can be on a Roku at a time; installing replaces it.
 |---|---|
 | `manifest` | App name, version, icons |
 | `source/main.brs` | Opens the screen |
-| `components/MainScene.*` | Video, channel bar, remote keys, settings in the registry |
+| `components/MainScene.*` | Video, guide, channel bar, remote keys, the themes, settings in the registry |
 | `components/ChannelsTask.*` | Reads `/iptv/channels.m3u` from ErsatzTV |
-| `images/` | Icons and splash screen: the viewer's Cable splash (the little television), rendered from `../docker/web/app/js/splash.js` |
+| `images/` | Icons and the start-up splash (Cable), every theme's splash, the cog and "playing" mark (white, tinted by the app), the cell shapes (`*.9.png`). All made by `../tools/render-splash` |
+| `fonts/` | The themes' faces as TTF, with their licences (PrevueGrid is not ours: see its NOTICE) |
 | `install.sh` | Zip and sideload |
 
 Streams are ErsatzTV's HLS (`/iptv/channel/<n>.m3u8?mode=segmenter`), the same ones the

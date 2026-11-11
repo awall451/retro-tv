@@ -143,8 +143,8 @@ Keep it on the tailnet. Do not publish it to the internet (no Funnel, no port fo
   corner radius (`--r`, `--r-chan`, `--frame-r`), gloss or bevels (`--cell-shadow`), a glow on
   the highlight (`--sel-shadow`), a backdrop behind the picture (`--band`), letter case and
   spacing. The grid's geometry stays the same in every theme. Theme ids are lowercase letters
-  only (`js/theme-boot.js` checks). The Roku app and the Retro TV box's boot splash still know
-  only Cable and Vaporwave.
+  only (`js/theme-boot.js` checks). The Roku app has all nine too, with flat fills where this page has gradients
+  (`../roku-tv/README.md`), and the Retro TV box's boot splash follows the theme.
 - Add `?tv` to the address for the plain 640×480 layout, whatever the window's shape.
 - Add `&screen=4:3` when the screen shows the window as 4:3 whatever its pixel count (a CRT fed
   720×480 from the Pi's composite jack): the page is laid out for square pixels and stretched.

@@ -32,3 +32,26 @@ for woff2 in sorted(src.glob("*.woff2")):
     font.save(str(ttf))
     count += 1
 print(f"{count} font(s) unpacked into {out.relative_to(here)}")
+
+# The Roku app needs the themes' faces as TTF too (roku-tv/fonts, committed).
+# Cabin and Audiowide are already there as full files.
+roku = here.parent.parent / "roku-tv" / "fonts"
+ROKU = {
+    "arimo-latin-400-normal": "Arimo-Regular", "arimo-latin-700-normal": "Arimo-Bold",
+    "exo-2-latin-400-normal": "Exo2-Regular", "exo-2-latin-800-normal": "Exo2-ExtraBold",
+    "nunito-latin-400-normal": "Nunito-Regular", "nunito-latin-800-normal": "Nunito-ExtraBold",
+    "open-sans-latin-300-normal": "OpenSans-Light", "open-sans-latin-400-normal": "OpenSans-Regular",
+    "open-sans-latin-600-normal": "OpenSans-SemiBold",
+    "lato-latin-400-normal": "Lato-Regular", "lato-latin-700-normal": "Lato-Bold",
+    "chakra-petch-latin-400-normal": "ChakraPetch-Regular", "chakra-petch-latin-700-normal": "ChakraPetch-Bold",
+    "archivo-black-latin-400-normal": "ArchivoBlack-Regular",
+}
+import shutil
+for stem, name in ROKU.items():
+    shutil.copyfile(out / (stem + ".ttf"), roku / (name + ".ttf"))
+shutil.copyfile(src / "PrevueGrid.ttf", roku / "PrevueGrid.ttf")
+for notice in list(src.glob("*-LICENSE-OFL.txt")) + [src / "PrevueGrid-NOTICE.txt"]:
+    if notice.name.split("-")[0] in {"Arimo", "Exo2", "Nunito", "OpenSans", "Lato", "ChakraPetch", "ArchivoBlack", "PrevueGrid"}:
+        shutil.copyfile(notice, roku / notice.name)
+print(f"{len(ROKU) + 1} font(s) copied into roku-tv/fonts")
+

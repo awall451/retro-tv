@@ -3,3 +3,5 @@ package-lock.json
 # copies of the viewer's modules made at render time
 *.mjs
 !render.mjs
+# Roku splashes before they become JPEGs
+out/

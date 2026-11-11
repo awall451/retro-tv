@@ -1,7 +1,7 @@
 ' Retro TV for Roku: a port of the browser viewer (../docker/web/app/js/app.js).
 '
-' Same screens, colours, font (Cabin) and layout: the guide is drawn in the
-' viewer's 853x480 design units and scaled by K = 2.25 to fill 1920x1080.
+' Same screens, themes, fonts and layout: the guide is drawn in the viewer's
+' 853x480 design units and scaled by K = 2.25 to fill 1920x1080.
 '
 ' Remote, mapped to the viewer's keyboard actions:
 '   Guide     arrows move (held Up / Down speed up; Down on the last channel
@@ -14,11 +14,12 @@
 '             activates its highlighted button; Left / Right pick one),
 '             Back opens the guide.
 '   Details   OK or the buttons, Up / Down scroll, Back closes.
-'   Settings  Up / Down pick, Left / Right / OK change, Back closes.
+'   Settings  Up / Down pick, Left / Right / OK change, Back closes. On
+'             Theme they open the theme picker: arrows move, OK takes it.
 '
 ' Kept in the Roku's registry (section "RetroTV"): server, channel (the
-' last one watched, by number), quality ("sd" or "hd"), theme ("cable" or
-' "vapor").
+' last one watched, by number), quality ("sd" or "hd"), theme (an id from
+' themeIds()).
 
 ' ---- design units -------------------------------------------------------------
 
@@ -35,54 +36,260 @@ end function
 ' Colour names keep the Cable theme's words whatever the colour is. "accent"
 ' is the accent used as text (channel line, clock, messages): yellow in
 ' Cable, cyan in Vaporwave, where pink text would smear on a composite CRT.
+'
+' A Roku draws square, flat rectangles: where the viewer has a gradient the
+' theme here has its middle colour, and the rounded, glossy, bevelled and
+' framed cells are small stretchable pictures (images/*.9.png, made by
+' tools/render-splash): "shape" ones are white and tinted with the cell's
+' colour, "bevel" is laid over a flat cell, "prevue" carries its own fill.
 
-function themes() as object
-    return {
-        cable: {
-            label: "Cable",
-            help: "The late-90s cable guide: navy and yellow, flat cells. The splash is the little television.",
-            colors: {
-                navy: "0x0A1240FF", program: "0x0F2A7AFF", channel: "0x1C3FA8FF",
-                timebar: "0x5A7FE0FF", yellow: "0xF2C200FF", soft: "0xCFE0FFFF",
-                white: "0xFFFFFFFF", gap: "0x000000FF", accent: "0xF2C200FF"
-            },
-            display: "pkg:/fonts/Cabin-Bold.ttf",
-            splash: "pkg:/images/splash_fhd.png",
-            cog: "pkg:/images/cog.png", cogSel: "pkg:/images/cog_sel.png",
-            playing: "pkg:/images/playing.png", playingSel: "pkg:/images/playing_sel.png"
-        },
-        vapor: {
-            label: "Vaporwave",
-            help: "Purple cells, pink highlights, cyan text. The splash is a sunset over a neon grid.",
-            colors: {
-                navy: "0x0D0624FF", program: "0x2A0A4EFF", channel: "0x4A1278FF",
-                timebar: "0x7B3FC4FF", yellow: "0xFF3FA4FF", soft: "0xD9C8FFFF",
-                white: "0xFFFFFFFF", gap: "0x000000FF", accent: "0x19E6FFFF"
-            },
-            display: "pkg:/fonts/Audiowide-Regular.ttf",
-            splash: "pkg:/images/splash_vapor_fhd.png",
-            cog: "pkg:/images/cog_vapor.png", cogSel: "pkg:/images/cog_sel_vapor.png",
-            playing: "pkg:/images/playing_vapor.png", playingSel: "pkg:/images/playing_sel_vapor.png"
-        }
-    }
+function themeIds() as object
+    return ["cable", "vapor", "digital", "satellite", "dvr", "mediacenter", "aqua", "settop", "listings"]
 end function
+
+function themeTable() as object
+    if m.themeTable <> invalid then return m.themeTable
+    t = {}
+    t.cable = {
+        label: "Cable",
+        help: "The late-90s cable guide: navy and yellow, flat cells. The splash is the little television.",
+        colors: {
+            navy: "0x0A1240FF", program: "0x0F2A7AFF", channel: "0x1C3FA8FF",
+            timebar: "0x5A7FE0FF", yellow: "0xF2C200FF", soft: "0xCFE0FFFF",
+            white: "0xFFFFFFFF", gap: "0x000000FF", accent: "0xF2C200FF"
+        },
+        splash: "pkg:/images/splash_fhd.png"
+    }
+    t.vapor = {
+        label: "Vaporwave",
+        help: "Purple cells, pink highlights, cyan text. The splash is a sunset over a neon grid.",
+        colors: {
+            navy: "0x0D0624FF", program: "0x2A0A4EFF", channel: "0x4A1278FF",
+            timebar: "0x7B3FC4FF", yellow: "0xFF3FA4FF", soft: "0xD9C8FFFF",
+            white: "0xFFFFFFFF", gap: "0x000000FF", accent: "0x19E6FFFF"
+        },
+        display: "pkg:/fonts/Audiowide-Regular.ttf"
+    }
+    t.digital = {
+        label: "Digital Cable",
+        help: "A 2000s digital cable box: black and deep blue, rounded bars, a light-blue highlight.",
+        colors: {
+            navy: "0x000814FF", program: "0x1D4A9AFF", channel: "0x2A2F39FF",
+            timebar: "0x444D5BFF", yellow: "0x7CC0FFFF", soft: "0xB9D6FFFF",
+            white: "0xFFFFFFFF", gap: "0x000814FF", accent: "0x8FC8FFFF",
+            seltext: "0x03112EFF", slottext: "0xE6EEFCFF", frame: "0x4AA3FFFF"
+        },
+        style: "shape", shape: "pkg:/images/round_m.9.png", cellSize: 14,
+        regular: "pkg:/fonts/Arimo-Regular.ttf", bold: "pkg:/fonts/Arimo-Bold.ttf"
+    }
+    t.satellite = {
+        label: "Satellite",
+        help: "An early-2000s satellite receiver: navy into purple, rounded tabs, a gold highlight. The splash is a dish in orbit.",
+        colors: {
+            navy: "0x120A38FF", program: "0x233178FF", channel: "0x3B2285FF",
+            timebar: "0x5848B5FF", yellow: "0xFFCE5CFF", soft: "0xC9CFF5FF",
+            white: "0xFFFFFFFF", gap: "0x120A38FF", accent: "0xFFCE5CFF",
+            seltext: "0x1A0D4AFF", frame: "0xFFCE5CFF"
+        },
+        style: "shape", shape: "pkg:/images/round_s.9.png", shapeChan: "pkg:/images/round_l.9.png", cellSize: 14,
+        regular: "pkg:/fonts/Exo2-Regular.ttf", bold: "pkg:/fonts/Exo2-ExtraBold.ttf"
+    }
+    t.dvr = {
+        label: "DVR",
+        help: "A hard-disk recorder from around 2000: soft blues, rounded white pills, a green highlight and a friendly little TV.",
+        colors: {
+            navy: "0x23559FFF", program: "0xE9F0FBFF", channel: "0xFFFFFFFF",
+            timebar: "0xFFD54AFF", yellow: "0x7ED957FF", soft: "0xE3ECFFFF",
+            white: "0xFFFFFFFF", gap: "0x23559FFF", accent: "0xFFD54AFF",
+            text: "0x173A80FF", slottext: "0x173A80FF", seltext: "0x134D12FF",
+            clockfill: "0xFF7A7AFF", clocktext: "0x5E1212FF", frame: "0xFFFFFFFF"
+        },
+        style: "shape", shape: "pkg:/images/round_l.9.png", cellSize: 14,
+        regular: "pkg:/fonts/Nunito-Regular.ttf", bold: "pkg:/fonts/Nunito-ExtraBold.ttf"
+    }
+    t.mediacenter = {
+        label: "Media Center",
+        help: "A 2005 living-room PC: glassy blue tiles, a green highlight, a thin face.",
+        colors: {
+            navy: "0x08356AFF", program: "0x1C4F86FF", channel: "0x2A5D95FF",
+            timebar: "0x08356AFF", yellow: "0x52C244FF", soft: "0xB7E0FFFF",
+            white: "0xFFFFFFFF", gap: "0x08356AFF", accent: "0x9FF07EFF",
+            seltext: "0xFFFFFFFF", slottext: "0xB7E0FFFF",
+            clockfill: "0x08356AFF", clocktext: "0xFFFFFFFF", frame: "0x9DB4CCFF"
+        },
+        style: "shape", shape: "pkg:/images/round_s.9.png", cellSize: 14,
+        regular: "pkg:/fonts/OpenSans-Regular.ttf", bold: "pkg:/fonts/OpenSans-SemiBold.ttf",
+        display: "pkg:/fonts/OpenSans-Light.ttf"
+    }
+    t.aqua = {
+        label: "Aqua",
+        help: "The Y2K desktop: light grey, white rounded cells, metal tabs and a blue gel highlight.",
+        colors: {
+            navy: "0xE3E7ECFF", program: "0xF4F6F9FF", channel: "0xC9CED5FF",
+            timebar: "0xC9CED5FF", yellow: "0x4DAEF7FF", soft: "0x4C5868FF",
+            white: "0x1D2A3AFF", gap: "0xFFFFFFFF", lines: "0xE3E7ECFF", accent: "0x1F78C8FF",
+            seltext: "0x04305AFF", slottext: "0x3A4350FF", frame: "0x8F96A0FF"
+        },
+        style: "shape", shape: "pkg:/images/round_l.9.png", cellSize: 14,
+        regular: "pkg:/fonts/Lato-Regular.ttf", bold: "pkg:/fonts/Lato-Bold.ttf"
+    }
+    t.settop = {
+        label: "Set-Top Web",
+        help: "A late-90s internet box on the TV: purple and black, chunky bevelled buttons, everything in capitals.",
+        colors: {
+            navy: "0x12082AFF", program: "0x3A2468FF", channel: "0x52348EFF",
+            timebar: "0x6A4AA8FF", yellow: "0xFFBE3CFF", soft: "0xD9C8FFFF",
+            white: "0xFFFFFFFF", gap: "0x07020FFF", accent: "0xFFBE3CFF",
+            seltext: "0x2A1450FF", frame: "0x8F7BC0FF"
+        },
+        style: "bevel", cellSize: 14, upper: true,
+        regular: "pkg:/fonts/ChakraPetch-Regular.ttf", bold: "pkg:/fonts/ChakraPetch-Bold.ttf",
+        display: "pkg:/fonts/ArchivoBlack-Regular.ttf"
+    }
+    ' The id is still "listings" (the theme this one replaced), as in the viewer.
+    t.listings = {
+        label: "TV Guide",
+        help: "The scrolling TV Guide Channel of the late 90s, as on channel 1: dark blue boxes in 3-D frames, yellow channels and times, grey listings in the Amiga font.",
+        colors: {
+            navy: "0x000030FF", program: "0x000051FF", channel: "0x000051FF",
+            timebar: "0x263383FF", yellow: "0xCBD100FF", soft: "0xAAAAAAFF",
+            white: "0xAAAAAAFF", gap: "0x000030FF", accent: "0xCBD100FF",
+            text: "0xAAAAAAFF", slottext: "0xCBD100FF", chantext: "0xCBD100FF",
+            clockfill: "0x263383FF", clocktext: "0xCBD100FF", seltext: "0x000030FF",
+            frame: "0xAAAAAAFF", time: "0xCBD100FF"
+        },
+        style: "prevue", cellSize: 21, chanSize: 18, clockSize: 17, btnSize: 19,
+        chanUpper: true, shadow: true, centerBar: true, info: [21, 25, 20, 20, 18, 20],
+        regular: "pkg:/fonts/PrevueGrid.ttf", bold: "pkg:/fonts/PrevueGrid.ttf"
+    }
+
+    ' Whatever a theme leaves out is as in Cable.
+    for each id in themeIds()
+        th = t[id]
+        c = th.colors
+        setDefault(c, "text", c.white)
+        setDefault(c, "seltext", c.navy)
+        setDefault(c, "slottext", c.white)
+        setDefault(c, "chantext", c.text)
+        setDefault(c, "clockfill", c.yellow)
+        setDefault(c, "clocktext", c.seltext)
+        setDefault(c, "frame", c.yellow)
+        setDefault(c, "lines", c.gap)
+        setDefault(c, "time", c.white)
+        setDefault(th, "style", "flat")
+        setDefault(th, "shape", "")
+        setDefault(th, "shapeChan", th.shape)
+        setDefault(th, "regular", "pkg:/fonts/Cabin-Regular.ttf")
+        setDefault(th, "bold", "pkg:/fonts/Cabin-Bold.ttf")
+        setDefault(th, "display", th.bold)
+        setDefault(th, "cellSize", 15)
+        setDefault(th, "chanSize", th.cellSize)
+        setDefault(th, "clockSize", th.cellSize)
+        setDefault(th, "btnSize", 15)
+        setDefault(th, "upper", false)
+        setDefault(th, "chanUpper", th.upper)
+        setDefault(th, "shadow", false)
+        setDefault(th, "centerBar", false)
+        setDefault(th, "info", [15, 21, 16, 16, 14, 18])
+        setDefault(th, "splash", "pkg:/images/splash_" + id + "_fhd.jpg")
+    end for
+    m.themeTable = t
+    return t
+end function
+
+sub setDefault(aa as object, key as string, value as dynamic)
+    if not aa.DoesExist(key) then aa[key] = value
+end sub
 
 function theme() as object
-    return themes()[m.theme]
+    return m.T
 end function
 
-' Make a theme current: its colours for col(), its display face, a fresh
-' font cache. The stage must be (re)built after this to show the change.
+' Make a theme current: its colours for col(), its faces, a fresh font
+' cache. The stage must be (re)built after this to show the change.
 sub applyTheme(id as string)
-    if themes()[id] = invalid then id = "cable"
+    if themeTable()[id] = invalid then id = "cable"
     m.theme = id
-    m.colors = themes()[id].colors
+    m.T = themeTable()[id]
+    m.colors = m.T.colors
     m.fonts = {}
 end sub
 
 function col(name as string) as string
     return m.colors[name]
 end function
+
+' Capitals where the theme sets them (everything in Set-Top Web, the
+' channel names in TV Guide).
+function cellCase(text as string, isChan as boolean) as string
+    if m.T.upper or (isChan and m.T.chanUpper) then return UCase(text)
+    return text
+end function
+
+' A stretchable picture (9-patch) at a size, tinted unless tint is "".
+function shapeIn(parent as object, x as integer, y as integer, w as integer, h as integer, uri as string, tint as string) as object
+    p = CreateObject("roSGNode", "Poster")
+    p.translation = [x, y]
+    p.width = w
+    p.height = h
+    p.uri = uri
+    if tint <> "" then p.blendColor = tint
+    parent.appendChild(p)
+    return p
+end function
+
+' A cell, button or settings row in the theme's shape, in screen pixels.
+' kind: "show", "chan", "bar" (time bar), "clock", "sel" (highlight), "selchan".
+' Text goes in as a child of what this returns.
+function cellBox(parent as object, x as integer, y as integer, w as integer, h as integer, kind as string, color as string) as object
+    th = m.T
+    w = maxI(w, 0)
+    if th.style = "flat" or w < 60 then return rect(parent, x, y, w, h, color)
+    if th.style = "bevel" then
+        r = rect(parent, x, y, w, h, color)
+        shapeIn(r, 0, 0, w, h, "pkg:/images/bevel.9.png", "")
+        return r
+    end if
+    if th.style = "prevue" then
+        uri = "pkg:/images/prevue_row.9.png"
+        if kind = "bar" or kind = "clock" then uri = "pkg:/images/prevue_bar.9.png"
+        if kind = "sel" or kind = "selchan" then uri = "pkg:/images/prevue_sel.9.png"
+        return shapeIn(parent, x, y, w, h, uri, "")
+    end if
+    uri = th.shape
+    if kind = "chan" or kind = "selchan" then uri = th.shapeChan
+    ' The big radius needs a cell as tall as a grid row; buttons take the middle one.
+    if h < 58 and uri = "pkg:/images/round_l.9.png" then uri = "pkg:/images/round_m.9.png"
+    return shapeIn(parent, x, y, w, h, uri, color)
+end function
+
+' TV Guide theme: a hard black copy of a label, down and right, under it.
+' Call it once the label is complete (text, alignment) and is still the
+' last child of its parent.
+sub addShadow(l as object)
+    if not m.T.shadow then return
+    p = l.getParent()
+    if p = invalid then return
+    sh = CreateObject("roSGNode", "Label")
+    copyLabel(sh, l)
+    p.insertChild(sh, p.getChildCount() - 1)
+end sub
+
+sub copyLabel(sh as object, l as object)
+    tr = l.translation
+    sh.translation = [tr[0] + 4, tr[1] + 4]
+    sh.width = l.width
+    sh.height = l.height
+    sh.font = l.font
+    sh.color = "0x111111FF"
+    sh.vertAlign = l.vertAlign
+    sh.horizAlign = l.horizAlign
+    sh.wrap = l.wrap
+    sh.maxLines = l.maxLines
+    sh.lineSpacing = l.lineSpacing
+    sh.text = l.text
+    sh.visible = l.visible
+end sub
 
 function HALF() as integer
     return 1800
@@ -128,7 +335,7 @@ sub init()
     m.S = {
         channels: [], hasHd: false, dataEnd: 0, guide: {},
         mode: "guide", setRow: 0, focusCh: 0, focusTime: now(), winStart: floorHalf(now()),
-        rowTop: 0, tuned: -1, cog: false, detBtn: 0, banBtn: 0, muted: false,
+        rowTop: 0, tuned: -1, cog: false, detBtn: 0, banBtn: 0, tpIndex: 0, muted: false,
         loading: false, retrySecs: 5, playState: "idle"
     }
     m.quality = regRead("quality", "sd")
@@ -182,21 +389,26 @@ function font(size as float, bold as boolean) as object
     if m.fonts.DoesExist(key) then return m.fonts[key]
     f = CreateObject("roSGNode", "Font")
     if bold then
-        f.uri = "pkg:/fonts/Cabin-Bold.ttf"
+        f.uri = m.T.bold
     else
-        f.uri = "pkg:/fonts/Cabin-Regular.ttf"
+        f.uri = m.T.regular
     end if
     f.size = Int(size + 0.5)
     m.fonts[key] = f
     return f
 end function
 
-' The theme's face for show titles: Cabin Bold, or Audiowide (one weight) in Vaporwave.
+' The theme's face for show titles (Audiowide in Vaporwave, Archivo Black in Set-Top Web...).
 function displayFont(size as float) as object
-    key = "display" + size.ToStr()
+    return faceFont(m.T.display, size)
+end function
+
+' Any face at a size (the theme picker shows every theme in its own).
+function faceFont(uri as string, size as float) as object
+    key = uri + size.ToStr()
     if m.fonts.DoesExist(key) then return m.fonts[key]
     f = CreateObject("roSGNode", "Font")
-    f.uri = theme().display
+    f.uri = uri
     f.size = Int(size + 0.5)
     m.fonts[key] = f
     return f
@@ -275,27 +487,38 @@ sub buildStage()
     rect(s, 0, 0, 1920, 1080, col("navy"))
 
     ' Picture pbox: 2 px yellow frame, black inside, a hint until something plays.
-    rect(s, px(lay.pv.x), px(lay.pv.y), px(lay.pv.w), px(lay.pv.h), col("yellow"))
-    rect(s, px(lay.pv.x + 2), px(lay.pv.y + 2), px(lay.pv.w - 4), px(lay.pv.h - 4), col("gap"))
+    rect(s, px(lay.pv.x), px(lay.pv.y), px(lay.pv.w), px(lay.pv.h), col("frame"))
+    rect(s, px(lay.pv.x + 2), px(lay.pv.y + 2), px(lay.pv.w - 4), px(lay.pv.h - 4), "0x000000FF")
     m.previewMsg = label(s, px(lay.pv.x + 8), px(lay.pv.y + lay.pv.h - 24), px(lay.pv.w - 16), px(18), 13 * KK(), false, col("soft"))
     m.previewMsg.text = "Pick a show to watch"
 
     ' Programme info beside the picture.
-    m.infoCh = label(s, 0, 0, 0, 0, 15 * KK(), true, col("accent"))
-    m.infoTitle = label(s, 0, 0, 0, 0, 21 * KK(), true, col("white"))
-    m.infoTitle.font = displayFont(21 * KK())
-    m.infoEp = label(s, 0, 0, 0, 0, 16 * KK(), true, col("soft"))
-    m.infoTime = label(s, 0, 0, 0, 0, 16 * KK(), true, col("white"))
+    ' (TV Guide theme: five black copies first, so they lie under the lines.)
+    sz = m.T.info
+    m.infoShadows = []
+    if m.T.shadow then
+        for i = 0 to 4
+            sh = CreateObject("roSGNode", "Label")
+            s.appendChild(sh)
+            m.infoShadows.Push(sh)
+        end for
+    end if
+    m.infoCh = label(s, 0, 0, 0, 0, sz[0] * KK(), true, col("accent"))
+    m.infoTitle = label(s, 0, 0, 0, 0, sz[1] * KK(), true, col("white"))
+    m.infoTitle.font = displayFont(sz[1] * KK())
+    m.infoEp = label(s, 0, 0, 0, 0, sz[2] * KK(), true, col("soft"))
+    m.infoTime = label(s, 0, 0, 0, 0, sz[3] * KK(), true, col("time"))
     m.infoPlot = CreateObject("roSGNode", "Label")
-    m.infoPlot.font = font(14 * KK(), false)
+    m.infoPlot.font = font(sz[4] * KK(), false)
     m.infoPlot.color = col("soft")
     m.infoPlot.wrap = true
-    m.infoPlot.lineSpacing = px(18) - Int(14 * KK() * 1.2)
+    m.infoPlot.lineSpacing = px(sz[5]) - Int(sz[4] * KK() * 1.2)
     s.appendChild(m.infoPlot)
 
     ' Settings cog, top right of the info area.
     m.cog = CreateObject("roSGNode", "Poster")
-    m.cog.uri = theme().cog
+    m.cog.uri = "pkg:/images/cog.png"
+    m.cog.blendColor = col("soft")
     m.cog.translation = [px(lay.info.x + lay.info.w - 28 + 3), px(lay.info.y - 3 + 3)]
     m.cog.width = px(24)
     m.cog.height = px(24)
@@ -307,7 +530,7 @@ sub buildStage()
     m.gridCells.translation = [0, px(lay.gridTop)]
     s.appendChild(m.gridCells)
     m.gridMsgBox = rect(s, 0, px(lay.gridTop + 2 + lay.row), 1920, px(27), col("program"))
-    m.gridMsg = label(m.gridMsgBox, px(7), 0, 1920 - px(14), px(27), 15 * KK(), true, col("white"))
+    m.gridMsg = label(m.gridMsgBox, px(7), 0, 1920 - px(14), px(27), 15 * KK(), true, col("text"))
     m.gridMsg.text = "Loading the guide…"
 
     ' Show details and settings, over the grid.
@@ -317,6 +540,9 @@ sub buildStage()
     m.settings = CreateObject("roSGNode", "Group")
     m.settings.visible = false
     s.appendChild(m.settings)
+    m.picker = CreateObject("roSGNode", "Group")
+    m.picker.visible = false
+    s.appendChild(m.picker)
 end sub
 
 ' After a theme change: draw the stage again in the new colours and put the
@@ -330,6 +556,8 @@ sub rebuildStage()
     m.details.visible = m.S.mode = "details"
     m.settings.visible = m.S.mode = "settings"
     if m.S.mode = "settings" then renderSettings()
+    m.picker.visible = m.S.mode = "themes"
+    if m.S.mode = "themes" then renderPicker()
     placeVideo()
     render()
 end sub
@@ -348,7 +576,7 @@ end sub
 
 sub showSplash(secs as float)
     m.splashFade.control = "stop"
-    m.splashImg.uri = theme().splash
+    m.splashImg.uri = m.T.splash
     m.splash.opacity = 1
     m.splash.visible = true
     t = m.top.findNode("splashTimer")
@@ -368,31 +596,38 @@ end sub
 ' Lay out the info column (a flex column in the viewer: empty lines collapse).
 sub renderInfoLayout(ep as string, time as string, plot as string)
     lay = m.lay
+    sz = m.T.info
     x = px(lay.info.x)
     w = px(lay.info.w)
     y = lay.info.y
-    placeLine(m.infoCh, x, y, w - px(34), 15)
-    y = y + 18 + 2
-    placeLine(m.infoTitle, x, y, w, 21)
-    y = y + 25 + 2
+    placeLine(m.infoCh, x, y, w - px(34), sz[0])
+    y = y + Int(sz[0] * 1.2) + 2
+    placeLine(m.infoTitle, x, y, w, sz[1])
+    y = y + Int(sz[1] * 1.2) + 2
     m.infoEp.visible = ep <> ""
     if ep <> "" then
-        placeLine(m.infoEp, x, y, w, 16)
-        y = y + 19
+        placeLine(m.infoEp, x, y, w, sz[2])
+        y = y + Int(sz[2] * 1.2)
     end if
     m.infoTime.visible = time <> ""
     if time <> "" then
         y = y + 4
-        placeLine(m.infoTime, x, y, w, 16)
-        y = y + 19 + 4
+        placeLine(m.infoTime, x, y, w, sz[3])
+        y = y + Int(sz[3] * 1.2) + 4
     end if
     room = lay.info.y + lay.info.h - y
-    lines = maxI(1, Int(room / 18))
+    lines = maxI(1, Int(room / sz[5]))
     m.infoPlot.translation = [x, px(y)]
     m.infoPlot.width = w
-    m.infoPlot.height = px(lines * 18)
+    m.infoPlot.height = px(lines * sz[5])
     m.infoPlot.maxLines = lines
     m.infoPlot.text = plot
+    if m.infoShadows.Count() = 5 then
+        lines5 = [m.infoCh, m.infoTitle, m.infoEp, m.infoTime, m.infoPlot]
+        for i = 0 to 4
+            copyLabel(m.infoShadows[i], lines5[i])
+        end for
+    end if
 end sub
 
 sub placeLine(l as object, x as integer, y as integer, w as integer, size as integer)
@@ -671,31 +906,40 @@ sub render()
     if m.S.mode = "details" then renderDetails()
 end sub
 
-' One grid cell: background, and a label unless it is too narrow (30 px).
-sub drawCell(x as integer, y as integer, w as integer, text as string, bg as string, fg as string, withLabel as boolean)
-    r = rect(m.gridCells, px(x), px(y), px(x + w) - px(x), px(27), bg)
-    if withLabel then
-        l = label(r, px(7), 0, px(w) - px(14), px(27), 15 * KK(), true, fg)
-        l.text = text
-    end if
+' One grid cell in the theme's shape, and a label unless it is too narrow
+' (30 px). kind as in cellBox.
+sub drawCell(x as integer, y as integer, w as integer, text as string, kind as string, bg as string, fg as string, withLabel as boolean)
+    th = m.T
+    r = cellBox(m.gridCells, px(x), px(y), px(x + w) - px(x), px(27), kind, bg)
+    if not withLabel then return
+    fsize = th.cellSize
+    if kind = "chan" or kind = "selchan" then fsize = th.chanSize
+    if kind = "clock" then fsize = th.clockSize
+    pad = 7
+    if fsize > 16 then pad = 5
+    l = label(r, px(pad), 0, px(w) - px(2 * pad), px(27), fsize * KK(), true, fg)
+    if th.centerBar and (kind = "clock" or kind = "bar") then l.horizAlign = "center"
+    l.text = cellCase(text, kind = "chan" or kind = "selchan")
+    if kind <> "sel" and kind <> "selchan" then addShadow(l)
 end sub
 
 sub renderGrid()
     lay = m.lay
     S = m.S
+    th = m.T
     t0 = S.winStart
     t1 = t0 + lay.span
     tnow = now()
     m.gridCells.removeChildrenIndex(m.gridCells.getChildCount(), 0)
 
-    drawCell(0, 2, lay.chanW, fmtDay(tnow) + " " + fmtTime(tnow), col("yellow"), col("navy"), true)
+    drawCell(0, 2, lay.chanW, fmtDay(tnow) + " " + fmtTime(tnow), "clock", col("clockfill"), col("clocktext"), true)
     for i = 0 to lay.slots - 1
         a = t0 + i * HALF()
         lx = gx(a)
         rx = gx(a + HALF())
         w = rx - lx
         if i < lay.slots - 1 then w = w - 2
-        drawCell(lx, 2, w, fmtTime(a), col("timebar"), col("white"), true)
+        drawCell(lx, 2, w, fmtTime(a), "bar", col("timebar"), col("slottext"), true)
     end for
 
     for r = 0 to lay.rows - 1
@@ -704,29 +948,33 @@ sub renderGrid()
         ch = S.channels[ci]
         y = 2 + lay.row * (r + 1)
         focused = ci = S.focusCh and not S.cog
+        ckind = "chan"
         bg = col("channel")
-        fg = col("white")
+        fg = col("chantext")
         if focused then
+            ckind = "selchan"
             bg = col("yellow")
-            fg = col("navy")
+            fg = col("seltext")
         else if ci = S.tuned then
             fg = col("accent")
         end if
         name = ch.num + " " + ch.name
         if ci = S.tuned then
             ' The channel being watched: a small flat triangle before its name.
-            rr = rect(m.gridCells, 0, px(y), px(lay.chanW), px(27), bg)
+            rr = cellBox(m.gridCells, 0, px(y), px(lay.chanW), px(27), ckind, bg)
             tri = CreateObject("roSGNode", "Poster")
-            tri.uri = theme().playing
-            if focused then tri.uri = theme().playingSel
+            tri.uri = "pkg:/images/tri.png"
+            tri.blendColor = col("yellow")
+            if focused then tri.blendColor = col("seltext")
             tri.translation = [px(7), px(8.5)]
             tri.width = px(8)
             tri.height = px(10)
             rr.appendChild(tri)
-            l = label(rr, px(20), 0, px(lay.chanW - 27), px(27), 15 * KK(), true, fg)
-            l.text = name
+            l = label(rr, px(20), 0, px(lay.chanW - 25), px(27), th.chanSize * KK(), true, fg)
+            l.text = cellCase(name, true)
+            if not focused then addShadow(l)
         else
-            drawCell(0, y, lay.chanW, name, bg, fg, true)
+            drawCell(0, y, lay.chanW, name, ckind, bg, fg, true)
         end if
 
         t = t0
@@ -739,14 +987,16 @@ sub renderGrid()
             if b < t1 then w = w - 2
             if w >= 2 then
                 sel = focused and S.focusTime >= c.start and S.focusTime < c.ends
+                skind = "show"
                 cbg = col("program")
-                cfg = col("white")
+                cfg = col("text")
                 if c.gap = true then cfg = col("soft")
                 if sel then
+                    skind = "sel"
                     cbg = col("yellow")
-                    cfg = col("navy")
+                    cfg = col("seltext")
                 end if
-                drawCell(lx, y, w, cellLabel(c), cbg, cfg, w >= 30)
+                drawCell(lx, y, w, cellLabel(c), skind, cbg, cfg, w >= 30)
             end if
             if not (b > t) then exit while
             t = b
@@ -757,10 +1007,10 @@ sub renderGrid()
         rect(m.gridCells, px(minI(gx(tnow), lay.W - 2)), px(2), px(2), px(27), col("yellow"))
     end if
 
-    if S.cog or S.mode = "settings" then
-        m.cog.uri = theme().cogSel
+    if S.cog or S.mode = "settings" or S.mode = "themes" then
+        m.cog.blendColor = col("accent")
     else
-        m.cog.uri = theme().cog
+        m.cog.blendColor = col("soft")
     end if
 end sub
 
@@ -773,7 +1023,7 @@ sub renderInfo()
     ch = focusChannel()
     d = describe(focusCell())
     m.infoCh.text = "Ch " + ch.num + " · " + ch.name
-    m.infoTitle.text = d.title
+    m.infoTitle.text = cellCase(d.title, false)
     m.infoEp.text = d.ep
     m.infoTime.text = d.time
     plot = d.plot
@@ -842,6 +1092,7 @@ sub renderDetails()
     end if
     ml = label(g, px(x), px(innerTop), px(w), px(20), 16 * KK(), true, col("accent"))
     ml.text = meta.Join(" · ")
+    addShadow(ml)
 
     body = ""
     if one <> invalid then
@@ -870,23 +1121,28 @@ sub renderDetails()
     tl.translation = [px(x), px(textTop) - m.detScroll]
     tl.text = body
     clip.appendChild(tl)
+    addShadow(tl)
 
     ' Buttons: Watch now, Back (2 px black lines between).
     labels = ["Watch now", "Back"]
     bx = x
-    rect(g, px(bx), px(btnTop), px(2 + 96 + 2 + 54 + 2), px(31), col("gap"))
     widths = [96, 54]
+    if m.T.btnSize > 16 then widths = [118, 62]
+    rect(g, px(bx), px(btnTop), px(2 + widths[0] + 2 + widths[1] + 2), px(31), col("lines"))
     for i = 0 to 1
+        bkind = "chan"
         bg = col("channel")
-        fg = col("white")
+        fg = col("text")
         if i = m.S.detBtn then
+            bkind = "sel"
             bg = col("yellow")
-            fg = col("navy")
+            fg = col("seltext")
         end if
-        r = rect(g, px(bx + 2), px(btnTop + 2), px(widths[i]), px(27), bg)
-        l = label(r, 0, 0, px(widths[i]), px(27), 15 * KK(), true, fg)
+        r = cellBox(g, px(bx + 2), px(btnTop + 2), px(widths[i]), px(27), bkind, bg)
+        l = label(r, 0, 0, px(widths[i]), px(27), m.T.btnSize * KK(), true, fg)
         l.horizAlign = "center"
-        l.text = labels[i]
+        l.text = cellCase(labels[i], false)
+        if bkind <> "sel" then addShadow(l)
         bx = bx + 2 + widths[i]
     end for
 end sub
@@ -895,7 +1151,7 @@ end sub
 
 function settingRows() as object
     rows = []
-    rows.Push({ id: "theme", label: "Theme", value: theme().label, help: theme().help })
+    rows.Push({ id: "theme", label: "Theme", value: m.T.label, help: m.T.help + " OK shows them all." })
     if m.S.hasHd then
         q = "Standard"
         help = "The 4:3 picture made for the old TV. Lightest on the connection."
@@ -934,30 +1190,37 @@ sub renderSettings()
     y = top + 2 + 10
     t = label(g, px(8), px(y), px(400), px(20), 16 * KK(), true, col("accent"))
     t.text = "Settings for this device"
+    addShadow(t)
     y = y + 20 + 8
 
     rows = settingRows()
     labelW = 120
     valueW = 260
     n = rows.Count()
-    rect(g, px(8), px(y), px(2 + labelW + 2 + valueW + 2), px(2 + n * 29), col("gap"))
+    rect(g, px(8), px(y), px(2 + labelW + 2 + valueW + 2), px(2 + n * 29), col("lines"))
     for i = 0 to n - 1
         sel = i = m.S.setRow
         lb = col("channel")
         vb = col("program")
-        fg = col("white")
+        fg = col("text")
+        k1 = "chan"
+        k2 = "show"
         if sel then
             lb = col("yellow")
             vb = col("yellow")
-            fg = col("navy")
+            fg = col("seltext")
+            k1 = "selchan"
+            k2 = "sel"
         end if
         ry = y + 2 + i * 29
-        r1 = rect(g, px(10), px(ry), px(labelW), px(27), lb)
-        l1 = label(r1, px(10), 0, px(labelW - 20), px(27), 15 * KK(), true, fg)
-        l1.text = rows[i].label
-        r2 = rect(g, px(10 + labelW + 2), px(ry), px(valueW), px(27), vb)
-        l2 = label(r2, px(10), 0, px(valueW - 20), px(27), 15 * KK(), true, fg)
-        l2.text = rows[i].value
+        r1 = cellBox(g, px(10), px(ry), px(labelW), px(27), k1, lb)
+        l1 = label(r1, px(10), 0, px(labelW - 20), px(27), m.T.btnSize * KK(), true, fg)
+        l1.text = cellCase(rows[i].label, false)
+        if not sel then addShadow(l1)
+        r2 = cellBox(g, px(10 + labelW + 2), px(ry), px(valueW), px(27), k2, vb)
+        l2 = label(r2, px(10), 0, px(valueW - 20), px(27), m.T.btnSize * KK(), true, fg)
+        l2.text = cellCase(rows[i].value, false)
+        if not sel then addShadow(l2)
     end for
     y = y + 2 + n * 29 + 8
 
@@ -971,20 +1234,26 @@ sub renderSettings()
     hl.width = px(lay.W - 16)
     hl.text = help
     g.appendChild(hl)
+    addShadow(hl)
 
     ' Done button, bottom left.
     by = lay.H - 8 - 31
-    rect(g, px(8), px(by), px(2 + 54 + 2), px(31), col("gap"))
+    doneW = 54
+    if m.T.btnSize > 16 then doneW = 66
+    rect(g, px(8), px(by), px(2 + doneW + 2), px(31), col("lines"))
+    bkind = "chan"
     bg = col("channel")
-    fg = col("white")
+    fg = col("text")
     if m.S.setRow = n then
+        bkind = "sel"
         bg = col("yellow")
-        fg = col("navy")
+        fg = col("seltext")
     end if
-    r = rect(g, px(10), px(by + 2), px(54), px(27), bg)
-    l = label(r, 0, 0, px(54), px(27), 15 * KK(), true, fg)
+    r = cellBox(g, px(10), px(by + 2), px(doneW), px(27), bkind, bg)
+    l = label(r, 0, 0, px(doneW), px(27), m.T.btnSize * KK(), true, fg)
     l.horizAlign = "center"
-    l.text = "Done"
+    l.text = cellCase("Done", false)
+    if bkind <> "sel" then addShadow(l)
 end sub
 
 sub changeSetting()
@@ -995,15 +1264,7 @@ sub changeSetting()
     end if
     id = rows[m.S.setRow].id
     if id = "theme" then
-        ' Reskin at once, and show the new theme's splash so the change is seen.
-        if m.theme = "cable" then
-            applyTheme("vapor")
-        else
-            applyTheme("cable")
-        end if
-        regWrite("theme", m.theme)
-        rebuildStage()
-        showSplash(2)
+        openThemes()
         return
     else if id = "quality" then
         if m.quality = "hd" then
@@ -1018,6 +1279,107 @@ sub changeSetting()
         askServer(m.server)
     end if
     renderSettings()
+end sub
+
+' ---- theme picker (over the grid, from the Theme row in settings) -----------------
+' Every theme as a small tile in its own colours and face, three across.
+
+sub openThemes()
+    ids = themeIds()
+    m.S.tpIndex = 0
+    for i = 0 to ids.Count() - 1
+        if ids[i] = m.theme then m.S.tpIndex = i
+    end for
+    m.S.mode = "themes"
+    m.settings.visible = false
+    m.picker.visible = true
+    renderPicker()
+    renderGrid()
+end sub
+
+sub closeThemes()
+    m.S.mode = "settings"
+    m.picker.visible = false
+    m.settings.visible = true
+    renderSettings()
+end sub
+
+sub renderPicker()
+    lay = m.lay
+    g = m.picker
+    g.removeChildrenIndex(g.getChildCount(), 0)
+    top = lay.gridTop
+    rect(g, 0, px(top), 1920, 1080 - px(top), col("navy"))
+    rect(g, 0, px(top), 1920, px(2), col("gap"))
+    hd = label(g, px(8), px(top + 10), px(400), px(20), 16 * KK(), true, col("accent"))
+    hd.text = "Pick a theme"
+    addShadow(hd)
+
+    ids = themeIds()
+    all = themeTable()
+    tileW = 275
+    tileH = 64
+    for i = 0 to ids.Count() - 1
+        th = all[ids[i]]
+        c = th.colors
+        tx = 8 + (i mod 3) * (tileW + 6)
+        ty = top + 36 + Int(i / 3) * (tileH + 6)
+        if i = m.S.tpIndex then rect(g, px(tx), px(ty), px(tileW), px(tileH), col("yellow"))
+        tile = rect(g, px(tx + 3), px(ty + 3), px(tileW - 6), px(tileH - 6), c.navy)
+        nl = CreateObject("roSGNode", "Label")
+        nl.translation = [px(6), px(2)]
+        nl.width = px(tileW - 6 - 70)
+        nl.height = px(18)
+        nl.vertAlign = "center"
+        nl.font = faceFont(th.display, 14 * KK())
+        nl.color = c.white
+        nl.text = th.label
+        if th.upper then nl.text = UCase(th.label)
+        tile.appendChild(nl)
+        if ids[i] = m.theme then
+            badge = rect(tile, px(tileW - 6 - 50), px(4), px(46), px(15), c.yellow)
+            bl = CreateObject("roSGNode", "Label")
+            bl.width = px(46)
+            bl.height = px(15)
+            bl.horizAlign = "center"
+            bl.vertAlign = "center"
+            bl.font = faceFont(th.bold, 11 * KK())
+            bl.color = c.seltext
+            bl.text = "In use"
+            badge.appendChild(bl)
+        end if
+        ' Three small rows: the time bar, a row with the highlight, a plain row.
+        inner = tileW - 6 - 12
+        u = (inner - 4) / 8
+        fills = [[c.clockfill, c.timebar, c.timebar], [c.channel, c.yellow, c.program], [c.channel, c.program, c.program]]
+        for r = 0 to 2
+            ry = 24 + r * 11
+            rect(tile, px(6), px(ry), px(2 * u), px(9), fills[r][0])
+            rect(tile, px(6 + 2 * u + 2), px(ry), px(3 * u), px(9), fills[r][1])
+            rect(tile, px(6 + 5 * u + 4), px(ry), px(3 * u), px(9), fills[r][2])
+        end for
+    end for
+
+    hl = label(g, px(8), px(lay.H - 24), px(lay.W - 16), px(18), 13 * KK(), false, col("soft"))
+    hl.text = all[ids[m.S.tpIndex]].help
+    addShadow(hl)
+end sub
+
+sub moveTheme(delta as integer)
+    target = m.S.tpIndex + delta
+    if target < 0 or target > themeIds().Count() - 1 then return
+    m.S.tpIndex = target
+    renderPicker()
+end sub
+
+' Reskin at once, back in settings, and show the new theme's splash so the
+' change is seen.
+sub pickTheme()
+    applyTheme(themeIds()[m.S.tpIndex])
+    regWrite("theme", m.theme)
+    m.S.mode = "settings"
+    rebuildStage()
+    showSplash(2)
 end sub
 
 ' ---- watching ----------------------------------------------------------------
@@ -1104,6 +1466,7 @@ sub setMode(mode as string)
     m.stage.visible = mode <> "full"
     m.details.visible = mode = "details"
     m.settings.visible = mode = "settings"
+    m.picker.visible = mode = "themes"
     if mode <> "full" then hideBanner()
     placeVideo()
     render()
@@ -1164,6 +1527,10 @@ sub fillBanner()
     x = pbox.x + padX
     btnW = [Int(60 * b), Int(58 * b), Int(58 * b), Int(66 * b)]
     if m.S.muted then btnW[3] = Int(80 * b)
+    if m.T.btnSize > 16 then
+        btnW = [Int(72 * b), Int(66 * b), Int(66 * b), Int(72 * b)]
+        if m.S.muted then btnW[3] = Int(96 * b)
+    end if
     btnTotal = Int(2 * b)
     for each w in btnW
         btnTotal = btnTotal + w + Int(2 * b)
@@ -1187,35 +1554,42 @@ sub fillBanner()
     end if
     l = label(g, x, y, infoW, Int(14 * 1.25 * b), 14 * b, true, col("accent"))
     l.text = "Ch " + ch.num + " · " + ch.name
+    addShadow(l)
     l = label(g, x, y + Int(14 * 1.25 * b) + Int(2 * b), infoW, Int(22 * 1.25 * b), 22 * b, true, col("white"))
     l.font = displayFont(22 * b)
-    l.text = title
+    l.text = cellCase(title, false)
+    addShadow(l)
     l = label(g, x, y + Int(36 * 1.25 * b) + Int(4 * b), infoW, Int(15 * 1.25 * b), 15 * b, true, col("soft"))
     l.text = sub1
+    addShadow(l)
 
     ' Right column: clock above the buttons.
     rightX = pbox.x + pbox.w - padX
     l = label(g, rightX - Int(200 * b), y, Int(200 * b), Int(15 * 1.25 * b), 15 * b, true, col("white"))
     l.horizAlign = "right"
     l.text = fmtTime(tnow)
+    addShadow(l)
     names = ["Guide", "Ch −", "Ch +", "Mute"]
     if m.S.muted then names[3] = "Unmute"
     bh = Int(28 * b) + Int(4 * b)
     by = y + Int(36 * 1.25 * b) + Int(4 * b) + Int(15 * 1.25 * b) - bh
     bx = rightX - btnTotal
-    rect(g, bx, by, btnTotal, bh, col("gap"))
+    rect(g, bx, by, btnTotal, bh, col("lines"))
     bx = bx + Int(2 * b)
     for i = 0 to 3
+        bkind = "chan"
         bg = col("channel")
-        fg = col("white")
+        fg = col("text")
         if i = m.S.banBtn then
+            bkind = "sel"
             bg = col("yellow")
-            fg = col("navy")
+            fg = col("seltext")
         end if
-        r = rect(g, bx, by + Int(2 * b), btnW[i], Int(28 * b), bg)
+        r = cellBox(g, bx, by + Int(2 * b), btnW[i], Int(28 * b), bkind, bg)
         bl = label(r, 0, 0, btnW[i], Int(28 * b), 15 * b, true, fg)
         bl.horizAlign = "center"
-        bl.text = names[i]
+        bl.text = cellCase(names[i], false)
+        if bkind <> "sel" then addShadow(bl)
         bx = bx + btnW[i] + Int(2 * b)
     end for
 end sub
@@ -1357,6 +1731,23 @@ function onKeyEvent(key as string, press as boolean) as boolean
             changeSetting()
         else if key = "back" or key = "replay" or key = "options" then
             closeSettings()
+        end if
+        return true
+    end if
+
+    if S.mode = "themes" then
+        if key = "up" then
+            moveTheme(-3)
+        else if key = "down" then
+            moveTheme(3)
+        else if key = "left" then
+            moveTheme(-1)
+        else if key = "right" then
+            moveTheme(1)
+        else if key = "OK" then
+            pickTheme()
+        else if key = "back" or key = "replay" or key = "options" then
+            closeThemes()
         end if
         return true
     end if
