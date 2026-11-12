@@ -50,18 +50,18 @@ link to them, and what you do with them is up to you.
 `python3 build.py OUT --list` prints the same with download sizes. The full build downloads
 about 20 GB and keeps about 13 GB.
 
-What we pair them with: 80s shows get `80s`, 90s shows `90s`; Stranger Things gets
+How we pair them, as an example: 80s shows get `80s`, 90s shows `90s`; Stranger Things gets
 `reels8486` + `games80s` + `trailers80s`; horror films get `horror` + `fifties`; black-and-white
 classics and The Twilight Zone get `fifties`; romantic comedies get `romcom` + `ads2000s` + `90s`;
 Star Wars films get `starwars` + `90s`.
-The sets added on 2026-11-08 go with channels of the same name (MCU films get `marvel`, Fast & Furious
+The channel-themed sets go with channels of the same name (MCU films get `marvel`, Fast & Furious
 `cars`, a Sci-Fi channel `scifi`, and so on); `sixties` and `fifties` go between drama episodes,
 `seventies` with 70s crime films and drive-in movies.
 A small themed set on its own makes every break the same few ads (MCU breaks were six
 Spider-Man 2 spots in a row), so on the channels these sets go with they are mixed with general
 ads of the period: the themed ones then come up about one in four to one in six.
 
-**Quality bar for the 2026-11-08 sets.** Ordinary soft VHS stays. Thrown out: burned-in watermarks
+**Quality bar.** Ordinary soft VHS stays. Thrown out: burned-in watermarks
 and running timecode (two Periscope Film uploads, 97 pieces), VHS tracking noise over the whole
 picture, VCR on-screen displays, black or title-card pieces, pieces over about two minutes, and
 software demo videos that never aired. The Powerhouse bumper reel was cut by hand, not by `build.py`: black frames inside its bumpers made the usual split produce fragments, so it was cut only at black gaps of 0.3 s or more, pieces under 10 s joined to the next (the catalog lists the result). Two sources were mislabelled (one "2000s/2010s ads" item is
@@ -86,7 +86,7 @@ clips are kept, and a part-finished download resumes.
 
 Two tab-separated files, readable in any spreadsheet:
 
-**`sources.tsv`**: one row per file downloaded (680).
+**`sources.tsv`**: one row per file downloaded (1,684).
 
 | Column | Meaning |
 |---|---|
@@ -99,7 +99,7 @@ Two tab-separated files, readable in any spreadsheet:
 | `reason` | why it was rejected |
 | `archive_title` | the Archive item's title |
 
-**`clips.tsv`**: one row per clip that came out (1,120 on air, 90 rejected).
+**`clips.tsv`**: one row per clip that came out (3,488 on air, 787 rejected).
 
 | Column | Meaning |
 |---|---|

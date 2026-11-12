@@ -21,7 +21,7 @@ the channels; several small boxes and apps tune in.
 ```
                  ┌──────────────────────────────────────────────┐
                  │  Home server: ErsatzTV (port 8409)           │
-                 │  36 scheduled channels from a Plex library,  │
+                 │  Scheduled channels from your media library, │
                  │  ads between and inside programmes, a guide  │
                  └──────────────┬───────────────────────────────┘
                                 │  channel list (M3U), guide (XMLTV), streams
@@ -30,16 +30,16 @@ the channels; several small boxes and apps tune in.
   Batocera Pi 4    Retro TV box      Browser app        Roku app         Any player
   Kodi, retro      Pi 4 that boots   Docker container   SceneGraph       mpv, VLC …
   guide skin,      straight into     with the guide,    channel for a
-  1,075 games,     the guide on a    open it on a       Roku on the
-  Sony Trinitron   12-inch CRT       laptop or phone    home network
+  retro games,     the guide on a    open it on a       Roku on the
+  HDMI TV or CRT   CRT               laptop or phone    home network
 ```
 
 | Piece | What it is | Start here |
 |---|---|---|
-| **ErsatzTV channels** | How the channels are built: video profile for a CRT, smart collections, ad breaks, schedules, the commercials catalog (1,120 clips) and a script to rebuild them | [`ersatztv/README.md`](ersatztv/README.md) |
-| **Browser app** | The TV guide viewer: plain HTML/CSS/JS behind nginx, in Docker. Pick a show, it plays; keeps playing in the corner while you browse. Nine themes (Cable, Vaporwave, Digital Cable, Satellite, DVR, Media Center, Aqua, Set-Top Web, TV Guide), each with its own splash screen. Reachable from phones over Tailscale through [Gantry](https://github.com/awall451/gantry), a companion project | [`docker/README.md`](docker/README.md) |
-| **Batocera Pi** | The first Pi: Batocera 43.1 with retro games, Kodi live TV with a cable-style guide skin, Plex, and two display profiles (flat HDMI TV or the Trinitron through a composite converter) | [`pi/README.md`](pi/README.md), full guide in [`docs/`](docs/index.html) |
-| **Retro TV box** | The second Pi: a stock Pi OS Lite card plus one script becomes a box that boots to the guide full screen on a CRT, with a themed boot splash and an IR remote | [`pi-image/README.md`](pi-image/README.md) |
+| **ErsatzTV channels** | How the channels are built: video profile for a CRT, smart collections, ad breaks, schedules, the commercials catalog and a script to rebuild them | [`ersatztv/README.md`](ersatztv/README.md) |
+| **Browser app** | The TV guide viewer: plain HTML/CSS/JS behind nginx, in Docker. Pick a show, it plays; keeps playing in the corner while you browse. Nine themes (Cable, Vaporwave, Digital Cable, Satellite, DVR, Media Center, Aqua, Set-Top Web, TV Guide), each with its own splash screen | [`docker/README.md`](docker/README.md) |
+| **Batocera Pi** | A Raspberry Pi running Batocera 43.1: retro games, Kodi live TV with a cable-style guide skin, Plex, and two display profiles (a flat HDMI TV, or a 4:3 CRT through a composite converter) | [`pi/README.md`](pi/README.md), full guide in [`docs/`](docs/index.html) |
+| **Retro TV box** | A Raspberry Pi as an appliance: a stock Pi OS Lite card plus one script becomes a box that boots to the guide full screen on a CRT, with a themed boot splash and an IR remote | [`pi-image/README.md`](pi-image/README.md) |
 | **Roku** | The same guide and channels as a sideloaded Roku channel | [`roku-tv/README.md`](roku-tv/README.md) |
 
 Everything downstream of the server is a **viewer**: it reads ErsatzTV's channel list, listings and
@@ -52,30 +52,35 @@ read-only `/iptv/` paths get through.
 
 <table><tr><td align="center"><img src="docs/img/readme/es-snes-1080.jpg" width="400"><br><sub>Batocera's system view</sub></td><td align="center"><img src="docs/img/readme/tv-guide-playing-cable.png" width="400"><br><sub>The Retro TV box: the guide at 640×480</sub></td><td align="center"><img src="docs/img/readme/kodi-details-640.png" width="400"><br><sub>Show details in Kodi</sub></td></tr></table>
 
-## Hardware
+## What you need
+
+Only the server is required. Pick whichever viewers suit the screens you have.
 
 | | |
 |---|---|
-| Server | A Linux box with an NVIDIA GPU running ErsatzTV (k3s here; Docker Compose works too) |
-| Batocera Pi | Raspberry Pi 4 (8 GB), Argon ONE M.2 case, 1 TB SSD, PS5 DualSense, Sony Trinitron KV-19TR20 through a Dingsun HDMI-to-composite converter |
-| Retro TV box | Raspberry Pi 4 (2 GB), official PoE+ HAT, 16 GB card, a 12-inch CRT with composite input through the same kind of converter (or the Pi's own composite jack), MCE USB IR receiver |
-| Elsewhere | A laptop running the browser app in Docker behind [Gantry](https://github.com/awall451/gantry), a Roku, phones |
+| Server | Any machine that runs [ErsatzTV](https://ersatztv.org) (Docker or Kubernetes) and can reach your media. A GPU or other hardware encoder helps once several channels are watched at the same time |
+| Browser app | Anything that runs Docker |
+| Batocera Pi | A Raspberry Pi 4, a game controller, and an HDMI TV; for a CRT, an HDMI-to-composite converter |
+| Retro TV box | A Raspberry Pi 4 (2 GB is plenty) and a TV with HDMI or composite input; an IR receiver is optional |
+| Roku | A Roku on the same network as the server |
+
+Each piece's page lists its parts in detail and names the hardware it was built and tested on.
 
 ## Repo map
 
 | Folder | What's in it |
 |---|---|
 | `docs/` | The HTML guide to the Batocera Pi (open `docs/index.html` in a browser): setup, game library, shaders, display profiles, live TV, reference |
-| `pi/display-profiles/` | The HDMI / Trinitron profile switcher and its helpers, installed on the Batocera Pi |
+| `pi/display-profiles/` | The HDMI / CRT profile switcher and its helpers, installed on the Batocera Pi |
 | `pi/kodi-skin/` | Kodi's retro TV guide and show details screens, and the live-TV controller map |
 | `pi/scripts/` | Batocera launch hooks (`/userdata/system/scripts/`) |
-| `pi/shaders/` | Shader sets and the Trinitron CRT presets |
+| `pi/shaders/` | Shader sets and the Trinitron-style CRT presets |
 | `pi/snapshots/` | Sanitized copies of the Batocera Pi's config files |
 | `tools/` | Scripts run from a PC or copied to the Pi: flashing, importing a game library, BIOS check, shader benchmarks |
 | `tools/render-splash/` | Renders the viewer's splash scenes to PNG for the Roku app and the box's boot screen |
 | `docker/` | The browser app (Docker Compose) |
 | `roku-tv/` | The Roku app |
-| `pi-image/` | The Retro TV box: design, config, `setup.sh`, boot splash, IR key map, build log |
+| `pi-image/` | The Retro TV box: design, config, `setup.sh`, boot splash, IR key map |
 | `ersatztv/` | How the channels are built, and the commercials |
 
 ## Conventions
@@ -89,8 +94,6 @@ read-only `/iptv/` paths get through.
   (`.gitattributes`); a shell script with Windows line endings fails on Batocera.
 - **HD twins.** The server gives every channel an HD copy (number + 100, group `HD`) for modern
   screens. The CRT boxes hide that group; the browser app and the Roku offer Standard / HD.
-- Work lands on `main`; features are built on `feat/*` branches and merged when they run on the
-  real hardware.
 
 ## License
 

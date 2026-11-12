@@ -9,24 +9,17 @@
   <a href="../ersatztv/README.md">ErsatzTV channels</a>
 </p>
 
-The late-90s cable guide from the Trinitron, in a web browser: open the page, the guide appears,
+A late-90s cable guide in a web browser: open the page, the guide appears,
 pick a show, it plays. The show keeps playing in the corner box while you browse.
 
 It is a viewer only. It reads ErsatzTV's channel list, listings and streams, and can change
 nothing on the server.
 
 ```
-browser ──► Gantry (this machine's proxy) ──► retro-tv container (nginx)
-                                                ├─ /        the guide (static files)
-                                                └─ /iptv/…  read-only pass-through ──► ErsatzTV
+browser ──► retro-tv container (nginx)
+              ├─ /        the guide (static files)
+              └─ /iptv/…  read-only pass-through ──► ErsatzTV
 ```
-
-The proxy in that picture is [Gantry](https://github.com/awall451/gantry), a companion project by the same author: a Docker
-dashboard with a Caddy reverse proxy built in. It watches the Docker socket and gives every
-container with a published port a name, `retro-tv.localhost` at the desk and
-`https://retro-tv.<your domain>` from a phone over Tailscale, with a real certificate and nothing
-open to the internet. It is optional: without it the viewer is at `http://localhost:8410` on the
-machine that runs it, and any other reverse proxy can stand in its place.
 
 ## Screens
 
@@ -60,7 +53,7 @@ Then open <http://localhost:8410>.
 |---|---|
 | `ERSATZTV_URL` | Where ErsatzTV answers, as seen from this machine: `http://<server-ip>:8409`. No trailing slash. If the server is also on your tailnet, use its tailnet address and the viewer works at home and away. |
 | `VIEWER_PORT` | Port the viewer is published on. Default `8410`. |
-| `VIEWER_BIND` | Where that port is open. Default `127.0.0.1` (this machine only; other devices come in through Gantry, see below). `0.0.0.0` also opens it to every device on the local network, with no login. |
+| `VIEWER_BIND` | Where that port is open. Default `127.0.0.1` (this machine only; see "Reach it from other devices" below). `0.0.0.0` also opens it to every device on the local network, with no login. |
 | `COMPOSE_FILE`, `UPLINK_PORT`, `UPLINK_BIND` | Only for the uplink add-on, below. |
 
 After changing a file under `web/`, run `docker compose up -d --build` again. After changing only
@@ -83,21 +76,22 @@ That starts a second small container, `retro-tv-uplink`, on the host's network. 
 its ErsatzTV requests to it and it passes them on. It listens on the Docker bridge address only
 (`172.17.0.1:8411`; change with `UPLINK_BIND` and `UPLINK_PORT`), so other machines cannot reach it.
 
-## Reach it from other devices (Gantry)
+## Reach it from other devices
 
-The viewer's port is published on loopback, so by itself it is reachable from this machine only.
-[Gantry](https://github.com/awall451/gantry), the reverse proxy this machine runs, is the way in from elsewhere.
-It finds the container by its published port and routes it under the container's name:
+The viewer's port is published on loopback, so out of the box only this machine can open it.
+Two ways to let phones, tablets and other computers in:
 
-- `http://retro-tv.localhost` on this machine
-- `https://retro-tv.<your Gantry tailnet domain>` from any device on the tailnet
+- **On the home network:** set `VIEWER_BIND=0.0.0.0` in `.env` and run `docker compose up -d`.
+  The viewer is then at `http://<this machine's address>:8410` for every device on the network,
+  with no login.
+- **Through a reverse proxy:** point any proxy that can reach `127.0.0.1:8410` at it (Caddy,
+  nginx, Traefik). That gives it a name and HTTPS, and with a VPN such as Tailscale it works
+  away from home too. One option is [Gantry](https://github.com/awall451/gantry), a Docker
+  dashboard with a reverse proxy built in, by the same author: it finds the container by its
+  published port and serves it as `http://retro-tv.localhost` and, over Tailscale,
+  `https://retro-tv.<your domain>`.
 
-For a shorter name, add a manual route in Gantry (for example hostname `tv`, port `8410`).
-
-Not running Gantry? Any reverse proxy that can reach `127.0.0.1:8410` does the same job, or set
-`VIEWER_BIND=0.0.0.0` in `.env` to open the port to the local network directly.
-
-Keep it on the tailnet. Do not publish it to the internet (no Funnel, no port forwarding).
+Keep it on your own network or VPN. Do not publish it to the internet: there is no login.
 
 ## Using it
 
@@ -313,8 +307,7 @@ docker/
 │       ├── js/app.js         the guide, the three screens, every input
 │       ├── fonts/            the themes' fonts (SIL Open Font License) and PrevueGrid for the TV Guide page and theme (see its NOTICE)
 │       └── vendor/           hls.js 1.7.3 (Apache-2.0), served from here, not a CDN
-├── notes/                    hand-over notes to the Pi side
-└── design/mockup.html        the approved design
+└── design/mockup.html        the original design mockup
 ```
 
 No build step: the app is plain HTML, CSS and JavaScript modules.
@@ -327,6 +320,6 @@ No build step: the app is plain HTML, CSS and JavaScript modules.
 | "Channel unavailable, retrying…", or ErsatzTV's own error picture, after surfing | Too many channels were started in a short time and the server ran out of video encoders. Wait a minute; it retries by itself. |
 | "Channel unavailable, retrying…" on one channel only | The server did not start that stream. It retries by itself; if it keeps failing, look at that channel in ErsatzTV. |
 | `compose up` fails with "copy .env.example to .env" | Do that, and set `ERSATZTV_URL`. |
-| Port 8410 is taken | Set another `VIEWER_PORT` in `.env`, then `docker compose up -d`. Update any manual Gantry route to the same number. |
+| Port 8410 is taken | Set another `VIEWER_PORT` in `.env`, then `docker compose up -d`. Update any reverse-proxy route to the same number. |
 | The guide shows old listings | Press R. The server's schedules are sometimes rebuilt. |
 | A picture inside the picture has black bars | That is how the file was made (a widescreen show on a 4:3 channel), not the viewer. |

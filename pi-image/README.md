@@ -16,8 +16,7 @@ folder holds the design, the configuration, and the script that turns a stock Ra
 Lite card into the box.
 
 Where it stands: the script route (step 1, below) works on real hardware; the one-file image
-(step 2) is not built yet. The build log, with dates and what is still to be tested, is in
-[`NOTES.md`](NOTES.md).
+(step 2) is not built yet. What is still untested is listed under "Not yet".
 
 <table><tr><td align="center"><img src="../docs/img/readme/tv-guide-playing-cable.png" width="600"><br><sub>What the box shows: the guide at 640×480, a show playing in the box</sub></td><td align="center"><img src="../docs/img/readme/poe-hat.jpg" width="600"><br><sub>The official PoE+ HAT: one cable for power and network</sub></td></tr></table>
 
@@ -83,8 +82,7 @@ Where it stands: the script route (step 1, below) works on real hardware; the on
 - **TV power and volume stay with the TV.** A universal remote with "punch-through" sends power
   and volume to the TV and everything else to the box. The box itself is switched off from its
   settings screen (Power off, pressed twice), and the plug is pulled only once the green light
-  is out: a Pi unplugged while running can lose files, and this one once lost its Wi-Fi profile
-  that way. The Pi cannot be switched on by IR: power from fully off is the PoE switch's port (if
+  is out: a Pi unplugged while running can lose files, its Wi-Fi profile among them. The Pi cannot be switched on by IR: power from fully off is the PoE switch's port (if
   it is managed) or the plug.
 - **Read-only system, writable data** (planned for step 2). The root filesystem is mounted
   read-only with an overlay, so pulling the plug can never corrupt the card. A separate writable
@@ -115,7 +113,6 @@ About 25 seconds from power to SSH on a Pi 4; the guide follows a few seconds la
 ```
 pi-image/
 ├── README.md                      this page
-├── NOTES.md                       build log: what was tested when, open items
 ├── setup.sh                       turns a fresh Pi OS Lite into the box; run again after changes
 └── config/
     ├── retro-tv.env.example       the box's settings: server address, display mode, margins, extra Wi-Fi name, Tailscale
@@ -223,18 +220,18 @@ survive.
   left, wlroots refuses to start unless `WLR_LIBINPUT_NO_DEVICES=1` is set, so the service sets
   it. The viewer also hides the pointer in `?tv` mode.
 - **No Ethernet link means Wi-Fi, silently.** If the cable is out or the switch port is off, the box
-  comes up on Wi-Fi and nothing on screen said so. One box did exactly that and its 5 GHz link
-  dropped about 40% of packets in 30-second holes every minute: nginx's connects to the server
-  timed out, and the guide showed "Channel unavailable, retrying…" for a few seconds at a time.
-  Plugging the cable in fixed it at once (NetworkManager prefers Ethernet). The settings screen
+  comes up on Wi-Fi and nothing on screen says so. On a weak 5 GHz link that means bursts of lost
+  packets: nginx's connects to the server time out, and the guide shows "Channel unavailable,
+  retrying…" for a few seconds at a time. Plugging the cable in fixes it at once (NetworkManager
+  prefers Ethernet). The settings screen
   now shows the path and the signal, and the network check reconnects or reboots on its own.
 - **Do not pin the Wi-Fi band over SSH.** Many dual-band routers broadcast two names, such as
   `Home` and `Home - 5G`; a profile for the 5 GHz name pinned to 2.4 GHz can never associate,
   and a headless box is then unreachable. Give the 2.4 GHz name as `WIFI_EXTRA_SSID` instead
   and let NetworkManager choose.
 - **A power cut took the Wi-Fi profile with it.** NetworkManager rewrites a profile's file each
-  time the network connects. One box was unplugged while running on Wi-Fi and came back with no
-  Wi-Fi profile at all, so it booted with no network and no way to say so. Imager's `network-config` on the boot partition survives, and the
+  time the network connects. A box unplugged while running on Wi-Fi can come back with no Wi-Fi
+  profile at all: no network, and no way to say so. Imager's `network-config` on the boot partition survives, and the
   restore step rebuilds the profiles from it at every boot.
 - **The composite cable's yellow plug gave nothing.** Pi OS was driving the jack (the kernel
   showed `Composite-1` connected, and a `grim` capture under `cage` showed the guide), but the
@@ -248,7 +245,7 @@ survive.
   The style is a separate file now (`overscan.css`) and the image fills the screen.
 - **Flipping through themes made the box crawl.** Each theme change rebuilt the initramfs at
   once, for every installed kernel, at normal priority, and several presses in a row ran several
-  rebuilds at the same time (the service had burned six minutes of CPU in an afternoon). Now the
+  rebuilds at the same time. Now the
   rebuild waits for 20 quiet seconds, runs once under `nice` and `ionice`, and only for the
   kernel this Pi boots; it takes about 15 seconds and the guide does not notice.
 - **Sound defaulted to the headphone jack.** PipeWire picks the 3.5 mm jack as the default

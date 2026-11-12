@@ -1,4 +1,4 @@
-# The Batocera Pi: games, Plex and live TV on a Sony Trinitron
+# The Batocera Pi: games, Plex and live TV on a flat TV or a CRT
 
 <p align="center">
   <a href="../README.md">Home</a> &nbsp;·&nbsp;
@@ -9,14 +9,13 @@
   <a href="../ersatztv/README.md">ErsatzTV channels</a>
 </p>
 
-One Raspberry Pi 4 running Batocera 43.1 that plays retro games and a shared Plex library, and
-watches the ErsatzTV channels in Kodi through a late-90s cable-style guide. From the controller it
-switches between a flat HDMI TV and a 4:3 Sony Trinitron.
+A Raspberry Pi 4 running Batocera 43.1 that plays retro games and a Plex library, and watches the
+ErsatzTV channels in Kodi through a late-90s cable-style guide. From the controller it switches
+between a flat HDMI TV and a 4:3 CRT.
 
 This page is the short version. **The full guide is the HTML in [`docs/`](../docs/index.html)**
-(open `docs/index.html` in a browser; also published privately as a
-[Claude artifact](https://claude.ai/artifact/V1V4L9BL9b557rc5xS4qQt)). It records every step, so
-the whole setup can be rebuilt from a blank card.
+(open `docs/index.html` in a browser). It follows one build from a blank card to the finished
+system, step by step.
 
 | Guide page | Covers |
 |---|---|
@@ -30,31 +29,35 @@ the whole setup can be rebuilt from a blank card.
 <p align="center"><img src="../docs/img/readme/game-dkc2-1080.jpg" alt="Donkey Kong Country 2 under the Trinitron shader" width="100%"></p>
 <p align="center"><sub>Donkey Kong Country 2 on the flat TV, through the <code>trinitron-hdmi</code> shader: aperture-grille mask, a little curvature.</sub></p>
 
-<table><tr><td align="center"><img src="../docs/img/readme/es-snes-1080.jpg" width="400"><br><sub>The system carousel (Carbon theme, HDMI profile)</sub></td><td align="center"><img src="../docs/img/readme/es-grid-snes-1080.jpg" width="400"><br><sub>313 SNES games with box art</sub></td><td align="center"><img src="../docs/img/readme/bcc-game-1080.jpg" width="400"><br><sub>Batocera's Control Center over a running game</sub></td></tr></table>
+<table><tr><td align="center"><img src="../docs/img/readme/es-snes-1080.jpg" width="400"><br><sub>The system carousel (Carbon theme, HDMI profile)</sub></td><td align="center"><img src="../docs/img/readme/es-grid-snes-1080.jpg" width="400"><br><sub>The SNES grid with box art</sub></td><td align="center"><img src="../docs/img/readme/bcc-game-1080.jpg" width="400"><br><sub>Batocera's Control Center over a running game</sub></td></tr></table>
 
 <table><tr><td align="center"><img src="../docs/img/readme/game-smw-1080.jpg" width="400"><br><sub>Super Mario World</sub></td><td align="center"><img src="../docs/img/readme/game-sonic2-1080.jpg" width="400"><br><sub>Sonic the Hedgehog 2</sub></td><td align="center"><img src="../docs/img/readme/game-crash-1080.jpg" width="400"><br><sub>Crash Bandicoot (PlayStation)</sub></td></tr></table>
 
 ## What the finished system does
 
-- 1,075 games across SNES, NES, Mega Drive, Game Boy, GBC, GBA and PlayStation, imported from a
-  Miyoo Mini (Onion) backup with its box art.
+- Retro games with box art, on whatever systems Batocera supports on a Pi 4. Bring your own
+  ROMs; import scripts are included for a library that comes from a Miyoo Mini (Onion) card.
 - Two display profiles, picked from the **Ports** menu: a 16:9 HDMI TV with a Trinitron-style
-  CRT shader, or the real Trinitron through an HDMI-to-composite converter at 640×480 with no
-  shaders, overscan margins and a CRT-legible menu. Either profile gives a picture on either TV.
+  CRT shader, or a real CRT through an HDMI-to-composite converter at 640×480 with no shaders,
+  overscan margins and a CRT-legible menu. Either profile gives a picture on either TV.
 - Kodi with the live channels (ErsatzTV on the home server) and on-demand Plex (PM4K), both
   following the active display profile.
-- Storage on a 1 TB SSD, SSH by key, an Argon ONE case with its fan service on.
 
-## Hardware
+## What you need
 
 | Part | Notes |
 |---|---|
-| Raspberry Pi 4 Model B, 8 GB | Wired Ethernet, address pinned by a DHCP reservation |
-| Argon ONE M.2 case | The shell is the heatsink; fan and power button on an I2C board at `0x1a` |
-| 1 TB M.2 SATA SSD | `/userdata` lives here (a `batocera` folder, picked by UUID in `batocera-boot.conf`) |
-| 32 GB microSD | Holds Batocera |
-| Dingsun HDMI-to-composite converter | Only for the Trinitron; outputs 480i, NTSC switch, USB powered |
-| PS5 DualSense | Bluetooth; the PS button is the hotkey |
+| Raspberry Pi 4 Model B | Wired Ethernet is best; give it a fixed address (a DHCP reservation) |
+| microSD card | Holds Batocera |
+| A game controller | Bluetooth or USB; its hotkey button opens Batocera's menus |
+| HDMI-to-composite converter | Only for a CRT. One that outputs 480i with an NTSC switch |
+| SSD or other USB storage, optional | Room for `/userdata` (a `batocera` folder, picked by UUID in `batocera-boot.conf`) |
+| Argon ONE case, optional | Steps 3 and 4 below cover its SSD bay, fan and power button |
+
+**Tested on:** Raspberry Pi 4 (8 GB) in an Argon ONE M.2 case with a 1 TB SATA SSD and a 32 GB
+card, a PS5 DualSense, and a Sony Trinitron KV-19TR20 through a Dingsun HDMI-to-composite
+converter. The CRT profile's file names, menu entry ("Sony Trinitron") and shader presets carry
+that tube's name; they work on any 4:3 set.
 
 ## Setting it up, in order
 
@@ -63,16 +66,17 @@ the whole setup can be rebuilt from a blank card.
    image, then reads the card back and compares SHA-256.
 2. **SSH by key**: `ssh-keygen -t ed25519`, append the public key to `/userdata/system/.ssh/authorized_keys`
    on the Pi (root's home is on the SSD, so it survives updates). Use the IP, not `batocera.local`.
-3. **Move `/userdata` to the SSD**: ext4 the drive, copy the card's `/userdata` into a `batocera`
+3. **Move `/userdata` to an SSD** (optional): ext4 the drive, copy the card's `/userdata` into a `batocera`
    folder on it, set `sharedevice=DEV <UUID>` in `/boot/batocera-boot.conf`, reboot, check with
    `findmnt /userdata`.
-4. **Argon fan and button**: `dtparam=i2c_arm=on`, `dtparam=i2c-1=on` in `config.txt` and
+4. **Argon ONE fan and button** (only with that case): `dtparam=i2c_arm=on`, `dtparam=i2c-1=on` in `config.txt` and
    `system.power.switch=ARGONONE` in `batocera.conf`.
 5. **BIOS files**: [`tools/check_bios.py`](../tools/check_bios.py) checks MD5s against Batocera's list.
-6. **Game library**: stage each Onion system folder on the SSD, then
-   [`tools/import_onion.py`](../tools/import_onion.py) (cartridge systems: ROMs, fully validated
-   PNG art, `gamelist.xml`) and [`tools/import_onion_psx.py`](../tools/import_onion_psx.py)
-   (cue + tracks, one `.m3u` per multi-disc game). Scrape only what is missing afterwards.
+6. **Game library**: copy your ROMs into `/userdata/roms/<system>/` and scrape the art in
+   Batocera. Coming from a Miyoo Mini (Onion) card instead? Stage each Onion system folder on the
+   Pi, then run [`tools/import_onion.py`](../tools/import_onion.py) (cartridge systems: ROMs, fully
+   validated PNG art, `gamelist.xml`) and [`tools/import_onion_psx.py`](../tools/import_onion_psx.py)
+   (cue + tracks, one `.m3u` per multi-disc game), and scrape only what is missing afterwards.
 7. **Shaders and profiles**: copy `pi/shaders/configs/*` to `/userdata/shaders/configs/`,
    `pi/shaders/crt/*.glslp` to `/userdata/shaders/crt/`, `pi/display-profiles/*` to
    `/userdata/system/display-profiles/`, its `ports/*` to `/userdata/roms/ports/`, `pi/kodi-skin/*`
@@ -93,17 +97,17 @@ Pick **Display: HDMI TV (16:9)** or **Display: Sony Trinitron (4:3 CRT)** in Por
 rewrites a complete set of video, theme, Control Center, Kodi and Plex settings, backs up what it
 changes, and reboots (about 30 s).
 
-| | HDMI TV | Trinitron |
+| | HDMI TV | CRT |
 |---|---|---|
 | Output | Best mode up to 1080p | `max-640x480`, 60 Hz |
-| Overscan margins (kernel `video=`) | None | left 13, right 27, top 0, bottom 20 px |
+| Overscan margins (kernel `video=`) | None | Per TV, from `crt-margins.conf` (the test set needed left 13, right 27, top 0, bottom 20 px) |
 | Shader set | `trinitron-hdmi`: crt-pi with an aperture-grille mask, horizontal curvature; LCD looks for handhelds | `trinitron-crt`: none; the tube draws the real thing |
 | Menu theme | Stock Carbon | Carbon CRT: bold, white, bigger titles (1-pixel strokes flicker on 480i) |
 | Control Center | Stock | Compact 12 px bold layout that fits 640 px |
 | Kodi skin | Estuary Retro: the retro TV guide, channel banner and show details laid out for 16:9 | Estuary CRT: the same screens on the 4:3 canvas, plus every font bold and 1.5× |
 | Plex (PM4K) quality | Original | 480p, 1.5 Mbps (software decoding) |
 
-<table><tr><td align="center"><img src="../docs/img/readme/es-snes-1080.jpg" width="600"><br><sub>HDMI profile: 1080p, stock Carbon</sub></td><td align="center"><img src="../docs/img/readme/es-snes-640.png" width="600"><br><sub>Trinitron profile: 640×480, Carbon CRT (bold, bigger, no thin strokes)</sub></td></tr></table>
+<table><tr><td align="center"><img src="../docs/img/readme/es-snes-1080.jpg" width="600"><br><sub>HDMI profile: 1080p, stock Carbon</sub></td><td align="center"><img src="../docs/img/readme/es-snes-640.png" width="600"><br><sub>CRT profile: 640×480, Carbon CRT (bold, bigger, no thin strokes)</sub></td></tr></table>
 
 <table><tr><td align="center"><img src="../docs/img/readme/es-grid-snes-640.png" width="400"><br><sub>The SNES grid at 640×480</sub></td><td align="center"><img src="../docs/img/readme/bcc-game-640.png" width="400"><br><sub>The compact Control Center, 12 px bold, fits 640 px</sub></td><td align="center"><img src="../docs/img/trinitron-shader-zoom.png" width="400"><br><sub>The Trinitron shader on a flat TV, 3× zoom</sub></td></tr></table>
 
@@ -150,7 +154,7 @@ margins are hardware DRM properties set on the kernel command line from
 - **Launch hook** in `/userdata/system/scripts/`:
   [`scripts/kodi-fullscreen-fix.sh`](scripts/kodi-fullscreen-fix.sh), which toggles full screen
   once after Kodi opens because sway first places the window 19 px low.
-- The converter does not pass HDMI-CEC, so the controller drives Kodi on the Trinitron, not a
+- The converter does not pass HDMI-CEC, so the controller drives Kodi on the CRT, not a
   TV remote.
 
 <table><tr><td align="center"><img src="../docs/img/readme/kodi-guide-640.png" width="600"><br><sub>The retro guide: the show you are watching in the box, the highlighted show beside it</sub></td><td align="center"><img src="../docs/img/readme/kodi-details-640.png" width="600"><br><sub>Show details, big and bold for the tube</sub></td></tr></table>
@@ -169,7 +173,7 @@ margins are hardware DRM properties set on the kernel command line from
 |---|---|
 | `display-profiles/apply.sh hdmi\|crt` | `/userdata/system/display-profiles/apply.sh`: applies a profile, backs up, logs to `logs/display-profile.log`, reboots |
 | `display-profiles/ports/` | The two Ports menu entries (`/userdata/roms/ports/`) |
-| `display-profiles/crt-margins.conf` | The Trinitron's overscan margins |
+| `display-profiles/crt-margins.conf` | The CRT's overscan margins |
 | `display-profiles/make_crt_theme.sh` | Builds the Carbon CRT theme (`/userdata/themes/es-theme-carbon-crt`) |
 | `display-profiles/make_bcc_compact_css.py`, `make_bcc_layout.py` | Control Center stylesheet and layout |
 | `display-profiles/make_kodi_skin.sh` + `kodi-skin/` | Builds and enables the retro Kodi skin: `crt` (4:3, big bold fonts; screens in `kodi-skin/`) or `hdmi` (16:9; screens in `kodi-skin/hdmi/`). Stops cleanly and falls back to stock Estuary if a Batocera update changed Estuary |
@@ -178,7 +182,7 @@ margins are hardware DRM properties set on the kernel command line from
 | `scripts/` | `/userdata/system/scripts/`: Batocera's per-launch hooks |
 | `shaders/configs/trinitron-hdmi`, `trinitron-crt` | `/userdata/shaders/configs/`: the two shader sets |
 | `shaders/crt/trinitron.glslp`, `trinitron-flat.glslp` | `/userdata/shaders/crt/`: crt-pi tuned for a Trinitron, curved and flat |
-| `snapshots/` | Sanitized copies of `batocera.conf`, `batocera-boot.conf`, `cmdline.txt`, `config.txt`, `crt-margins.conf`, `es_settings.cfg` (2026-11-05, Trinitron profile) |
+| `snapshots/` | Sanitized copies of `batocera.conf`, `batocera-boot.conf`, `cmdline.txt`, `config.txt`, `crt-margins.conf`, `es_settings.cfg`, taken in the CRT profile |
 
 Copy files over with `scp -i ~/.ssh/<key> <file> root@<pi-ip>:<path>`.
 
@@ -186,13 +190,13 @@ Copy files over with `scp -i ~/.ssh/<key> <file> root@<pi-ip>:<path>`.
 
 | Problem | Fix |
 |---|---|
-| No picture on the Trinitron | Converter powered and on NTSC, TV on the Video input, Pi booted with the converter already on |
+| No picture on the CRT | Converter powered and on NTSC, TV on the Video input, Pi booted with the converter already on |
 | Picture rolls or is black and white | Converter on PAL; switch to NTSC |
-| Edges cut off | Re-measure with the test pattern, edit `crt-margins.conf`, run the Trinitron entry again |
+| Edges cut off | Re-measure with the test pattern, edit `crt-margins.conf`, run the CRT entry in Ports again |
 | Wrong profile | Pick the other Ports entry; both work on either TV |
 | Controller won't connect | Airplane mode: `batocera-planemode disable`, then `/etc/init.d/S32bluetooth restart` |
 | New channels with an empty guide | Close Kodi, move `Database/Epg16.db` and IPTV Simple's two cache files aside, start Kodi |
 | Channels renumbered on the server, Kodi keeps old numbers | Close Kodi, move `Database/TV*.db` and `Database/Epg*.db` aside, start Kodi: it imports the list again |
-| `/userdata` on the card, not the SSD | `findmnt /userdata`; check `sharedevice=DEV <UUID>` and `lsblk -f` |
+| `/userdata` is on the card, not the SSD | `findmnt /userdata`; check `sharedevice=DEV <UUID>` and `lsblk -f` |
 
 More, with the reasons, in [Reference](../docs/reference.html).

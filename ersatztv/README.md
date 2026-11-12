@@ -9,15 +9,16 @@
   <b>ErsatzTV channels</b>
 </p>
 
-How we run 36 round-the-clock "cable" channels on [ErsatzTV](https://ersatztv.org), with
+How to build round-the-clock "cable" channels on [ErsatzTV](https://ersatztv.org), with
 commercials between and inside programmes, a TV guide, and an HD copy of every channel for
-modern screens. It is written so you can do the same with your own library. Kodi on the Pi
+modern screens. It describes the setup this project runs, written so you can do the same with
+your own library. Kodi on the Pi
 watches these channels (see `../pi/`); so does the browser viewer (`../docker/`).
 
 | File | What it is |
 |---|---|
 | `README.md` | This guide |
-| `commercials/` | **The commercials**: 1,120 clips in 12 sets from the Internet Archive, the catalog of where each came from, and `build.py` to rebuild them. Start with `commercials/README.md` |
+| `commercials/` | **The commercials**: about 3,000 clips in 29 sets from the Internet Archive, the catalog of where each came from, and `build.py` to rebuild them. Start with `commercials/README.md` |
 | `lineups.example.json` | Example channel lineups (a few of ours) |
 | `build-queries.py` | Turns a lineups file into ErsatzTV smart collection queries |
 | `check-chapters.py` | Lists episodes a commercial-break channel would drop (see "Chapter marks") |
@@ -29,8 +30,8 @@ Addresses are placeholders: `<server-ip>` is the machine running ErsatzTV (port 
 
 - **ErsatzTV 26.11** in a container, with an NVIDIA card for encoding (NVENC). Every channel,
   the HD twins included, runs on the Next streaming engine (26.12 removes the Legacy one).
-- **The library comes from a Plex server** (a friend's, shared with us). ErsatzTV reads Plex's
-  catalogue and streams a file only while a channel showing it is watched; nothing is copied.
+- **The library comes from a Plex server**, a remote one. ErsatzTV reads Plex's catalogue and
+  streams a file only while a channel showing it is watched; nothing is copied.
   Local folders and Jellyfin/Emby work the same way.
 - **Commercials are a local library** of type Other Videos (see `commercials/README.md`).
 - **One FFmpeg profile for every channel**, `CRT 640x480 NVENC`: NVENC, 640x480, scale and pad,
