@@ -753,9 +753,24 @@ sub onGuideData()
     tunedNum = ""
     if m.S.tuned >= 0 then tunedNum = m.S.channels[m.S.tuned].num
 
+    ' HD twins: group "HD", numbered 1000 above the channel they mirror
+    ' (1 -> 1001). The older +100 numbering is still recognised; the first
+    ' offset that lands on a channel wins.
+    sd = {}
+    for each c in m.chTask.channels
+        if c.group <> "HD" then sd[c.num] = true
+    end for
     hd = {}
     for each c in m.chTask.channels
-        if c.group = "HD" then hd[(c.n - 100).ToStr()] = c.num
+        if c.group = "HD" then
+            for each offset in [1000, 100]
+                key = (c.n - offset).ToStr()
+                if sd.DoesExist(key) and not hd.DoesExist(key) then
+                    hd[key] = c.num
+                    exit for
+                end if
+            end for
+        end if
     end for
     chans = []
     for each c in m.chTask.channels
