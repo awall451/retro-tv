@@ -48,7 +48,7 @@ Where it stands: the script route (step 1, below) works on real hardware; the on
   screen, no desktop, no cursor. Chromium runs in kiosk mode with sound allowed from the start
   (`--autoplay-policy=no-user-gesture-required`: the "press a key for sound" problem does not
   exist here, and a web channel's page, such as a weather loop, plays its music at once; set
-  `WEB_CHANNELS` in `/etc/retro-tv.env`, see `../docker/README.md`) and its profile on a writable data
+  `WEB_CHANNELS` in `/etc/retro-tv.env`, single-quoted, see `../docker/README.md`) and its profile on a writable data
   area so the theme and other settings survive reboots. The page is `http://127.0.0.1:8410/?tv`:
   the plain 640×480 layout.
 - **Boot splash: Plymouth, in the current theme.** The Pi's rainbow square and the scrolling boot

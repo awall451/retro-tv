@@ -206,7 +206,9 @@ WEB_CHANNELS=192=https://weather.example/?kiosk=true;250=https://cam.example/liv
   allows it: after a key press or click on the viewer, or always on the [Pi box](../pi-image/README.md),
   whose kiosk runs Chromium with `--autoplay-policy=no-user-gesture-required`.
 - The map is served at `/web-channels.json`. On the Pi box, set `WEB_CHANNELS` in
-  `/etc/retro-tv.env` and run `setup.sh` again.
+  `/etc/retro-tv.env` and run `setup.sh` again. That file is read by a shell, so put the
+  value in single quotes (`WEB_CHANNELS='192=https://…?a=1&b=2'`): unquoted, a URL is cut off
+  at its first `&` and the channel silently shows its stream.
 
 ### Padding and slow connections
 
