@@ -7,9 +7,11 @@
 #
 # WEB_CHANNELS="192=https://weather.example/?kiosk=true;193=https://cam.example/"
 # Entries are separated by ";" or white space. A URL must start with
-# http:// or https:// and must not contain white space, ";", quotes,
-# backslashes, < or > (percent-encode them). A bad entry is skipped
-# with a warning; the container still starts.
+# http:// or https://, or be a path on the viewer itself starting with a
+# single "/" (WEB_CHANNELS="7=/tvguide.html?tv&promo=7"; 'self' already
+# covers it), and must not contain white space, ";", quotes, backslashes,
+# < or > (percent-encode them). A bad entry is skipped with a warning;
+# the container still starts.
 #
 # The nginx entrypoint sources this file (*.envsh) before it fills in the
 # templates, so the export below reaches them; the Pi box's setup.sh
@@ -28,7 +30,14 @@ WEB_FRAME_SRC=$(
         eq = index(e, "=")
         num = substr(e, 1, eq - 1); url = substr(e, eq + 1)
         if (eq < 2 || num !~ /^[0-9]+(\.[0-9]+)?$/) { warn("skipped \"" e "\": not <channel number>=<url>"); continue }
-        if (url !~ /^[Hh][Tt][Tt][Pp][Ss]?:\/\/[^\/?#]+/ || url ~ /["\\<>'\'']/) { warn("skipped channel " num ": not a plain http(s) URL"); continue }
+        if (url ~ /["\\<>'\'']/) { warn("skipped channel " num ": not a plain http(s) URL or /path"); continue }
+        if (url ~ /^\/([^\/]|$)/) {
+          # A page on the viewer itself: frame-src self covers it.
+          if (num in seen) warn("channel " num " is listed twice; the last one wins")
+          seen[num] = url
+          continue
+        }
+        if (url !~ /^[Hh][Tt][Tt][Pp][Ss]?:\/\/[^\/?#]+/) { warn("skipped channel " num ": not a plain http(s) URL or /path"); continue }
         match(url, /^[Hh][Tt][Tt][Pp][Ss]?:\/\/[^\/?#]+/)
         origin = tolower(substr(url, 1, RLENGTH))
         if (origin !~ /^https?:\/\/([a-z0-9.-]+|\[[0-9a-f:.]+\])(:[0-9]+)?$/) { warn("skipped channel " num ": odd host in " origin); continue }
@@ -39,7 +48,7 @@ WEB_FRAME_SRC=$(
       for (num in seen) json = json (json == "" ? "" : ",\n") "  \"" num "\": \"" seen[num] "\""
       print "{" (json == "" ? "" : "\n" json "\n") "}" > out
       close(out)
-      if (json != "") printf "web-channels: frames allowed from%s\n", origins > "/dev/stderr"
+      if (json != "") printf "web-channels: frames allowed from self%s\n", origins > "/dev/stderr"
       print "'\''self'\''" origins
     }'
 )

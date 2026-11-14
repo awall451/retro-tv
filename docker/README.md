@@ -188,13 +188,22 @@ WEB_CHANNELS=192=https://weather.example/?kiosk=true;250=https://cam.example/liv
 ```
 
 - **Format:** `<channel number>=<URL>`, entries separated by `;` (or spaces). The URL must
-  start with `http://` or `https://` and must not contain spaces, `;`, quotes, backslashes, `<`
-  or `>`: percent-encode those (`%3B`, `%22`, ...). A bad entry is skipped with a line in the
-  container log; the rest still work.
+  start with `http://` or `https://`, or be a path on the viewer itself starting with a single
+  `/`, and must not contain spaces, `;`, quotes, backslashes, `<` or `>`: percent-encode those
+  (`%3B`, `%22`, ...). A bad entry is skipped with a line in the container log; the rest still
+  work.
+- **A page of the viewer's own** is given as a path, so it works under whatever address the
+  viewer is opened with (the Pi box's `127.0.0.1:8410` as well as a browser's). For example the
+  TV Guide Channel page (below) as a channel, its top half playing that channel's own stream:
+  `7=/tvguide.html?tv&promo=7`. Give ErsatzTV's channel 7 the promos and trailers to play; Kodi
+  and the Roku app show that stream on 7. Such a page shares the viewer's origin, so the sandbox
+  below does not hold it in: list only the viewer's own pages that way.
 - **Security:** the viewer's Content-Security-Policy allows frames only from the sites named in
-  the setting (`frame-src`, built from each URL's scheme, host and port; never `*`). Without
-  the setting it stays as it was. The page itself must allow being framed by the viewer's
-  address: no `X-Frame-Options`, or a `frame-ancestors` that names the viewer.
+  the setting (`frame-src`, built from each URL's scheme, host and port; never `*`), plus the
+  viewer itself (`'self'`). Without the setting it stays as it was. The page itself must allow
+  being framed by the viewer's address: no `X-Frame-Options`, or a `frame-ancestors` that names
+  the viewer. The viewer's own pages allow it (`frame-ancestors 'self'`): only the viewer can
+  frame them.
 - **The page is to watch, not to use.** It gets no clicks and never keeps the keyboard focus,
   so the keys, remote and controller go on steering the viewer: channel up and down, the guide
   and typed numbers work as on any channel. It runs sandboxed (scripts and its own storage; no

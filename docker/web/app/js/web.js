@@ -20,7 +20,8 @@ export async function loadWebChannels() {
     const map = await res.json();
     const out = {};
     for (const [num, url] of Object.entries(map || {})) {
-      if (/^\d+(\.\d+)?$/.test(num) && /^https?:\/\//i.test(url)) out[num] = url;
+      // An http(s) URL, or a page on the viewer itself ("/tvguide.html?tv").
+      if (/^\d+(\.\d+)?$/.test(num) && /^(https?:\/\/|\/(?!\/))/i.test(url)) out[num] = url;
     }
     return out;
   } catch {
