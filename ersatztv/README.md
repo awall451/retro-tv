@@ -246,6 +246,13 @@ profile. Read the result with ffmpeg's `cropdetect`: 640x480 is full 4:3, 640x36
 widescreen, 480x360 a 4:3 picture with bars baked into a wide file. `mediaItem` is the episode's
 or movie's id in ErsatzTV's database.
 
+## Live streams and YouTube channels
+
+Channels do not have to come from files. Free 24-hour news streams and the films on a YouTube
+channel can air as ordinary channels through ErsatzTV's Remote Streams library and a small
+relay service. How it works, the relay itself and a script that turns a YouTube channel's films
+into stream files are in [`youtube/`](youtube/README.md).
+
 ## Limits we ran into
 
 - **At most 8 channels can play at once on a consumer NVIDIA card**: each channel being watched
