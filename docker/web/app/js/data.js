@@ -8,7 +8,10 @@ export const HALF_HOUR = 30 * 60 * 1000;
 const SHORT_MS = 15 * 60 * 1000;
 
 const HD_GROUP = 'HD';
-const HD_OFFSET = 100;
+// An HD twin sits this far above the channel it mirrors: 1000 (1 → 1001),
+// which leaves room for three-digit channels. 100 is the older numbering
+// and is still recognised; the first offset that finds a channel wins.
+const HD_OFFSETS = [1000, 100];
 
 async function getText(url) {
   const res = await fetch(url, { cache: 'no-store' });
@@ -119,14 +122,18 @@ export async function loadGuide(now = Date.now()) {
     getText('/iptv/channels.m3u'),
     getText('/iptv/xmltv.xml'),
   ]);
-  // HD twins: a channel in the group "HD", numbered 100 above the channel
-  // it mirrors, is that channel's HD stream. Twins never appear in the
-  // guide; the HD setting makes the viewer ask for them instead.
+  // HD twins: a channel in the group "HD", numbered 1000 (or, on older
+  // servers, 100) above the channel it mirrors, is that channel's HD
+  // stream. Twins never appear in the guide; the HD setting makes the
+  // viewer ask for them instead.
   const all = parseM3U(m3u);
   const channels = all.filter(c => c.group !== HD_GROUP);
   for (const twin of all.filter(c => c.group === HD_GROUP)) {
-    const base = channels.find(c => parseFloat(c.num) + HD_OFFSET === parseFloat(twin.num));
-    if (base) base.hd = twin.num;
+    const num = parseFloat(twin.num);
+    for (const offset of HD_OFFSETS) {
+      const base = channels.find(c => !c.hd && parseFloat(c.num) + offset === num);
+      if (base) { base.hd = twin.num; break; }
+    }
   }
   if (!channels.length) throw new Error('The channel list is empty');
   const progs = parseXmltv(xml, now - 2 * HALF_HOUR, now + 96 * HALF_HOUR);

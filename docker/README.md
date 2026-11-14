@@ -165,7 +165,8 @@ viewer ask for the twin instead. The viewer recognises a twin in ErsatzTV's chan
 things:
 
 - its **Group** is `HD`
-- its **number** is the channel's number plus 100 (channel 1 → 101)
+- its **number** is the channel's number plus 1000 (channel 1 → 1001); plus 100, the older
+  numbering, is still recognised
 
 In ErsatzTV a twin is a channel with Playout Source **Mirror**, Mirror Source Channel set to the
 channel it copies, an HD FFmpeg profile, Streaming Engine **Next**, and **Show In EPG** on (so Kodi gets guide data for it).
