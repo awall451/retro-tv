@@ -441,6 +441,10 @@ body.tv, body.tv * { cursor: none !important; }
 .cell.narrow { padding: 0; color: transparent; }
 .cell.sel { background: var(--fill-sel); color: var(--sel-text); box-shadow: var(--sel-shadow); z-index: 1; }
 .cell.narrow.sel { color: transparent; }
+/* A show with its episode number: the title is cut short, the number never. */
+.cell.with-ep { display: flex; }
+.cell.with-ep .name { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.cell.with-ep .num { flex: none; margin-left: 0.45em; font-size: 0.85em; opacity: 0.75; }
 
 /* The channel being watched: a small flat triangle before its name. */
 .cell.chan.playing::before {

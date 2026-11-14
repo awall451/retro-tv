@@ -52,13 +52,23 @@ sub fetch()
             if ic.Count() > 0 then icon = ic[0].GetAttributes().src
             year = Left(childText(p, "date"), 4)
             if year = "0" then year = ""
+            onscreen = ""
+            ns = ""
+            for each e in p.GetNamedElements("episode-num")
+                scheme = e.GetAttributes().system
+                if scheme = invalid then scheme = ""
+                if scheme = "onscreen" then onscreen = e.GetText()
+                if scheme = "xmltv_ns" then ns = e.GetText()
+            end for
+            ep = ""
+            if not movie then ep = episodeCode(onscreen, ns)
             guide[ch].Push({
                 start: start,
                 ends: ends,
                 title: childText(p, "title"),
                 sub: childText(p, "sub-title"),
                 desc: childText(p, "desc"),
-                ep: childText(p, "episode-num"),
+                ep: ep,
                 year: year,
                 movie: movie,
                 genres: cats.Join(", "),
@@ -99,6 +109,37 @@ function buildCells(progs as object) as object
         end if
     end for
     return out
+end function
+
+' Season and episode as "S01E02" (two digits at least), or "S01E02-E03"
+' for a double episode; "" when there are none (as episodeCode in the
+' viewer's data.js). Onscreen first: ErsatzTV writes a season 0 special as
+' season -1 in the zero-based xmltv_ns.
+function episodeCode(onscreen as string, ns as string) as string
+    s = -1
+    e = -1
+    e2 = -1
+    hit = CreateObject("roRegex", "^S(\d+)\s*E(\d+)(?:\s*-?\s*E?(\d+))?$", "i").Match(onscreen.Trim())
+    if hit.Count() > 2 then
+        s = hit[1].ToInt()
+        e = hit[2].ToInt()
+        if hit.Count() > 3 and hit[3] <> "" then e2 = hit[3].ToInt()
+    else
+        hit = CreateObject("roRegex", "^\s*(\d+)\s*(?:/\s*\d*\s*)?\.\s*(\d+)(?:\s*-\s*(\d+))?\s*(?:/\s*\d*\s*)?\.", "").Match(ns)
+        if hit.Count() < 3 then return ""
+        s = hit[1].ToInt() + 1
+        e = hit[2].ToInt() + 1
+        if hit.Count() > 3 and hit[3] <> "" then e2 = hit[3].ToInt() + 1
+    end if
+    code = "S" + two(s) + "E" + two(e)
+    if e2 > e then code = code + "-E" + two(e2)
+    return code
+end function
+
+function two(n as integer) as string
+    t = n.ToStr()
+    if Len(t) < 2 then t = "0" + t
+    return t
 end function
 
 function childText(p as object, name as string) as string

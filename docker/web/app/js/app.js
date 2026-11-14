@@ -50,6 +50,8 @@ const SURF_MS = 30 * 1000;               // warm-up ends this long after the las
 const SURF_SETTLE_MS = 900;              // start warming the next channel after this pause
 const ROW = 29;                          // a 27 px row and its 2 px line
 const NARROW = 30;                       // cells narrower than this get no label
+const EP_ROOM = 110;                     // cells narrower than this leave the episode number to the panel
+const EP_KEEP = 0.6;                     // ...and so does a cell where less than this share of the title would show
 
 const S = {
   channels: [],
@@ -260,6 +262,15 @@ function cellLabel(cell) {
   return cell.items.length > 1 ? `${cell.title} · ${cell.items.length} shorts` : cell.title;
 }
 
+// The season and episode of a programme ("S01E02"), when the setting is on.
+const epCode = p => (p && getSetting('epnum') === 'on' ? p.ep : '');
+
+// The panel's and the bar's second line: episode number, then the
+// episode's name (or a film's year).
+function epLine(p) {
+  return [epCode(p), p.sub ? `"${p.sub}"` : (p.movie && p.year ? p.year : '')].filter(Boolean).join(' · ');
+}
+
 function renderGrid() {
   const L = S.L, t0 = S.winStart, t1 = t0 + L.span, now = Date.now();
   const x = t => L.timeX + Math.round((t - t0) / L.span * L.timeW);
@@ -289,7 +300,19 @@ function renderGrid() {
       const start = Math.max(cell.start, t0), stop = Math.min(cell.stop, t1);
       const left = x(start), width = x(stop) - left - (stop < t1 ? 2 : 0);
       if (width >= 2) {
-        const node = cellNode('show', cellLabel(cell), left, y, width);
+        // The episode number goes after the title and is never cut: a long
+        // title gives way first. A small cell leaves it to the panel.
+        const code = cell.items.length === 1 && width >= EP_ROOM ? epCode(cell.items[0]) : '';
+        const node = cellNode('show', code ? '' : cellLabel(cell), left, y, width);
+        if (code) {
+          const title = document.createElement('span'), ep = document.createElement('span');
+          title.className = 'name';
+          title.textContent = cell.title;
+          ep.className = 'num';
+          ep.textContent = code;
+          node.classList.add('with-ep');
+          node.append(title, ep);
+        }
         node.dataset.ci = ci;
         node.dataset.t = start;
         node.classList.toggle('none', !!cell.gap);
@@ -303,6 +326,16 @@ function renderGrid() {
   }
   el.chans.replaceChildren(chans);
   el.rows.replaceChildren(rows);
+  // A number that would leave too little of a long title (a wide theme
+  // font, the small TV layout) gives way: the cell shows the title alone.
+  // A title cut by only a little keeps its number.
+  for (const node of el.rows.querySelectorAll('.with-ep')) {
+    const name = node.firstChild;
+    if (name.scrollWidth > name.clientWidth && name.clientWidth < EP_KEEP * name.scrollWidth) {
+      node.classList.remove('with-ep');
+      node.textContent = name.textContent;
+    }
+  }
 
   const tick = now >= t0 && now < t1;
   el.nowTick.hidden = !tick;
@@ -315,7 +348,7 @@ function describe(cell) {
   const rating = (one || cell.items[0] || {}).rating;
   let ep = '', plot = '';
   if (one) {
-    ep = one.sub ? `"${one.sub}"` : (one.movie && one.year ? one.year : '');
+    ep = epLine(one);
     plot = one.desc;
   } else if (cell.items.length) {
     ep = `${cell.items.length} shorts`;
@@ -747,7 +780,7 @@ function fillBanner() {
   el.banCh.textContent = `Ch ${ch.num} · ${ch.name}`;
   el.banClock.textContent = fmtTime(now);
   el.banTitle.textContent = p ? p.title : 'No information';
-  el.banEp.textContent = p ? (p.sub ? `"${p.sub}"` : (p.movie && p.year ? p.year : '')) : '';
+  el.banEp.textContent = p ? epLine(p) : '';
   el.banTime.textContent = p ? fmtRange(p.start, p.stop) + (p.rating ? ` · ${p.rating}` : '') : '';
   el.banFill.style.width = p ? `${clamp((now - p.start) / (p.stop - p.start), 0, 1) * 100}%` : '0';
 }
@@ -1246,6 +1279,9 @@ document.addEventListener('visibilitychange', () => {
 });
 
 window.addEventListener('resize', () => { applyLayout(); applyZoom(); render(); });
+// The grid measures its titles to place the episode numbers: measure
+// again once a theme's font has arrived.
+if (document.fonts) document.fonts.addEventListener('loadingdone', () => render());
 
 // Start: the theme, then the splash over the loading guide. The guide is
 // read in the meantime and is usually ready by the time the splash fades.
