@@ -209,6 +209,11 @@ WEB_CHANNELS=192=https://weather.example/?kiosk=true;250=https://cam.example/liv
   and typed numbers work as on any channel. It runs sandboxed (scripts and its own storage; no
   popups, forms or navigating away) with `allow="autoplay; fullscreen"`. **Mute** cannot reach
   a page's own sound.
+  The page is told the viewer's origin (`Referer` with scheme, host and port, never a path):
+  embedded players such as YouTube's refuse to play without it (error 153). A YouTube playlist
+  works as a channel through its embed address,
+  `https://www.youtube-nocookie.com/embed/videoseries?list=<playlist>&autoplay=1&loop=1&rel=0&controls=0`,
+  if its videos allow embedding; it starts at the playlist's first video on every tune.
 - **Leaving the channel removes the page,** sound and all. HD and "Fill the screen" do not
   apply to web channels; the box is 4:3.
 - **Sound:** the page may start its own sound (music on a weather loop) only if the browser

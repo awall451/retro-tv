@@ -60,7 +60,9 @@ export class WebScreen {
     // no popups, forms or navigating the viewer away.
     frame.allow = 'autoplay; fullscreen';
     frame.setAttribute('sandbox', 'allow-scripts allow-same-origin');
-    frame.referrerPolicy = 'no-referrer';
+    // Only the viewer's origin (scheme, host, port), never a path: embedded
+    // players such as YouTube's refuse to play without it (error 153).
+    frame.referrerPolicy = 'strict-origin';
     frame.addEventListener('load', () => { if (frame === this.frame) this.onLoad(); });
     this.box.insertBefore(frame, this.before);
     this.frame = frame;
