@@ -10,6 +10,8 @@ services:
     restart: unless-stopped
     environment:
       ERSATZTV_URL: ${ERSATZTV_URL:?copy .env.example to .env and set ERSATZTV_URL}
+      # Optional: channels that show a web page instead of their stream (README.md).
+      WEB_CHANNELS: ${WEB_CHANNELS:-}
     # Published on loopback by default: a proxy on this machine (Gantry) is
     # the way in from other devices, and finds the container by this port.
     # VIEWER_BIND=0.0.0.0 also opens it to the local network.

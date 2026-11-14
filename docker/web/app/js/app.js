@@ -2,7 +2,8 @@
 // window, show details) and every way of steering them.
 //
 // One rule runs through all of it: there is a single <video>, playing the
-// channel being watched. Browsing the guide never touches it.
+// channel being watched. Browsing the guide never touches it. (A web
+// channel shows its page in the same box instead; see js/web.js.)
 
 import { HALF_HOUR, loadGuide, cellAt, programmeAt } from './data.js';
 import { Player } from './player.js';
@@ -11,6 +12,7 @@ import { BarWatcher } from './bars.js';
 import { SETTINGS, getSetting, cycleSetting, setSetting } from './settings.js';
 import { applyTheme, THEMES } from './themes.js';
 import { showSplash, isSplashShowing } from './splash.js';
+import { loadWebChannels, WebScreen } from './web.js';
 
 const $ = id => document.getElementById(id);
 const el = {
@@ -215,7 +217,7 @@ const wantHd = () => S.hasHd && getSetting('quality') === 'hd' && !slowNow();
 const streamOf = ch => ({ num: wantHd() && ch.hd ? ch.hd : ch.num, hd: wantHd() && !!ch.hd });
 function pictureShape() {
   const ch = S.channels.find(c => c.id === S.tunedId);
-  return ch && wantHd() && ch.hd ? 16 / 9 : 4 / 3;
+  return ch && !ch.web && wantHd() && ch.hd ? 16 / 9 : 4 / 3;
 }
 // The box's "Power off" is an action row at the end of the list, not a stored setting.
 const POWER_ROW = {
@@ -455,6 +457,12 @@ if (new URLSearchParams(location.search).has('debug')) {
   }, 500);
 }
 
+// Web channels: the page shows in the picture's box instead of the video.
+const webChannels = loadWebChannels();
+const web = new WebScreen(el.screen, el.tuning, {
+  onLoad() { if (tunedChannel() && tunedChannel().web) el.tuning.hidden = true; },
+});
+
 // A real key press or click is what browsers want before they allow sound.
 function wake() {
   if (autoMuted) player.unmute();
@@ -661,7 +669,9 @@ function surf(direction) {
   surfSettleTimer = setTimeout(() => {
     const n = S.channels.length, at = S.channels.findIndex(c => c.id === S.tunedId);
     if (at < 0 || n < 3) return;
-    warmer.set([streamOf(S.channels[((at + direction) % n + n) % n])]);
+    const next = S.channels[((at + direction) % n + n) % n];
+    if (next.web) return warmer.clear();   // nothing to start on the server
+    warmer.set([streamOf(next)]);
   }, SURF_SETTLE_MS);
   surfTimer = setTimeout(stopSurf, SURF_MS);
 }
@@ -684,6 +694,19 @@ function tune(ch, direction = 0) {
     void el.screen.offsetWidth;
   }
   el.previewMsg.hidden = true;
+  if (ch.web) {
+    // A web channel: no stream on the server, the page instead.
+    player.stop();
+    bars.reset();
+    if (web.show(ch.web)) {
+      el.tuning.textContent = `Tuning to ${ch.num} ${ch.name}…`;
+      el.tuning.hidden = false;
+    }
+    if (direction) surf(direction);
+    else stopSurf();
+    return;
+  }
+  web.hide();
   const stream = streamOf(ch);
   const warm = warmer.isReady(stream);
   warmer.release(stream);
@@ -790,6 +813,9 @@ function hideOsd() {
 }
 
 function toggleMute() {
+  // A web page's own sound is out of the viewer's reach.
+  const ch = tunedChannel();
+  if (ch && ch.web) return showOsd('This channel plays its own sound', 1500);
   if (el.video.muted) {
     el.video.muted = false;
     autoMuted = false;
@@ -1179,7 +1205,8 @@ async function refresh(manual = false) {
   const first = !S.channels.length;
   const focusId = first ? null : focusChannel().id;
   try {
-    const guide = await loadGuide();
+    const [guide, pages] = await Promise.all([loadGuide(), webChannels]);
+    for (const ch of guide.channels) ch.web = pages[ch.num] || null;
     S.channels = guide.channels;
     S.hasHd = guide.hasHd;
     S.dataEnd = guide.end;

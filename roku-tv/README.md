@@ -94,3 +94,5 @@ Only one sideloaded app can be on a Roku at a time; installing replaces it.
 
 Streams are ErsatzTV's HLS (`/iptv/channel/<n>.m3u8?mode=segmenter`), the same ones the
 browser viewer plays. HD plays channel number + 100 when the server has that twin.
+A Roku cannot show web pages, so the browser viewer's web channels (`WEB_CHANNELS`, see
+`../docker/README.md`) play their ErsatzTV stream here.

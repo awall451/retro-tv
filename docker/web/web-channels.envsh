@@ -1,0 +1,46 @@
+#!/bin/sh
+# Web channels (see docker/README.md): turns WEB_CHANNELS into
+#  - /tmp/web-channels.json (or $WEB_CHANNELS_JSON), the channel number ->
+#    page URL map the app reads at /web-channels.json, and
+#  - WEB_FRAME_SRC, the sites allowed in the page's frame-src, which the
+#    nginx template fills into its Content-Security-Policy.
+#
+# WEB_CHANNELS="192=https://weather.example/?kiosk=true;193=https://cam.example/"
+# Entries are separated by ";" or white space. A URL must start with
+# http:// or https:// and must not contain white space, ";", quotes,
+# backslashes, < or > (percent-encode them). A bad entry is skipped
+# with a warning; the container still starts.
+#
+# The nginx entrypoint sources this file (*.envsh) before it fills in the
+# templates, so the export below reaches them; the Pi box's setup.sh
+# sources it too. Without WEB_CHANNELS the map is {} and frame-src is
+# 'self', which is what default-src allowed before.
+
+WEB_FRAME_SRC=$(
+  awk -v out="${WEB_CHANNELS_JSON:-/tmp/web-channels.json}" '
+    function warn(msg) { printf "web-channels: %s\n", msg > "/dev/stderr" }
+    BEGIN {
+      json = ""; origins = ""
+      n = split(ENVIRON["WEB_CHANNELS"], entries, /[;[:space:]]+/)
+      for (i = 1; i <= n; i++) {
+        e = entries[i]
+        if (e == "") continue
+        eq = index(e, "=")
+        num = substr(e, 1, eq - 1); url = substr(e, eq + 1)
+        if (eq < 2 || num !~ /^[0-9]+(\.[0-9]+)?$/) { warn("skipped \"" e "\": not <channel number>=<url>"); continue }
+        if (url !~ /^[Hh][Tt][Tt][Pp][Ss]?:\/\/[^\/?#]+/ || url ~ /["\\<>'\'']/) { warn("skipped channel " num ": not a plain http(s) URL"); continue }
+        match(url, /^[Hh][Tt][Tt][Pp][Ss]?:\/\/[^\/?#]+/)
+        origin = tolower(substr(url, 1, RLENGTH))
+        if (origin !~ /^https?:\/\/([a-z0-9.-]+|\[[0-9a-f:.]+\])(:[0-9]+)?$/) { warn("skipped channel " num ": odd host in " origin); continue }
+        if (num in seen) warn("channel " num " is listed twice; the last one wins")
+        seen[num] = url
+        if (!index(origins " ", " " origin " ")) origins = origins " " origin
+      }
+      for (num in seen) json = json (json == "" ? "" : ",\n") "  \"" num "\": \"" seen[num] "\""
+      print "{" (json == "" ? "" : "\n" json "\n") "}" > out
+      close(out)
+      if (json != "") printf "web-channels: frames allowed from%s\n", origins > "/dev/stderr"
+      print "'\''self'\''" origins
+    }'
+)
+export WEB_FRAME_SRC
