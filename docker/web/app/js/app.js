@@ -61,7 +61,7 @@ const S = {
   tpIndex: 0,                  // highlighted tile in the theme picker
   setRow: 0,                   // highlighted row on the settings screen
   net: null,                   // how the Pi box is on the network, from /pi/net (null elsewhere)
-  box: false,                  // running on the Pi box (it answered /pi/net): offers Power off
+  box: false,                  // running on the Pi box (it answered /pi/theme or /pi/net): offers Power off
   powerArmed: 0,               // timer while "Power off" waits for its second press
   focusCh: 0,                  // index into channels
   focusTime: Date.now(),       // the time position of the highlight
@@ -538,9 +538,16 @@ function openSettings() {
   S.setRow = 0;
   setMode('settings');
   renderSettings();
+  // The box is recognised by its theme service, which answers from the moment it
+  // starts (anywhere else /pi/theme is a 404). How it is on the network comes
+  // separately: /pi/net is only there after the first network check, 90 seconds
+  // after start-up, and "Power off" must not wait for that.
+  fetch('/pi/theme', { cache: 'no-store' })
+    .then(r => { if (r.ok) { S.box = true; if (S.mode === 'settings') renderSettings(); } })
+    .catch(() => {});
   fetch('/pi/net', { cache: 'no-store' })
     .then(r => (r.ok ? r.json() : null))
-    .then(n => { S.net = n; S.box = !!n; if (S.mode === 'settings') renderSettings(); })
+    .then(n => { S.net = n; if (n) S.box = true; if (S.mode === 'settings') renderSettings(); })
     .catch(() => {});
 }
 
