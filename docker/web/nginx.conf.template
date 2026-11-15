@@ -60,6 +60,14 @@ server {
     add_header Referrer-Policy "no-referrer" always;
     add_header Content-Security-Policy "default-src 'self'; img-src 'self' data:; media-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'" always;
   }
+  # Sleep timer: written from IDLE_TIMEOUT_MIN and IDLE_PROMPT_SEC at start
+  # (idle.envsh).
+  location = /idle.json {
+    alias /tmp/idle.json;
+    default_type application/json;
+    add_header Cache-Control "no-store" always;
+    add_header X-Content-Type-Options "nosniff" always;
+  }
   location /vendor/ { expires 30d; }
   location /fonts/  { expires 30d; }
 

@@ -9,6 +9,8 @@ FROM nginxinc/nginx-unprivileged:1.31.7-alpine
 ENV NGINX_ENVSUBST_FILTER="^(ERSATZTV_URL|UPLINK_BIND|UPLINK_PORT)$" \
     HEALTH_URL=http://127.0.0.1:8080/healthz
 
+# Sleep timer: IDLE_TIMEOUT_MIN and IDLE_PROMPT_SEC -> /idle.json.
+COPY --chmod=755 idle.envsh /docker-entrypoint.d/17-idle.envsh
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY uplink/uplink.conf.template /etc/nginx/uplink-templates/default.conf.template
 COPY app/ /usr/share/nginx/html/

@@ -1,0 +1,29 @@
+#!/bin/sh
+# Sleep timer (see docker/README.md, "Sleep timer"): turns IDLE_TIMEOUT_MIN
+# and IDLE_PROMPT_SEC into /tmp/idle.json (or $IDLE_JSON), which the app
+# reads at /idle.json:
+#
+#   IDLE_TIMEOUT_MIN=90   minutes without a key press before "Are you still
+#                         watching?" (asked when the programme on then ends);
+#                         0 or empty: never (the default)
+#   IDLE_PROMPT_SEC=60    how long the question waits for a key before the
+#                         viewer stops playing
+#
+# A bad value is ignored with a warning and the container still starts. The
+# nginx entrypoint sources this file (*.envsh) before it fills in the
+# templates; the Pi box's setup.sh sources it too.
+
+_idle_min=${IDLE_TIMEOUT_MIN:-0}
+_idle_sec=${IDLE_PROMPT_SEC:-60}
+if ! printf '%s' "$_idle_min" | grep -Eq '^[0-9]{1,5}$'; then
+  echo "idle: ignored IDLE_TIMEOUT_MIN \"$_idle_min\": not a whole number of minutes; the sleep timer is off" >&2
+  _idle_min=0
+fi
+if ! printf '%s' "$_idle_sec" | grep -Eq '^[0-9]{1,4}$' || [ "$_idle_sec" -lt 5 ]; then
+  echo "idle: ignored IDLE_PROMPT_SEC \"$_idle_sec\": not a whole number of seconds (5 or more); using 60" >&2
+  _idle_sec=60
+fi
+_idle_min=$((_idle_min + 0)); _idle_sec=$((_idle_sec + 0))
+[ "$_idle_min" -gt 0 ] && echo "idle: asks \"Are you still watching?\" after ${_idle_min} min without input" >&2
+printf '{"timeoutMin": %s, "promptSec": %s}\n' "$_idle_min" "$_idle_sec" > "${IDLE_JSON:-/tmp/idle.json}"
+unset _idle_min _idle_sec
