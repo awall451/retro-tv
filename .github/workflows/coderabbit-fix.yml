@@ -4,8 +4,10 @@
 # Two jobs, so that nothing Claude can touch ever meets a token that can write:
 #
 #   claude   The job's token can only read. Claude gets the findings as a file, may
-#            read and edit files and run syntax checks, and cannot run the code. What
-#            it leaves behind (its files and its answers) is passed on as untrusted.
+#            read and edit files and run syntax checks, and cannot run the code or
+#            git (git runs commands named in its settings file, which Claude could
+#            edit). What it leaves behind (its files and its answers) is passed on
+#            as untrusted.
 #   apply    Starts from a fresh checkout, takes only file contents from the first
 #            job, looks the findings up again itself, then makes one commit, one push
 #            and the replies. Changes under .github/ and to CodeRabbit's settings are
@@ -117,7 +119,8 @@ jobs:
             2. If it is real and worth fixing, make the smallest change that fixes it, in
                the style of the surrounding code. Where the repository has tests, add or
                change a test that would have caught the defect. Check your edits with the
-               syntax checks you are allowed (python3 -m py_compile, bash -n, node --check).
+               syntax checks you are allowed (python3 -I -m py_compile, bash -n, node --check).
+               Git commands are not available; read the files directly.
             3. If it is not real, or the fix costs more than the defect, leave the code as
                it is and say why in one or two sentences.
             4. If you cannot tell without running the code, or the fix needs a decision
@@ -139,7 +142,7 @@ jobs:
             three sentence summary.
           claude_args: |
             --max-turns 80
-            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(python3 -m py_compile:*),Bash(bash -n:*),Bash(node --check:*),Bash(git diff:*),Bash(git status:*),Bash(git log:*),Bash(git show:*),Bash(ls:*)"
+            --allowedTools "Read,Edit,Write,Glob,Grep,Bash(python3 -I -m py_compile:*),Bash(bash -n:*),Bash(node --check:*),Bash(ls:*)"
             --json-schema '{"type":"object","properties":{"summary":{"type":"string"},"commit_subject":{"type":"string"},"threads":{"type":"array","items":{"type":"object","properties":{"comment_id":{"type":"integer"},"verdict":{"type":"string","enum":["fixed","declined","needs_human"]},"reply":{"type":"string"}},"required":["comment_id","verdict","reply"]}}},"required":["summary","threads"]}'
 
       - name: Pack the files as Claude left them

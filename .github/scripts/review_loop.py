@@ -306,7 +306,8 @@ def cmd_apply(args):
         print(summary, "\nlabel:", waiting > 0)
     else:
         comment(args.pr, summary)
-        set_label(args.pr, waiting > 0)
+        if waiting > 0:  # only a person takes the label off again
+            set_label(args.pr, True)
 
 
 # --- gate ------------------------------------------------------------------
