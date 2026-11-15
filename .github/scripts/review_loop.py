@@ -383,6 +383,11 @@ def area_of(path, settings):
     return next(a for a in settings["areas"] if a["name"] == settings["default_area"])
 
 
+def fingerprint(changes):
+    """The changed files of a pull request, in a form two listings can be compared by."""
+    return sorted((c["filename"], c.get("previous_filename") or "", c.get("sha") or "", c["status"]) for c in changes)
+
+
 def covers(reviewed, sha):
     return bool(reviewed) and (sha.startswith(reviewed) or reviewed.startswith(sha))
 
@@ -567,6 +572,8 @@ def cmd_gate(args):
             changed_mind = "it got a new commit"
         elif latest["base"]["ref"] != base:
             changed_mind = "it was pointed at %s instead of %s" % (latest["base"]["ref"], base)
+        elif fingerprint(pages("repos/%s/pulls/%d/files?per_page=100" % (REPO, number))) != fingerprint(changes):
+            changed_mind = "its changed files are no longer the ones that were scored"
         elif LABEL in [label["name"] for label in latest["labels"]]:
             changed_mind = "the label %s was added" % LABEL
     if changed_mind:
