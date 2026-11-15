@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+inheritance: true
+reviews:
+  auto_review:
+    drafts: true
+  pre_merge_checks:
+    custom_checks:
+      - name: "Tests accompany code changes"
+        mode: "off"
+        instructions: "Not used here: this repository has no automated test suite."
+  path_instructions:
+    - path: "**/*.sh"
+      instructions: |
+        These scripts run on a Batocera Raspberry Pi or a home server with no
+        test suite. Flag anything that can leave the device unbootable or
+        without a picture, any unquoted variable in a path, and any destructive
+        command without a backup step before it.
+    - path: "docs/**"
+      instructions: |
+        Docs describe the project, not one person's setup. Flag a statement
+        that the changed code in the same pull request no longer makes true.
