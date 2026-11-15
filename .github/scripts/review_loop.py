@@ -385,7 +385,8 @@ def area_of(path, settings):
 
 def fingerprint(changes):
     """The changed files of a pull request, in a form two listings can be compared by."""
-    return sorted((c["filename"], c.get("previous_filename") or "", c.get("sha") or "", c["status"]) for c in changes)
+    return sorted((c["filename"], c.get("previous_filename") or "", c.get("sha") or "", c["status"],
+                   c["additions"], c["deletions"]) for c in changes)
 
 
 def covers(reviewed, sha):
@@ -557,10 +558,6 @@ def cmd_gate(args):
     if not args.post:
         return
 
-    # The status goes first: the branch rule on the default branch asks for it,
-    # so it has to be there before the merge is tried.
-    gh("api", "repos/%s/statuses/%s" % (REPO, sha), "-f", "state=" + ("success" if passed else "failure"),
-       "-f", "context=merge-gate", "-f", "description=" + ("Score %d: %s" % (score, verdict))[:140], check=False)
     changed_mind = None
     if passed and merging:
         # The checks above took a while. Look once more for a reason to stop that a
@@ -577,9 +574,15 @@ def cmd_gate(args):
         elif LABEL in [label["name"] for label in latest["labels"]]:
             changed_mind = "the label %s was added" % LABEL
     if changed_mind:
-        passed, verdict, outcome = False, "needs a person", "Passed the rules, but while it was checked %s." % changed_mind
-        gh("api", "repos/%s/statuses/%s" % (REPO, sha), "-f", "state=failure", "-f", "context=merge-gate",
-           "-f", "description=" + ("Stopped: " + changed_mind)[:140], check=False)
+        passed, verdict = False, "needs a person"
+
+    # The status is written only now, after the last look, so a green status always
+    # means every check finished. It still goes before the merge: the branch rule on
+    # the default branch asks for it.
+    gh("api", "repos/%s/statuses/%s" % (REPO, sha), "-f", "state=" + ("success" if passed else "failure"),
+       "-f", "context=merge-gate", "-f", "description=" + ("Score %d: %s" % (score, verdict))[:140], check=False)
+    if changed_mind:
+        outcome = "Passed the rules, but while it was checked %s." % changed_mind
     elif passed and merging:
         result = subprocess.run(["gh", "pr", "merge", str(number), "--repo", REPO, "--" + settings["merge_method"],
                                  "--match-head-commit", sha], capture_output=True, text=True)
