@@ -36,6 +36,7 @@ DISPLAY_MODE=${DISPLAY_MODE:-hdmi480}
 MARGIN_LEFT=${MARGIN_LEFT:-0}; MARGIN_RIGHT=${MARGIN_RIGHT:-0}
 MARGIN_TOP=${MARGIN_TOP:-0}; MARGIN_BOTTOM=${MARGIN_BOTTOM:-0}
 TAILSCALE=${TAILSCALE:-0}
+CEC=${CEC:-auto}; CEC_KEYS=${CEC_KEYS:-0}
 case "$DISPLAY_MODE" in hdmi480|composite) ;; *) echo "DISPLAY_MODE must be hdmi480 or composite" >&2; exit 2;; esac
 
 # ---- packages -----------------------------------------------------------------
@@ -43,6 +44,8 @@ log "packages"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -q
 pkgs=(cage wlr-randr nginx-light plymouth plymouth-themes ir-keytable python3 python3-yaml rsync bluez pipewire-audio)
+# HDMI-CEC (cec-ctl) for an HDMI TV; composite has no CEC.
+[ "$DISPLAY_MODE" != composite ] && [ "$CEC" != 0 ] && pkgs+=(v4l-utils)
 if apt-cache show chromium >/dev/null 2>&1; then pkgs+=(chromium); else pkgs+=(chromium-browser); fi
 apt-get install -y -q --no-install-recommends "${pkgs[@]}"
 
@@ -119,6 +122,25 @@ systemctl enable retro-tv-themed.service retro-tv.service retro-tv-net-restore.s
 systemctl start retro-tv-net-check.timer
 systemctl disable getty@tty1.service >/dev/null 2>&1 || true
 systemctl set-default graphical.target
+
+# HDMI-CEC: whether the TV is on (/pi/cec), optionally its remote. Only for an
+# HDMI display mode on a Pi with a CEC device; otherwise off, and the viewer
+# simply finds no /pi/cec.
+install -m 755 "$HERE/config/retro-tv-cec.py" /usr/local/bin/retro-tv-cec.py
+install -m 644 "$HERE/config/retro-tv-cec.service" /etc/systemd/system/retro-tv-cec.service
+mkdir -p /etc/rc_keymaps
+install -m 644 "$HERE/config/rc_keymaps/retro-tv-cec.toml" /etc/rc_keymaps/
+systemctl daemon-reload
+sed -i '/retro-tv-cec\.toml/d' /etc/rc_maps.cfg 2>/dev/null || true
+if [ "$DISPLAY_MODE" != composite ] && [ "$CEC" != 0 ] && ls /dev/cec* >/dev/null 2>&1; then
+    log "HDMI-CEC on (keys: $CEC_KEYS)"
+    [ "$CEC_KEYS" = 1 ] && printf '*\trc-cec\tretro-tv-cec.toml\n' >> /etc/rc_maps.cfg
+    systemctl enable retro-tv-cec.service
+    systemctl restart retro-tv-cec.service
+else
+    systemctl disable --now retro-tv-cec.service >/dev/null 2>&1 || true
+    rm -f /run/retro-tv/cec.json
+fi
 
 # ---- boot splash -------------------------------------------------------------------
 log "plymouth theme"

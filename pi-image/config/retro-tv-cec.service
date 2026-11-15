@@ -1,0 +1,16 @@
+# The HDMI-CEC service behind /pi/cec (see retro-tv-cec.py). setup.sh enables
+# it only for an HDMI display mode on a box with a CEC device.
+[Unit]
+Description=Retro TV HDMI-CEC (TV power, optional remote keys)
+After=local-fs.target
+ConditionPathExistsGlob=/dev/cec*
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/retro-tv.env
+ExecStart=/usr/bin/python3 /usr/local/bin/retro-tv-cec.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

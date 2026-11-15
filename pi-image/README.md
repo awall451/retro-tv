@@ -124,9 +124,13 @@ pi-image/
     ├── retro-tv-net-restore.service   runs the restore before NetworkManager at boot
     ├── retro-tv-net-check.service     one check; retro-tv-net-check.timer runs it every minute
     ├── retro-tv-net-check.timer
+    ├── retro-tv-cec.py            HDMI-CEC: is the TV on? (/pi/cec), and optionally its remote; HDMI only
+    ├── retro-tv-cec.service       systemd unit for it (enabled by setup.sh only on HDMI with a CEC device)
     ├── nginx-pi.conf              the Pi-only additions to the viewer's nginx config (/pi/)
     ├── plymouth/retro-tv/         the boot splash theme: script, config, and the rendered scenes
-    └── rc_keymaps/retro-tv-mce.toml   MCE remote buttons → the viewer's keys
+    ├── rc_keymaps/retro-tv-mce.toml   MCE remote buttons → the viewer's keys
+    └── rc_keymaps/retro-tv-cec.toml   the TV's own remote over HDMI-CEC → the viewer's keys (CEC_KEYS=1)
+tests/test_cec.py                  how retro-tv-cec.py reads cec-ctl's output (python3 -m unittest discover -s pi-image/tests)
 ```
 
 The splash pictures in `config/plymouth/retro-tv/` are generated, not drawn by hand. In
@@ -200,6 +204,39 @@ one-file one.
   "Media Center PC" (or learn the MCE remote's codes), with volume and power punched through to
   the TV.
 
+## HDMI-CEC: the TV's power (and its remote)
+
+On an HDMI TV the box can tell when the TV is switched off and stop the stream, so the server
+does not transcode a channel for a dark screen. **Composite has no CEC**: with
+`DISPLAY_MODE=composite`, or `CEC=0` in `/etc/retro-tv.env`, setup.sh leaves this off and
+installs nothing extra (an HDMI-to-composite converter usually does not pass CEC either; then
+the TV never answers and nothing changes).
+
+- **`retro-tv-cec.py`** (service `retro-tv-cec`, enabled by setup.sh for an HDMI display mode when
+  the Pi has a `/dev/cec*` device; it installs `v4l-utils` for `cec-ctl`) registers the box on the
+  HDMI-CEC bus as a playback device named "Retro TV", asks the TV for its power status every
+  10 seconds (`CEC_POLL_SEC`) and listens to the bus, so the TV's own `<Standby>` is seen at once.
+  It writes `{"power": "on" | "standby" | "unknown"}` to `/run/retro-tv/cec.json`, which nginx
+  serves as `/pi/cec`. The device is the one of the HDMI port with a screen on it
+  (`HDMI-A-1` → `/dev/cec0`), or `CEC_DEVICE`.
+- **The viewer** polls `/pi/cec` every 3 seconds. TV off: the stream stops at once and the standby
+  screen goes up, as after the sleep timer (docker/README.md, "Sleep timer"), but without
+  asking. TV on again: the same channel resumes. A TV that does not answer counts as
+  "unknown", which changes nothing.
+- **The TV's remote** (`CEC_KEYS=1`): the kernel's CEC framework passes the remote's keys on as
+  key presses (RC passthrough) on the adapter's `rc-cec` input device, and
+  `rc_keymaps/retro-tv-cec.toml` maps them like the IR remote: arrows, OK → Enter, Back/Exit,
+  Home and Guide → Escape, Channel +/− → Page Up/Down, digits, Info → I, Setup menu → S,
+  blue (F1) → R. The map is loaded through `/etc/rc_maps.cfg` and again by the service at start.
+  TVs send their remote's keys to the active source, so with `CEC_KEYS=1` the box announces
+  itself as the active source when the service starts; on most TVs that switches the TV to the
+  box's input. Without `CEC_KEYS` the passthrough is off (`cec-ctl --no-rc-passthrough`).
+- **Untested on hardware.** The first box is on composite. `tests/test_cec.py` checks how the
+  service reads cec-ctl's output (power reports, bus messages, the physical address, which
+  device to use) against samples written from cec-ctl's output format, not captured from a TV.
+  On the first HDMI box, check: `journalctl -u retro-tv-cec`, `curl -s 127.0.0.1:8410/pi/cec`
+  with the TV on and off, and (with `CEC_KEYS=1`) `ir-keytable -t -s rcN` for the `rc-cec` device.
+
 ## Things that bit, and their fixes
 
 Each of these is handled by `setup.sh` or the kiosk script now; they are listed so the reasons
@@ -262,8 +299,9 @@ survive.
 ## Not yet
 
 - The IR receiver has not been tried on hardware.
-- A "standby" action for the remote's power button (blank the picture, stop the stream, without
-  shutting down) needs a small viewer change.
+- A "standby" action for the IR remote's power button (blank the picture, stop the stream,
+  without shutting down). With an HDMI TV, switching the TV off does this through HDMI-CEC.
+- HDMI-CEC on real hardware (see "HDMI-CEC" above).
 - The box controlling the TV through an IR emitter.
 - Tailscale: a settings-screen switch for it would need a second local endpoint like
   `/pi/theme`.
