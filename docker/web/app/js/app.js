@@ -542,13 +542,24 @@ function openSettings() {
   // starts (anywhere else /pi/theme is a 404). How it is on the network comes
   // separately: /pi/net is only there after the first network check, 90 seconds
   // after start-up, and "Power off" must not wait for that.
-  fetch('/pi/theme', { cache: 'no-store' })
-    .then(r => { if (r.ok) { S.box = true; if (S.mode === 'settings') renderSettings(); } })
-    .catch(() => {});
-  fetch('/pi/net', { cache: 'no-store' })
+  detectBox();
+}
+
+// A 404 means this is not the box; anything else (the theme service not up yet,
+// a dropped connection) is tried again every few seconds while settings is open.
+function detectBox() {
+  clearTimeout(S.detectTimer);
+  let retry = false;
+  const theme = fetch('/pi/theme', { cache: 'no-store' })
+    .then(r => { if (r.ok) { S.box = true; if (S.mode === 'settings') renderSettings(); } else if (r.status !== 404) retry = true; })
+    .catch(() => { retry = true; });
+  const net = fetch('/pi/net', { cache: 'no-store' })
     .then(r => (r.ok ? r.json() : null))
     .then(n => { S.net = n; if (n) S.box = true; if (S.mode === 'settings') renderSettings(); })
     .catch(() => {});
+  Promise.all([theme, net]).then(() => {
+    if (!S.box && retry && S.mode === 'settings') S.detectTimer = setTimeout(detectBox, 5000);
+  });
 }
 
 // Power off (the Pi box only, through /pi/power): the first press arms the

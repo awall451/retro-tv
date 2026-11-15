@@ -19,6 +19,7 @@ FIRST_BYTE_TIMEOUT = 60
 VOD_FORMAT = "bv[height<=720][protocol^=m3u8][vcodec^=avc]+ba[protocol^=m3u8]"
 # YouTube's stream addresses expire after about six hours.
 VOD_CACHE_SECONDS = 3 * 3600
+VOD_CACHE_MAX = 200
 VOD_CACHE = {}
 BASE = ["python3", YTDLP, "-q", "--no-warnings", "--no-cache-dir"]
 
@@ -81,6 +82,11 @@ def vod(video):
         lines += ["#EXTINF:%s," % duration, "%s/%d.ts" % (video, number)]
     lines.append("#EXT-X-ENDLIST")
     entry = {"at": time.time(), "picture": picture, "sound": sound, "playlist": "\n".join(lines) + "\n"}
+    now = time.time()
+    for key in [k for k, e in VOD_CACHE.items() if now - e["at"] >= VOD_CACHE_SECONDS]:
+        del VOD_CACHE[key]
+    while len(VOD_CACHE) >= VOD_CACHE_MAX:
+        del VOD_CACHE[min(VOD_CACHE, key=lambda k: VOD_CACHE[k]["at"])]
     VOD_CACHE[video] = entry
     log("/vod/" + video, "resolved,", len(picture), "segments")
     return entry
@@ -187,6 +193,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
             while chunk:
                 self.wfile.write(chunk)
                 sent += len(chunk)
+                ready, _, _ = select.select([process.stdout], [], [], FIRST_BYTE_TIMEOUT)
+                if not ready:
+                    log(path, "source quiet for", FIRST_BYTE_TIMEOUT, "s")
+                    break
                 chunk = os.read(process.stdout.fileno(), 65536)
             log(path, "source ended after", int(time.time() - started), "s")
         except (BrokenPipeError, ConnectionResetError):

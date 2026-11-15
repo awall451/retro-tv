@@ -76,7 +76,7 @@ def cmd_list(args):
             if seconds < MIN_SECONDS:
                 continue
             title = film_title(youtube_title)
-            key = re.sub(r"[^a-z0-9]", "", title.lower())  # "Vs." and "VS" are the same film
+            key = "".join(c for c in title.casefold() if c.isalnum())  # "Vs." and "VS" are the same film
             status, note = "keep", ""
             if seconds > MAX_SECONDS:
                 status, note = "skip", "double feature or marathon"
@@ -99,16 +99,23 @@ def cmd_write(args):
     os.makedirs(args.out, exist_ok=True)
     written = 0
     with open(args.table, newline="", encoding="utf-8") as handle:
-        for row in csv.DictReader(handle, delimiter="\t"):
-            if row["status"] != "keep":
-                continue
-            path = os.path.join(args.out, file_name(row["title"]) + ".yml")
-            with open(path, "w", encoding="utf-8") as out:
-                out.write("# %s: YouTube video %s, through the stream relay.\n" % (row["title"], row["id"]))
-                out.write('url: "%s/vod/%s.m3u8"\n' % (args.relay.rstrip("/"), row["id"]))
-                out.write("is_live: false\n")
-                out.write("duration: %s\n" % row["duration"])
-            written += 1
+        rows = [row for row in csv.DictReader(handle, delimiter="\t") if row["status"] == "keep"]
+    names = {}
+    for row in rows:
+        names.setdefault(file_name(row["title"]) + ".yml", []).append(row["id"])
+    clashes = {name: ids for name, ids in names.items() if len(ids) > 1}
+    if clashes:
+        for name, ids in clashes.items():
+            print("%s would be written for %s" % (name, ", ".join(ids)), file=sys.stderr)
+        sys.exit("nothing written: mark all but one film of each name as skip in the table")
+    for row in rows:
+        path = os.path.join(args.out, file_name(row["title"]) + ".yml")
+        with open(path, "w", encoding="utf-8") as out:
+            out.write("# %s: YouTube video %s, through the stream relay.\n" % (row["title"], row["id"]))
+            out.write('url: "%s/vod/%s.m3u8"\n' % (args.relay.rstrip("/"), row["id"]))
+            out.write("is_live: false\n")
+            out.write("duration: %s\n" % row["duration"])
+        written += 1
     print("%d stream files written to %s" % (written, args.out))
 
 
