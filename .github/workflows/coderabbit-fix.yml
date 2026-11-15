@@ -145,6 +145,18 @@ jobs:
             --allowedTools "Read,Edit,Write,Glob,Grep,Bash(python3 -I -m py_compile:*),Bash(bash -n:*),Bash(node --check:*),Bash(ls:*)"
             --json-schema '{"type":"object","properties":{"summary":{"type":"string"},"commit_subject":{"type":"string"},"threads":{"type":"array","items":{"type":"object","properties":{"comment_id":{"type":"integer"},"verdict":{"type":"string","enum":["fixed","declined","needs_human"]},"reply":{"type":"string"}},"required":["comment_id","verdict","reply"]}}},"required":["summary","threads"]}'
 
+      # The action hides Claude's output. When the run fails, print only the last
+      # message's text (an error such as a rejected token), cut short.
+      - name: Say why Claude stopped, if it failed
+        if: steps.threads.outputs.proceed == 'true' && steps.claude.outcome == 'failure'
+        run: |
+          file="$RUNNER_TEMP/claude-execution-output.json"
+          if [ -f "$file" ]; then
+            jq -r '(if type == "array" then .[-1] else . end) | (.result // .error // "no text in the last message") | tostring | .[0:400]' "$file" || true
+          else
+            echo "Claude left no output file"
+          fi
+
       - name: Pack the files as Claude left them
         if: steps.threads.outputs.proceed == 'true'
         run: tar --exclude=./.git --exclude=./.review-loop -cf "$RUNNER_TEMP/tree.tar" .
