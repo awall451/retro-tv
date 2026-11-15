@@ -7,6 +7,7 @@ import re
 import select
 import signal
 import subprocess
+import threading
 import time
 import urllib.request
 
@@ -21,6 +22,7 @@ VOD_FORMAT = "bv[height<=720][protocol^=m3u8][vcodec^=avc]+ba[protocol^=m3u8]"
 VOD_CACHE_SECONDS = 3 * 3600
 VOD_CACHE_MAX = 200
 VOD_CACHE = {}
+VOD_LOCK = threading.Lock()
 BASE = ["python3", YTDLP, "-q", "--no-warnings", "--no-cache-dir"]
 
 
@@ -62,7 +64,8 @@ def segments(playlist):
 
 def vod(video):
     """Picture and sound segment lists for one video, resolved with yt-dlp and cached."""
-    cached = VOD_CACHE.get(video)
+    with VOD_LOCK:
+        cached = VOD_CACHE.get(video)
     if cached and time.time() - cached["at"] < VOD_CACHE_SECONDS:
         return cached
     address = "https://www.youtube.com/watch?v=" + video
@@ -83,11 +86,12 @@ def vod(video):
     lines.append("#EXT-X-ENDLIST")
     entry = {"at": time.time(), "picture": picture, "sound": sound, "playlist": "\n".join(lines) + "\n"}
     now = time.time()
-    for key in [k for k, e in VOD_CACHE.items() if now - e["at"] >= VOD_CACHE_SECONDS]:
-        del VOD_CACHE[key]
-    while len(VOD_CACHE) >= VOD_CACHE_MAX:
-        del VOD_CACHE[min(VOD_CACHE, key=lambda k: VOD_CACHE[k]["at"])]
-    VOD_CACHE[video] = entry
+    with VOD_LOCK:
+        for key in [k for k, e in VOD_CACHE.items() if now - e["at"] >= VOD_CACHE_SECONDS]:
+            del VOD_CACHE[key]
+        while len(VOD_CACHE) >= VOD_CACHE_MAX:
+            del VOD_CACHE[min(VOD_CACHE, key=lambda k: VOD_CACHE[k]["at"])]
+        VOD_CACHE[video] = entry
     log("/vod/" + video, "resolved,", len(picture), "segments")
     return entry
 
