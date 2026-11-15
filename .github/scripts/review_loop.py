@@ -40,6 +40,7 @@ DEFAULTS = {
     "mode": "dry-run",
     "merge_method": "squash",
     "max_fix_rounds": 2,
+    "trusted_authors": [],
     "blocking_severities": ["Critical", "Major"],
     "protected_paths": [".github/*", ".coderabbit.yaml"],
     "areas": [{"name": "automation", "ceiling": None, "code": True, "paths": [".github/*", ".coderabbit.yaml"]},
@@ -433,9 +434,16 @@ def cmd_gate(args):
         stops.append((name, bool(passed), detail))
 
     stop("Open and not a draft", not pull["draft"], "draft" if pull["draft"] else "open")
-    stop("Written by the repository owner", pull["user"]["login"] == owner, "author is " + pull["user"]["login"])
-    stop("Branch is in this repository", (pull["head"]["repo"] or {}).get("full_name") == REPO,
-         (pull["head"]["repo"] or {}).get("full_name") or "deleted fork")
+    # The owner's pull requests come from a branch here. A trusted author's may come
+    # from their own copy of the repository: the gate never runs a pull request's code,
+    # it only reads what GitHub and CodeRabbit report about it.
+    author = pull["user"]["login"]
+    trusted = author in settings["trusted_authors"]
+    stop("Written by the owner or a trusted author", author == owner or trusted,
+         "author is %s%s" % (author, " (trusted)" if trusted else ""))
+    source = (pull["head"]["repo"] or {}).get("full_name")
+    stop("Comes from this repository, or from a trusted author's copy", source == REPO or (trusted and bool(source)),
+         source or "the source repository is gone")
     stop("Goes into the default branch", base == pull["base"]["repo"]["default_branch"], "goes into " + base)
     title = review[0]["output"]["title"] or ""
     stop("CodeRabbit finished its review",

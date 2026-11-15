@@ -2,6 +2,7 @@
   "mode": "merge",
   "merge_method": "squash",
   "max_fix_rounds": 2,
+  "trusted_authors": ["carlherbst"],
   "blocking_severities": ["Critical", "Major"],
   "protected_paths": [".github/*", ".coderabbit.yaml", ".coderabbit/*", "CLAUDE.md", "*/CLAUDE.md"],
 
