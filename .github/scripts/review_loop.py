@@ -399,6 +399,7 @@ def cmd_gate(args):
         print("pull request %d is %s; nothing to check" % (number, pull["state"]))
         return
     sha = pull["head"]["sha"]
+    base = pull["base"]["ref"]
     owner = REPO.split("/")[0]
 
     # CodeRabbit must have finished a real review of this exact commit. While it has
@@ -429,6 +430,7 @@ def cmd_gate(args):
     stop("Written by the repository owner", pull["user"]["login"] == owner, "author is " + pull["user"]["login"])
     stop("Branch is in this repository", (pull["head"]["repo"] or {}).get("full_name") == REPO,
          (pull["head"]["repo"] or {}).get("full_name") or "deleted fork")
+    stop("Goes into the default branch", base == pull["base"]["repo"]["default_branch"], "goes into " + base)
     title = review[0]["output"]["title"] or ""
     stop("CodeRabbit finished its review",
          review[0]["conclusion"] == "success" and not re.search(r"rate|limit|skip|paus|cancel", title, re.I),
@@ -563,6 +565,8 @@ def cmd_gate(args):
             changed_mind = "it is no longer open and ready"
         elif latest["head"]["sha"] != sha:
             changed_mind = "it got a new commit"
+        elif latest["base"]["ref"] != base:
+            changed_mind = "it was pointed at %s instead of %s" % (latest["base"]["ref"], base)
         elif LABEL in [label["name"] for label in latest["labels"]]:
             changed_mind = "the label %s was added" % LABEL
     if changed_mind:

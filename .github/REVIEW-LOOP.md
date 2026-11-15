@@ -17,6 +17,7 @@ The gate is plain rules, no model. Every number below is in `merge-gate.json`.
 Any one of these leaves the pull request for a person:
 
 - it is a draft, or was not opened by the repository owner from a branch of this repository
+- it goes into a branch other than the default branch
 - CodeRabbit has not finished, or its review does not cover the latest commit
 - CodeRabbit rates the merge risk or the security risk High or Critical
 - a Critical or Major finding is still open
