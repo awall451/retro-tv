@@ -5,11 +5,15 @@ and a fixed set of rules says whether the result could merge without a person.
 Three commands, each run by a workflow in ../workflows/:
 
   threads   list CodeRabbit's open findings on a pull request (for Claude to read)
-  apply     commit and push what Claude changed, and answer each finding
+  handover  label the pull request for a person when the rounds are used up
+  apply     take the files Claude changed into a fresh checkout, commit, push, and
+            answer each finding
   gate      check the merge rules and report the result on the pull request
 
-Everything goes through the `gh` program with the workflow's own token. Claude itself
-gets no GitHub access: it reads the findings from a file and edits files, nothing else.
+Claude runs in a job of its own whose token can only read. What it leaves behind (its
+files and its answers) is treated as untrusted: `apply` runs in a second job, starts
+from a fresh checkout, takes only file contents from Claude's job, and looks the
+findings up again itself.
 """
 import argparse
 import fnmatch
@@ -18,6 +22,7 @@ import os
 import re
 import subprocess
 import sys
+import tarfile
 import time
 
 REPO = os.environ.get("GITHUB_REPOSITORY", "")
@@ -26,6 +31,7 @@ LABEL = "needs-human"
 MARK = "<!-- merge-gate -->"
 ANSWERED = "(review loop, round "
 SCRATCH = ".review-loop"
+TREE_LIMIT = 300 * 1024 * 1024  # most that is taken from Claude's job, in bytes
 TRAILER = "Fix-Round:"
 SEVERITIES = ["Critical", "Major", "Minor", "Trivial", "Info"]
 DEFAULTS = {
@@ -140,24 +146,30 @@ def output(**values):
 
 # --- threads ---------------------------------------------------------------
 
+def open_findings(number):
+    """CodeRabbit's findings that are still open and that the loop has not answered yet."""
+    return [t for t in review_threads(number) if not t["resolved"] and not t["outdated"] and not t["answered"]]
+
+
 def cmd_threads(args):
     settings = config(args.config)
     pull = api("repos/%s/pulls/%d" % (REPO, args.pr))
     same_repo = (pull["head"]["repo"] or {}).get("full_name") == REPO
-    # Findings the loop already answered are not handed to Claude a second time.
-    open_threads = [t for t in review_threads(args.pr)
-                    if not t["resolved"] and not t["outdated"] and not t["answered"]]
+    findings = open_findings(args.pr)
     rounds = fix_rounds(args.pr)
     limit = settings["max_fix_rounds"]
     with open(args.out, "w", encoding="utf-8") as handle:
-        json.dump({"pr": args.pr, "head_ref": pull["head"]["ref"], "head_sha": pull["head"]["sha"],
-                   "round": rounds + 1, "max_rounds": limit, "threads": open_threads}, handle, indent=1)
-    proceed = pull["state"] == "open" and same_repo and bool(open_threads) and rounds < limit
-    if open_threads and same_repo and rounds >= limit and not args.dry_run:
-        set_label(args.pr, True)
-        comment(args.pr, "The review loop has made %d rounds of fixes and CodeRabbit still has %d open "
-                         "finding(s). It stops here; a person has to look." % (rounds, len(open_threads)))
-    output(proceed=str(proceed).lower(), count=len(open_threads), round=rounds + 1, head_ref=pull["head"]["ref"])
+        json.dump({"pr": args.pr, "round": rounds + 1, "max_rounds": limit, "threads": findings}, handle, indent=1)
+    workable = pull["state"] == "open" and same_repo and bool(findings)
+    output(proceed=str(workable and rounds < limit).lower(), handover=str(workable and rounds >= limit).lower(),
+           count=len(findings), round=rounds + 1, head_ref=pull["head"]["ref"], head_sha=pull["head"]["sha"])
+
+
+def cmd_handover(args):
+    findings, rounds = open_findings(args.pr), fix_rounds(args.pr)
+    set_label(args.pr, True)
+    comment(args.pr, "The review loop has made %d round(s) of fixes and CodeRabbit still has %d open "
+                     "finding(s). It stops here; a person has to look." % (rounds, len(findings)))
 
 
 # --- apply -----------------------------------------------------------------
@@ -170,79 +182,131 @@ def git(*args, check=True):
 
 
 def changed_files():
-    """Paths changed in the checkout, leaving out the loop's own scratch folder."""
-    paths = [line[3:].split(" -> ")[-1].strip('"') for line in git("status", "--porcelain").splitlines()]
-    return [path for path in paths if not path.startswith(SCRATCH + "/")]
+    """Paths that differ from the last commit, old names of renamed files included."""
+    fields = git("status", "--porcelain", "-z", "--untracked-files=all").split("\0")
+    paths, index = [], 0
+    while index < len(fields) and fields[index]:
+        status, path = fields[index][:2], fields[index][3:]
+        paths.append(path)
+        if "R" in status or "C" in status:  # with -z the old name follows as its own field
+            index += 1
+            paths.append(fields[index])
+        index += 1
+    return paths
+
+
+def take_tree(archive_path):
+    """Make the checkout's files match the tree Claude's job packed.
+
+    Only regular files are taken. Links, anything named .git, the loop's scratch folder
+    and compiled Python are left out, and Python's own checks refuse paths that would
+    land outside the checkout.
+    """
+    for path in filter(None, git("ls-files", "-z").split("\0")):
+        if os.path.isfile(path) and not os.path.islink(path):
+            os.remove(path)
+    taken = 0
+    with tarfile.open(archive_path) as archive:
+        for member in archive:
+            parts = [part for part in member.name.split("/") if part not in ("", ".")]
+            if not parts or not member.isfile():
+                continue
+            if ".git" in parts or parts[0] == SCRATCH or "__pycache__" in parts or parts[-1].endswith(".pyc"):
+                continue
+            taken += member.size
+            if taken > TREE_LIMIT:
+                sys.exit("the tree from Claude's job is larger than %d bytes" % TREE_LIMIT)
+            try:
+                archive.extract(member, ".", filter="data")
+            except tarfile.FilterError as problem:
+                print("left out:", problem)
+
+
+def harmless(text, limit):
+    """Text from Claude, made safe to post: no mention can call a person or a bot."""
+    return (text or "").strip()[:limit].replace("@", "@\u200b")
 
 
 def cmd_apply(args):
     settings = config(args.config)
-    with open(args.threads, encoding="utf-8") as handle:
-        known = json.load(handle)
-    by_id = {thread["comment_id"]: thread for thread in known["threads"]}
+    pull = api("repos/%s/pulls/%d" % (REPO, args.pr))
+    rounds, limit = fix_rounds(args.pr), settings["max_fix_rounds"]
+    this_round = rounds + 1
+    by_id = {thread["comment_id"]: thread for thread in open_findings(args.pr)}
     try:
         result = json.loads(os.environ.get("CLAUDE_RESULT") or "{}")
     except ValueError:
         result = {}
-    answers = [a for a in result.get("threads", []) if a.get("comment_id") in by_id]
+    if not isinstance(result, dict):
+        result = {}
+    words = {"fixed": "Fixed", "declined": "Not changed", "needs_human": "Needs a person"}
+    answers, seen = [], set()
+    for answer in result.get("threads") or []:
+        key = answer.get("comment_id") if isinstance(answer, dict) else None
+        if key in by_id and key not in seen and answer.get("verdict") in words:
+            seen.add(key)
+            answers.append(answer)
 
-    # Claude must not change the automation that checks its own work.
-    for path in changed_files():
-        if any(fnmatch.fnmatch(path, pattern) for pattern in settings["protected_paths"]):
-            print("undoing a change to a protected path:", path)
-            git("checkout", "--", path, check=False)
-            git("clean", "-fdq", "--", path, check=False)
+    moved = git("rev-parse", "HEAD").strip() != args.head_sha or pull["head"]["sha"] != args.head_sha
+    files = []
+    if moved:
+        print("the branch moved while Claude worked; its changes are not used")
+    elif rounds < limit:
+        take_tree(args.tree)
+        # Claude must not change the automation that checks its own work.
+        for path in changed_files():
+            if any(fnmatch.fnmatch(path, pattern) for pattern in settings["protected_paths"]):
+                print("undoing a change to a protected path:", path)
+                git("checkout", "--", path, check=False)
+                git("clean", "-fdq", "--", path, check=False)
+        files = changed_files()
 
-    files = changed_files()
     fixed = [a for a in answers if a["verdict"] == "fixed"]
     pushed = False
     if files and fixed:
-        subject = re.sub(r"\s+", " ", result.get("commit_subject") or "").strip()[:100] \
+        subject = re.sub(r"\s+", " ", str(result.get("commit_subject") or "")).strip()[:100] \
             or "review: fixes for CodeRabbit's findings"
         body = "\n".join("- %s:%s" % (by_id[a["comment_id"]]["path"], by_id[a["comment_id"]]["line"])
                          for a in fixed)
         message = "%s\n\nAnswers CodeRabbit's review findings on:\n%s\n\n%s %d\n" \
-                  "Co-Authored-By: Claude <noreply@anthropic.com>\n" % (subject, body, TRAILER, known["round"])
+                  "Co-Authored-By: Claude <noreply@anthropic.com>\n" % (subject, body, TRAILER, this_round)
         if args.dry_run:
-            print("would commit %d file(s):\n%s" % (len(files), message))
+            print("would commit %d file(s): %s\n%s" % (len(files), ", ".join(files[:8]), message))
         else:
-            git("add", "-A", "--", ".", ":!" + SCRATCH)
-            git("-c", "user.name=claude[bot]", "-c", "user.email=41898282+claude[bot]@users.noreply.github.com",
-                "commit", "-q", "-m", message)
+            git("add", "-A")
+            git("-c", "core.hooksPath=/dev/null", "-c", "user.name=claude[bot]",
+                "-c", "user.email=41898282+claude[bot]@users.noreply.github.com", "commit", "-q", "-m", message)
             helper = "!f() { echo username=x-access-token; echo password=$GH_TOKEN; }; f"
             git("-c", "credential.helper=", "-c", "credential.helper=" + helper, "push", "-q",
-                "https://github.com/%s.git" % REPO, "HEAD:refs/heads/" + known["head_ref"])
+                "https://github.com/%s.git" % REPO, "HEAD:refs/heads/" + pull["head"]["ref"])
             pushed = True
     elif files:
         print("files changed but no finding was marked fixed; nothing is committed")
-        git("checkout", "--", ".", check=False)
 
-    words = {"fixed": "Fixed", "declined": "Not changed", "needs_human": "Needs a person"}
     for answer in answers:
         if answer["verdict"] == "fixed" and not (pushed or args.dry_run):
             continue
-        text = "**%s** %s%d). %s" % (words.get(answer["verdict"], answer["verdict"]), ANSWERED,
-                                     known["round"], answer.get("reply", "").strip()[:3000])
+        text = "**%s** %s%d). %s" % (words[answer["verdict"]], ANSWERED, this_round, harmless(answer.get("reply"), 3000))
         if args.dry_run:
             print("would reply on %d: %s" % (answer["comment_id"], text[:160]))
         else:
             gh("api", "repos/%s/pulls/%d/comments/%d/replies" % (REPO, args.pr, answer["comment_id"]),
                "-f", "body=" + text, check=False)
 
-    unanswered = len(by_id) - len(answers)
-    stuck = unanswered > 0 or any(a["verdict"] == "needs_human" for a in answers)
     counts = {key: sum(a["verdict"] == key for a in answers) for key in words}
     if not (pushed or args.dry_run):
         counts["fixed"] = 0
-    summary = "**Review loop, round %d of %d.** %d finding(s): %d fixed, %d not changed, %d need a person%s.\n\n%s" % (
-        known["round"], known["max_rounds"], len(by_id), counts["fixed"], counts["declined"],
-        counts["needs_human"] + unanswered, "" if answers else " (the run produced no answers)",
-        (result.get("summary") or "").strip()[:2000])
+    waiting = len(by_id) - counts["fixed"] - counts["declined"]
+    note = " The branch moved while Claude worked, so its changes were not used." if moved else \
+        ("" if answers else " The run produced no answers.")
+    summary = "**Review loop, round %d of %d.** %d finding(s): %d fixed, %d not changed, %d need a person.%s\n\n%s" % (
+        this_round, limit, len(by_id), counts["fixed"], counts["declined"], waiting, note,
+        harmless(result.get("summary"), 2000))
     if args.dry_run:
-        print(summary, "\nlabel:", stuck)
+        print(summary, "\nlabel:", waiting > 0)
     else:
         comment(args.pr, summary)
-        set_label(args.pr, stuck)
+        set_label(args.pr, waiting > 0)
 
 
 # --- gate ------------------------------------------------------------------
@@ -323,7 +387,9 @@ def cmd_gate(args):
     bad += [s["context"] for s in statuses if s["context"] != "merge-gate" and s["state"] != "success"]
     rule("Other checks pass", not bad, ", ".join(bad) or "%d other check(s), none failing" % (len(others) + len(statuses)))
 
-    files = [f["filename"] for f in pages("repos/%s/pulls/%d/files?per_page=100" % (REPO, number))]
+    changes = pages("repos/%s/pulls/%d/files?per_page=100" % (REPO, number))
+    # A renamed file counts under both names, so moving a file cannot hide it.
+    files = sorted({name for change in changes for name in (change["filename"], change.get("previous_filename")) if name})
 
     def matches(path, patterns):
         return any(fnmatch.fnmatch(path, pattern) for pattern in patterns)
@@ -339,8 +405,13 @@ def cmd_gate(args):
     rule("At most %d rounds of fixes" % settings["max_fix_rounds"], rounds <= settings["max_fix_rounds"], "%d so far" % rounds)
     labels = [label["name"] for label in pull["labels"]]
     rule("Not handed to a person", LABEL not in labels, "label %s is set" % LABEL if LABEL in labels else "no label")
-    rule("No merge conflicts", pull.get("mergeable") is not False,
-         {True: "none", False: "conflicts with " + pull["base"]["ref"]}.get(pull.get("mergeable"), "not worked out yet"))
+    for attempt in range(5):  # GitHub works this out a little after it is first asked
+        if pull.get("mergeable") is not None or args.no_wait:
+            break
+        time.sleep(5)
+        pull = api("repos/%s/pulls/%d" % (REPO, number))
+    rule("No merge conflicts", pull.get("mergeable") is True,
+         {True: "none", False: "conflicts with " + pull["base"]["ref"]}.get(pull.get("mergeable"), "GitHub has not worked it out"))
 
     passed = all(ok for _, ok, _ in rules)
     verdict = "would merge" if passed else "needs a person"
@@ -369,11 +440,14 @@ def main():
     threads = commands.add_parser("threads")
     threads.add_argument("--pr", type=int, required=True)
     threads.add_argument("--out", required=True)
-    threads.add_argument("--dry-run", action="store_true")
     threads.set_defaults(run=cmd_threads)
+    handover = commands.add_parser("handover")
+    handover.add_argument("--pr", type=int, required=True)
+    handover.set_defaults(run=cmd_handover)
     apply = commands.add_parser("apply")
     apply.add_argument("--pr", type=int, required=True)
-    apply.add_argument("--threads", required=True)
+    apply.add_argument("--tree", required=True, help="tar file of the tree from Claude's job")
+    apply.add_argument("--head-sha", required=True, help="the commit Claude's job started from")
     apply.add_argument("--dry-run", action="store_true")
     apply.set_defaults(run=cmd_apply)
     gate = commands.add_parser("gate")
