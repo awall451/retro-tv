@@ -23,13 +23,15 @@ case "$profile" in
     hdmi)
         shaderset=trinitron-hdmi
         resolution=""            # Batocera default: best mode up to 1920x1080
-        gba_integerscale=""      # use the global setting (integer scaling on)
+        integerscale=1           # whole-number scaling: even scanlines and LCD grids at 1080p
         plex_quality=""          # PM4K default (16 = original quality)
         ;;
     crt)
         shaderset=trinitron-crt
         resolution=max-640x480
-        gba_integerscale=0       # 3x does not fit 640 wide; fill the screen instead
+        integerscale=0           # at 640x480 whole-number scaling leaves black bars beside every
+                                 # 224-line console (SNES, Mega Drive: 2x is 448 lines, about 597
+                                 # wide) and around the handhelds; fill the screen instead
         plex_quality=5           # PM4K index 5 = 720x480 at 1.5 Mbps, like the ErsatzTV channels
         ;;
     *)
@@ -46,14 +48,11 @@ cp "$BOOTCONF" "$BACKUPS/batocera-boot.conf.$stamp"
 
 # Settings shared by both profiles, set every time so the profile is complete.
 batocera-settings-set global.shaderset "$shaderset"
-batocera-settings-set global.integerscale 1
+batocera-settings-set global.integerscale "$integerscale"
 batocera-settings-set global.smooth 0
 batocera-settings-set global.bezel none
-if [ -n "$gba_integerscale" ]; then
-    batocera-settings-set gba.integerscale "$gba_integerscale"
-else
-    sed -i '/^gba\.integerscale=/d' "$CONF"
-fi
+# An older version kept a GBA-only exception; the profile now decides for every system.
+sed -i '/^gba\.integerscale=/d' "$CONF"
 
 # Output resolution: the menu reads es.resolution from the boot partition at startup, but the
 # shutdown service S65values4boot copies es.resolution from batocera.conf over it on every
@@ -163,7 +162,7 @@ fi
 log "theme: $theme"
 
 echo "$profile" > /userdata/system/display-profiles/current
-log "applied: shaderset=$shaderset resolution=${resolution:-default} gba.integerscale=${gba_integerscale:-global} plex_quality=${plex_quality:-default}"
+log "applied: shaderset=$shaderset resolution=${resolution:-default} integerscale=$integerscale plex_quality=${plex_quality:-default}"
 
 if [ "${2:-}" != "--no-reboot" ]; then
     log "rebooting"
