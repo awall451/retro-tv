@@ -1,0 +1,7 @@
+{
+  "max_fix_rounds": 2,
+  "allowed_merge_risk": ["Minimal", "Low"],
+  "blocking_severities": ["Critical", "Major"],
+  "protected_paths": [".github/*", ".coderabbit.yaml", ".coderabbit/*", "CLAUDE.md", "*/CLAUDE.md"],
+  "auto_merge_paths": ["docs/*", "*.md"]
+}
