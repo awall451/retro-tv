@@ -54,6 +54,7 @@ Then open <http://localhost:8410>.
 | `ERSATZTV_URL` | Where ErsatzTV answers, as seen from this machine: `http://<server-ip>:8409`. No trailing slash. If the server is also on your tailnet, use its tailnet address and the viewer works at home and away. |
 | `VIEWER_PORT` | Port the viewer is published on. Default `8410`. |
 | `VIEWER_BIND` | Where that port is open. Default `127.0.0.1` (this machine only; see "Reach it from other devices" below). `0.0.0.0` also opens it to every device on the local network, with no login. |
+| `TRACKER_URL` | Optional. The [channel tracker](../tracker/README.md) that counts watch time, as `http://<host>:<port>`. See "Watch beacons" below. The tracker's own settings are in its README. |
 | `COMPOSE_FILE`, `UPLINK_PORT`, `UPLINK_BIND` | Only for the uplink add-on, below. |
 
 After changing a file under `web/`, run `docker compose up -d --build` again. After changing only
@@ -172,6 +173,27 @@ channel it copies, an HD FFmpeg profile, Streaming Engine **Next**, and **Show I
 See `../ersatztv/README.md` ("HD copies of every channel") for why not Legacy.
 A channel without a twin simply plays in Standard.
 
+### Watch beacons
+
+With `TRACKER_URL` set, the viewer tells the [channel tracker](../tracker/README.md) (an optional
+second container, `docker compose --profile tracker up -d`) which channel it is playing: once a
+tune settles, every minute while playing, and on leaving. Each beacon is a small `text/plain`
+POST to `<TRACKER_URL>/api/watch/beacon` with the channel number, HD or not, the channels being
+warmed for fast flipping, the kind of screen (`tv`, `mobile`, `desktop`) and a random id kept in
+the browser's storage (`retro-tv.client-id`), so the tracker can join one screen's minutes.
+Nothing else: no titles, no names. A stream counts while it plays, also in a hidden tab until
+the viewer stops it there.
+
+- `TRACKER_URL` is the address browsers use, so not `localhost` unless every viewer runs on this
+  machine. If the viewer is opened over `https://`, the tracker must be `https://` too.
+- At start the setting is written to `/tracker.json` (`web/tracker.envsh`) and the tracker's
+  origin is added to the Content-Security-Policy's `connect-src`. Without it, `/tracker.json` is
+  `{}`, nothing is sent and `connect-src` is `'self'`.
+- The tracker accepts beacons only from the viewer's own address (`TRACKER_ORIGINS` there;
+  localhost is always allowed).
+- On the [Retro TV box](../pi-image/README.md), set `TRACKER_URL` in `/etc/retro-tv.env` and run
+  `setup.sh` again.
+
 ### Padding and slow connections
 
 A live channel only exists a little ahead of real time: the server keeps the last ~40 seconds
@@ -284,13 +306,14 @@ ffprobe "$B/iptv/channel/1.m3u8?mode=segmenter"           # h264 640x480 + aac
 
 ```
 docker/
-├── compose.yaml              the viewer (one read-only container, port on loopback) and the TV Guide generator (profile "tvguide")
+├── compose.yaml              the viewer (one read-only container, port on loopback), the TV Guide generator (profile "tvguide") and the channel tracker (profile "tracker", ../tracker/)
 ├── compose.uplink.yaml       add-on for hosts whose containers cannot route out
 ├── .env.example              copy to .env
 ├── tvguide/                  the TV Guide Channel generator: the page rendered and streamed as HLS for ErsatzTV
 ├── web/
 │   ├── Dockerfile            pinned nginx (unprivileged) + the app
 │   ├── nginx.conf.template   static files and the read-only /iptv/ proxy
+│   ├── tracker.envsh         TRACKER_URL -> /tracker.json and the CSP's connect-src (runs at start)
 │   ├── uplink/               the uplink's nginx config (same image)
 │   └── app/
 │       ├── index.html
@@ -299,6 +322,7 @@ docker/
 │       ├── js/data.js        reads the channel list and listings
 │       ├── js/player.js      the one video player (hls.js, or Safari's own)
 │       ├── js/warm.js        keeps the next channel running while flipping
+│       ├── js/beacon.js      watch beacons for the channel tracker (TRACKER_URL)
 │       ├── js/bars.js        finds black bars in the picture (for "Fill the screen")
 │       ├── js/settings.js    the settings and where they are kept
 │       ├── js/themes.js      the themes (Cable, Vaporwave and seven more): names, splash, browser tint

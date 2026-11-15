@@ -79,6 +79,7 @@ Each piece's page lists its parts in detail and names the hardware it was built 
 | `tools/` | Scripts run from a PC or copied to the Pi: flashing, importing a game library, BIOS check, shader benchmarks |
 | `tools/render-splash/` | Renders the viewer's splash scenes to PNG for the Roku app and the box's boot screen |
 | `docker/` | The browser app (Docker Compose) |
+| `tracker/` | The channel tracker: an optional page for browsing the channels and library, queueing channel changes and seeing which channels get watched (`docker compose --profile tracker`) |
 | `roku-tv/` | The Roku app |
 | `pi-image/` | The Retro TV box: design, config, `setup.sh`, boot splash, IR key map |
 | `ersatztv/` | How the channels are built, and the commercials |

@@ -11,6 +11,7 @@ import { BarWatcher } from './bars.js';
 import { SETTINGS, getSetting, cycleSetting, setSetting } from './settings.js';
 import { applyTheme, THEMES } from './themes.js';
 import { showSplash, isSplashShowing } from './splash.js';
+import { loadTracker, Beacon } from './beacon.js';
 
 const $ = id => document.getElementById(id);
 const el = {
@@ -670,6 +671,14 @@ function moveSetting(delta) {
 // next flip lands on a running stream. It stops 30 s after the last flip:
 // while simply watching, only the channel on screen is streamed.
 const warmer = new Warmer();
+
+// Watch beacons for the channel tracker (TRACKER_URL; js/beacon.js). Off
+// when the server has no tracker set.
+const beacon = new Beacon(loadTracker(), () => {
+  const ch = tunedChannel();
+  if (!ch || !player.channel || player.state === 'idle' || player.state === 'error') return null;
+  return { channel: player.stream, kind: 'stream', hd: player.stream !== ch.num, warm: warmer.channels() };
+}, { tvMode: TV_MODE });
 let surfTimer = 0, surfSettleTimer = 0;
 
 function surf(direction) {
@@ -692,6 +701,7 @@ function stopSurf() {
 
 function tune(ch, direction = 0) {
   S.tunedId = ch.id;
+  beacon.changed();
   try { localStorage.setItem(LAST_CHANNEL_KEY, ch.id); } catch { /* private mode */ }
   applyLayout();               // the picture's shape can change with the channel
   if (el.screen.hidden) {
@@ -1243,12 +1253,14 @@ setInterval(() => {
 // A forgotten tab must not keep the server streaming all night.
 let hiddenTimer = 0, suspendedId = null;
 document.addEventListener('visibilitychange', () => {
+  beacon.changed();
   if (document.hidden) {
     hiddenTimer = setTimeout(() => {
       if (!player.channel) return;
       suspendedId = player.channel.id;
       player.stop();
       stopSurf();
+      beacon.changed();
     }, HIDDEN_STOP_MS);
     return;
   }
