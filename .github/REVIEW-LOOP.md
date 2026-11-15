@@ -1,7 +1,8 @@
 # The review loop
 
 Every pull request the owner opens goes through three steps with no person involved, and
-merges by itself when a fixed set of rules says it may.
+merges by itself when a fixed set of rules says it may. Pull requests from trusted authors
+get the first and the third step.
 
 1. **CodeRabbit reviews it** and rates how risky it is to merge.
 2. **Claude answers the findings** (`workflows/coderabbit-fix.yml`). It checks each one
@@ -16,7 +17,8 @@ The gate is plain rules, no model. Every number below is in `merge-gate.json`.
 
 Any one of these leaves the pull request for a person:
 
-- it is a draft, or was not opened by the repository owner from a branch of this repository
+- it is a draft
+- it was not opened by the repository owner or by someone listed under `trusted_authors`
 - it goes into a branch other than the default branch
 - CodeRabbit has not finished, or its review does not cover the latest commit
 - CodeRabbit rates the merge risk or the security risk High or Critical
@@ -55,6 +57,19 @@ touches. A file belongs to the first area in `merge-gate.json` whose patterns ma
 | Services and scripts (`ersatztv/`, `tools/`, the rest of `docker/`) | 5 |
 | Device and deploy (`pi/`, `pi-image/`, compose, nginx, Dockerfile) | 3 |
 | Automation | never |
+
+## Other people's pull requests
+
+Someone listed under `trusted_authors` in `merge-gate.json` is scored like the owner, and
+their pull request merges by itself when it passes, also from their own copy (fork) of the
+repository. Two things differ:
+
+- Claude does not fix findings on their pull requests. It cannot push to someone else's
+  copy, so the author answers CodeRabbit's findings.
+- An author can mark a finding's thread as resolved on their own pull request. Trusting
+  someone includes trusting them not to close a finding they have not dealt with.
+
+Anyone not on the list is always left for a person.
 
 ## Changing it
 
