@@ -439,10 +439,12 @@ def cmd_gate(args):
     merge_level = summary["merge"] if current else None
     stop("Merge risk is not High or Critical", merge_level in scores["merge_risk"],
          "CodeRabbit says %s" % (merge_level or "nothing"))
-    security_level = summary["security"] if covers(summary["security_covered"], sha) else None
-    security_key = security_level or "not rated"
-    stop("Security risk is not High or Critical", security_key in scores["security_risk"],
-         "CodeRabbit says %s" % security_key)
+    # No security rating at all reads as "not rated". A rating for an older commit is
+    # not that: it may be High, so it stops the merge until CodeRabbit rates this commit.
+    security_stale = bool(summary["security"]) and not covers(summary["security_covered"], sha)
+    security_key = summary["security"] or "not rated"
+    stop("Security risk is not High or Critical", not security_stale and security_key in scores["security_risk"],
+         "CodeRabbit says %s%s" % (security_key, ", for an older commit" if security_stale else ""))
 
     threads = review_threads(number)
     unresolved = [t for t in threads if not t["resolved"]]
@@ -487,7 +489,11 @@ def cmd_gate(args):
     factor("Merge risk", scores["merge_risk"].get(merge_level, 0), merge_level or "not rated")
     factor("Security risk", scores["security_risk"].get(security_key, 0), security_key)
 
-    tests_changed = [path for path in files if matches(path, settings["test_paths"])]
+    # Only a test file that is still there, with added lines, counts. Deleting or
+    # moving tests away must not earn the discount.
+    tests_changed = [change["filename"] for change in changes
+                     if change["status"] != "removed" and change["additions"] > 0
+                     and matches(change["filename"], settings["test_paths"])]
     if not ran:
         proof, proof_detail = 2, "nothing ran the code"
     elif tests_changed:
@@ -548,7 +554,22 @@ def cmd_gate(args):
     # so it has to be there before the merge is tried.
     gh("api", "repos/%s/statuses/%s" % (REPO, sha), "-f", "state=" + ("success" if passed else "failure"),
        "-f", "context=merge-gate", "-f", "description=" + ("Score %d: %s" % (score, verdict))[:140], check=False)
+    changed_mind = None
     if passed and merging:
+        # The checks above took a while. Look once more for a reason to stop that a
+        # person may have given in the meantime; the merge itself is tied to this commit.
+        latest = api("repos/%s/pulls/%d" % (REPO, number))
+        if latest["state"] != "open" or latest["draft"]:
+            changed_mind = "it is no longer open and ready"
+        elif latest["head"]["sha"] != sha:
+            changed_mind = "it got a new commit"
+        elif LABEL in [label["name"] for label in latest["labels"]]:
+            changed_mind = "the label %s was added" % LABEL
+    if changed_mind:
+        passed, verdict, outcome = False, "needs a person", "Passed the rules, but while it was checked %s." % changed_mind
+        gh("api", "repos/%s/statuses/%s" % (REPO, sha), "-f", "state=failure", "-f", "context=merge-gate",
+           "-f", "description=" + ("Stopped: " + changed_mind)[:140], check=False)
+    elif passed and merging:
         result = subprocess.run(["gh", "pr", "merge", str(number), "--repo", REPO, "--" + settings["merge_method"],
                                  "--match-head-commit", sha], capture_output=True, text=True)
         if result.returncode == 0:
