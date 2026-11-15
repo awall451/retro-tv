@@ -157,16 +157,22 @@ def output(**values):
 
 # --- threads ---------------------------------------------------------------
 
-def open_findings(number):
-    """CodeRabbit's findings that are still open and that the loop has not answered yet."""
-    return [t for t in review_threads(number) if not t["resolved"] and not t["outdated"] and not t["answered"]]
+def open_findings(number, settings=None):
+    """CodeRabbit's findings that are still open and that the loop has not answered yet.
+
+    Findings on files Claude may not change (the automation itself) are left out: its
+    edits there are undone, so those findings wait for a person.
+    """
+    protected = (settings or DEFAULTS)["protected_paths"]
+    return [t for t in review_threads(number) if not t["resolved"] and not t["outdated"] and not t["answered"]
+            and not any(fnmatch.fnmatch(t["path"] or "", pattern) for pattern in protected)]
 
 
 def cmd_threads(args):
     settings = config(args.config)
     pull = api("repos/%s/pulls/%d" % (REPO, args.pr))
     same_repo = (pull["head"]["repo"] or {}).get("full_name") == REPO
-    findings = open_findings(args.pr)
+    findings = open_findings(args.pr, settings)
     rounds = fix_rounds(args.pr)
     limit = settings["max_fix_rounds"]
     with open(args.out, "w", encoding="utf-8") as handle:
@@ -243,7 +249,7 @@ def cmd_apply(args):
     pull = api("repos/%s/pulls/%d" % (REPO, args.pr))
     rounds, limit = fix_rounds(args.pr), settings["max_fix_rounds"]
     this_round = rounds + 1
-    by_id = {thread["comment_id"]: thread for thread in open_findings(args.pr)}
+    by_id = {thread["comment_id"]: thread for thread in open_findings(args.pr, settings)}
     try:
         result = json.loads(os.environ.get("CLAUDE_RESULT") or "{}")
     except ValueError:
