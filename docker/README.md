@@ -178,7 +178,7 @@ keeps one running. The sleep timer asks, the way streaming services do:
   has nothing to burn in. A key or a click (a moving mouse alone does not) starts the same
   channel again.
 - **A hidden tab** (another tab, a minimised window, a phone's home screen) goes to the same
-  standby screen after two minutes, without asking, while the timer is on. With it off, a hidden
+  standby screen after five minutes, without asking, while the timer is on. With it off, a hidden
   tab stops after five minutes and picks the channel up again by itself (see "Good to know").
 
 The server sets the time for every device; each device can choose its own under Settings, Sleep.
@@ -322,8 +322,8 @@ Pi box's `setup.sh` runs the same script and keeps the file in
   v26). Surfing through more than that in one stretch fills the server: the new channel then
   fails until older ones time out. The viewer retries by itself.
 - **A hidden tab stops after 5 minutes** and picks the channel up again when you come back, so a
-  forgotten tab does not keep the server working all night. With the sleep timer on it stops
-  after 2 minutes and shows the standby screen instead; a key picks the channel up again (see
+  forgotten tab does not keep the server working all night. With the sleep timer on it shows
+  the standby screen instead; a key picks the channel up again (see
   "Sleep timer").
 - **Sound may start off.** Browsers allow sound only after a key press or click on the page. A
   controller button does not count, so if you start with a controller you may see "Sound is off":
