@@ -155,8 +155,47 @@ The cog opens settings. They are kept by the browser they were set in, so each d
 | Theme | **Cable**: the late-90s guide, navy and yellow, flat cells. **Vaporwave**: purple cells, pink highlights, cyan text, chrome titles. **Digital Cable**: black and deep blue, glossy rounded bars, a glowing light-blue highlight. **Satellite**: navy into purple, rounded tabs, gold. **DVR**: soft blues, rounded white pills, green highlight. **Media Center**: glassy see-through tiles, green glow, a thin face. **Aqua**: light pinstripes, white rounded cells, a blue gel highlight. **Set-Top Web**: purple and black, chunky bevelled buttons, capitals. **TV Guide**: the look of the TV Guide Channel page below (channel 1), with its colours, 3-D frames, shadowed lettering and the PrevueGrid font; the highlight is a solid yellow box. Each theme has its own splash (below); changing the theme replays it. The looks are in the style of their era; no real logos or names. |
 | Quality | **Standard**: the 4:3 picture made for the old TV. **HD**: the same channels in widescreen 1080p. The guide, names and numbers do not change. Only shown when the server has HD twins (below). |
 | Picture | **Original**: the whole 4:3 picture, as on the TV. **Fill the screen**: while watching, zooms in until the black bars around a widescreen show are off the screen; a true 4:3 show is left as it is. For wide monitors. The zoom follows the picture, so it can change when a 4:3 commercial follows a widescreen film. |
+| Sleep | **As the server says** (`IDLE_TIMEOUT_MIN`, off unless set), **After 1 hour**, **After 90 min**, **After 3 hours** or **Off**: when to ask "Are you still watching?" (see "Sleep timer" below). |
 | Fast flipping | **On**: the next channel is warmed up while you flip (see below). **Off**: channels start only when tuned. |
 | Power | Only on the [Pi box](../pi-image/README.md): **Power off**, pressed twice, shuts the box down cleanly. A read-only **Network** line under it shows how the box is connected (wired, or the Wi-Fi band and signal). |
+
+### Sleep timer
+
+Every channel being watched is a live transcode on the server, and a television left on all night
+keeps one running. The sleep timer asks, the way streaming services do:
+
+- **Idle** means no key, remote button, controller button, click, touch or wheel turn for the
+  sleep time (a moving mouse counts too). Any of them restarts the count.
+- **It never cuts into a programme.** Once the time is up, the viewer waits for the end of the
+  show on the channel being watched (its stop time in the guide data) and only then asks
+  **ARE YOU STILL WATCHING?**, with a countdown and "press any key". A show running more than
+  three hours past that point, or a channel without listings, gets the question at once.
+- **A key answers it** and the channel plays on; that key does nothing else.
+- **No answer**: the stream stops completely (the player lets go of the channel, so the server
+  ends its transcode about a minute later, as for any channel nobody watches) and a standby
+  screen stays up: near black, a small dim "STANDBY" card with the clock, and "press any key to
+  resume". The card moves a little every minute, so a CRT or an OLED left like this all night
+  has nothing to burn in. A key or a click (a moving mouse alone does not) starts the same
+  channel again.
+- **A hidden tab** (another tab, a minimised window, a phone's home screen) goes to the same
+  standby screen after two minutes, without asking, while the timer is on. With it off, a hidden
+  tab stops after five minutes and picks the channel up again by itself (see "Good to know").
+
+The server sets the time for every device; each device can choose its own under Settings, Sleep.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `IDLE_TIMEOUT_MIN` | `0` (off) | Minutes without input before the question. 90 is a good start for a box that is a TV. |
+| `IDLE_PROMPT_SEC` | `60` | How long the question waits for a key. |
+
+Put them in `.env` (compose passes them on) and run `docker compose up -d`; on the Pi box they go in
+`/etc/retro-tv.env`, then `sudo pi-image/setup.sh`. They reach the app as the `idle` key of
+`/config.json` (`web/config.d/idle.sh`, see "Server settings"). To try it without waiting, add
+`?idle=1&idleprompt=15` to the address: a one-minute timer and a 15-second question, for that
+page only.
+
+On the [Pi box](../pi-image/README.md) with an HDMI TV, switching the TV off goes to standby at
+once and switching it on resumes, when the box's HDMI-CEC service is running (`/pi/cec`).
 
 ### HD twins on the server
 
@@ -280,7 +319,9 @@ Pi box's `setup.sh` runs the same script and keeps the file in
   v26). Surfing through more than that in one stretch fills the server: the new channel then
   fails until older ones time out. The viewer retries by itself.
 - **A hidden tab stops after 5 minutes** and picks the channel up again when you come back, so a
-  forgotten tab does not keep the server working all night.
+  forgotten tab does not keep the server working all night. With the sleep timer on it stops
+  after 2 minutes and shows the standby screen instead; a key picks the channel up again (see
+  "Sleep timer").
 - **Sound may start off.** Browsers allow sound only after a key press or click on the page. A
   controller button does not count, so if you start with a controller you may see "Sound is off":
   press any key or click once.
@@ -342,6 +383,7 @@ docker/
 │       ├── js/beacon.js      watch beacons for the channel tracker (TRACKER_URL)
 │       ├── js/bars.js        finds black bars in the picture (for "Fill the screen")
 │       ├── js/settings.js    the settings and where they are kept
+│       ├── js/idle.js        the sleep timer: "Are you still watching?" and the standby screen
 │       ├── js/config.js      reads the server settings (/config.json) once
 │       ├── js/themes.js      the themes (Cable, Vaporwave and seven more): names, splash, browser tint
 │       ├── js/theme-boot.js  puts the saved theme on <html> before the first paint

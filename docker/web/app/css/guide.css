@@ -693,6 +693,7 @@ body.tv #banner.narrow #banMute { border-right: 0; }
 #osd { z-index: 5; }
 #splash { z-index: 6; }
 #poweroff { z-index: 7; }
+#idle { z-index: 8; }
 
 /* ---- Splash (while the guide loads, and after a theme change) ---------- */
 /* js/splash.js draws the theme's scene in here as SVG, in 640x480 units,
@@ -736,3 +737,46 @@ body.tv #banner.narrow #banMute { border-right: 0; }
   padding: 0 10%; font-size: 20px;
 }
 #poweroff[hidden] { display: none; }
+
+/* ---- Sleep timer (js/idle.js) ------------------------------------------ */
+/* Sized by the script to the window, like the picture; --iu is one pixel of
+   a 640x480 screen. The question is the theme's own colors; the standby
+   screen is near black with a small dim card that moves every minute, so a
+   CRT or an OLED left on all night has nothing to burn in. */
+#idle {
+  position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; box-sizing: border-box;
+  font-family: var(--font); text-transform: uppercase; text-align: center;
+}
+#idle[hidden], #idle [hidden] { display: none; }
+#idleAsk {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: calc(14 * var(--iu, 1px));
+  background: rgba(0, 0, 0, .55);
+}
+#idleAsk > div:not(.idleBar) {
+  width: calc(520 * var(--iu, 1px)); box-sizing: border-box;
+}
+#idleAsk .idleBar {
+  width: calc(520 * var(--iu, 1px)); height: calc(6 * var(--iu, 1px));
+  background: repeating-linear-gradient(90deg, var(--yellow) 0 calc(40 * var(--iu, 1px)), transparent 0 calc(48 * var(--iu, 1px)));
+}
+#idleAsk .idleQ {
+  background: var(--navy); color: var(--white); border: calc(3 * var(--iu, 1px)) solid var(--yellow);
+  padding: calc(18 * var(--iu, 1px)) calc(12 * var(--iu, 1px));
+  font-size: calc(34 * var(--iu, 1px)); line-height: 1.15; letter-spacing: .04em;
+}
+#idleAsk .idleCount {
+  color: var(--ink-accent); font-size: calc(64 * var(--iu, 1px)); line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+#idleAsk .idleHint { color: var(--soft); font-size: calc(22 * var(--iu, 1px)); letter-spacing: .12em; }
+#idleStandby { position: absolute; inset: 0; background: #000; }
+#idleStandby .idleCard {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  padding: calc(10 * var(--iu, 1px)) calc(18 * var(--iu, 1px));
+  border: calc(2 * var(--iu, 1px)) solid #2a3352; color: #5d6789; text-shadow: none;
+  transition: left 2s ease, top 2s ease;
+}
+#idleStandby .idleWord { font-size: calc(26 * var(--iu, 1px)); letter-spacing: .3em; color: #77809e; }
+#idleStandby #idleClock { font-size: calc(20 * var(--iu, 1px)); margin: calc(4 * var(--iu, 1px)) 0; font-variant-numeric: tabular-nums; }
+#idleStandby .idleHint { font-size: calc(12 * var(--iu, 1px)); letter-spacing: .12em; }

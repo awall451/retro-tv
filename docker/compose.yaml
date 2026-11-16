@@ -13,6 +13,9 @@ services:
       # Optional: the channel tracker that counts watch time (README.md,
       # "Watch beacons"). Empty: no beacons.
       TRACKER_URL: ${TRACKER_URL:-}
+      # The sleep timer (README, "Sleep timer"): 0 = off.
+      IDLE_TIMEOUT_MIN: ${IDLE_TIMEOUT_MIN:-0}
+      IDLE_PROMPT_SEC: ${IDLE_PROMPT_SEC:-60}
     # Published on loopback by default: a proxy on this machine (Gantry) is
     # the way in from other devices, and finds the container by this port.
     # VIEWER_BIND=0.0.0.0 also opens it to the local network.
