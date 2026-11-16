@@ -466,6 +466,7 @@ const web = new WebScreen(el.screen, el.tuning, {
 // A real key press or click is what browsers want before they allow sound.
 function wake() {
   if (autoMuted) player.unmute();
+  web.wake();
 }
 
 function setMode(mode) {
@@ -1267,11 +1268,20 @@ setInterval(() => {
   if (!el.banner.hidden) fillBanner();
 }, 1000);
 
-// A forgotten tab must not keep the server streaming all night.
+// A forgotten tab must not keep the server streaming all night. A web
+// channel's page goes too: it may play a stream of its own (the TV Guide
+// Channel page's promo) or sound.
 let hiddenTimer = 0, suspendedId = null;
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     hiddenTimer = setTimeout(() => {
+      const ch = tunedChannel();
+      if (ch && web.showing) {
+        suspendedId = ch.id;
+        web.hide();
+        stopSurf();
+        return;
+      }
       if (!player.channel) return;
       suspendedId = player.channel.id;
       player.stop();
@@ -1284,7 +1294,8 @@ document.addEventListener('visibilitychange', () => {
   if (suspendedId) {
     const ch = S.channels.find(c => c.id === suspendedId);
     suspendedId = null;
-    if (ch) { const st = streamOf(ch); player.tune(ch, { stream: st.num, watchSlow: st.hd }); }
+    if (ch && ch.web) tune(ch);   // a web channel: its page again
+    else if (ch) { const st = streamOf(ch); player.tune(ch, { stream: st.num, watchSlow: st.hd }); }
   }
   if (Date.now() - S.loadedAt > 60000) refresh();
   render();
