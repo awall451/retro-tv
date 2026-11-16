@@ -266,6 +266,19 @@ takes the same `?tv` and `&screen=4:3` parameters as the guide. The [Pi box](../
 (`PAGE=tvguide`, `TVGUIDE_PROMO=`), and [tvguide/](tvguide/README.md) is the generator that
 streams it, so ErsatzTV can carry it as a channel of its own.
 
+### Server settings
+
+Settings that belong to the server rather than to one screen (those that
+come from `.env`, or from `/etc/retro-tv.env` on the Pi box) reach the app
+through one file, `/config.json`. When the container starts,
+`web/config.envsh` runs each piece in `web/config.d/` (one per feature);
+a piece checks its variables, adds its key to the file, and adds any other
+site the page has to reach to the Content-Security-Policy. A bad value is
+skipped with a warning in the log, and the container still starts. The
+Pi box's `setup.sh` runs the same script and keeps the file in
+`/var/lib/retro-tv/`, outside the app folder. With nothing set the file is
+`{}` and the policy is the same as before.
+
 ## Good to know
 
 - **One stream while watching.** Each stream is a live transcode on the server. Highlighting
@@ -330,6 +343,8 @@ docker/
 │   ├── Dockerfile            pinned nginx (unprivileged) + the app
 │   ├── nginx.conf.template   static files and the read-only /iptv/ proxy
 │   ├── idle.envsh            IDLE_TIMEOUT_MIN, IDLE_PROMPT_SEC -> /idle.json, at start
+│   ├── config.envsh          server settings -> /config.json and the CSP (below, "Server settings")
+│   ├── config.d/             one piece per feature with a server setting
 │   ├── uplink/               the uplink's nginx config (same image)
 │   └── app/
 │       ├── index.html
@@ -341,6 +356,7 @@ docker/
 │       ├── js/bars.js        finds black bars in the picture (for "Fill the screen")
 │       ├── js/settings.js    the settings and where they are kept
 │       ├── js/idle.js        the sleep timer: "Are you still watching?" and the standby screen
+│       ├── js/config.js      reads the server settings (/config.json) once
 │       ├── js/themes.js      the themes (Cable, Vaporwave and seven more): names, splash, browser tint
 │       ├── js/theme-boot.js  puts the saved theme on <html> before the first paint
 │       ├── js/splash.js      the splash scenes and the perspective floor grid

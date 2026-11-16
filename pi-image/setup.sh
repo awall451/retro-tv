@@ -78,6 +78,15 @@ cp "$HERE"/config/www/* "$APP/"          # the box's own pages (the overscan tes
 IDLE_JSON="$APP/idle.json"
 export IDLE_TIMEOUT_MIN IDLE_PROMPT_SEC IDLE_JSON
 . "$REPO/docker/web/idle.envsh"
+# Server settings (docker/web/config.envsh): the same script and pieces as the
+# container, reading the settings in $CFG. The file is kept outside $APP, so an
+# app update with rsync --delete cannot remove it.
+install -d -m 755 /var/lib/retro-tv
+CONFIG_D="$REPO/docker/web/config.d"
+CONFIG_JSON=/var/lib/retro-tv/config.json
+export CONFIG_D CONFIG_JSON
+. "$REPO/docker/web/config.envsh"
+chmod 644 "$CONFIG_JSON"
 # The site is the template with its closing brace taken off and the include put
 # in before it. It is built aside and the old one kept, so a template that no
 # longer ends the way this expects cannot leave nginx unable to start.
@@ -86,6 +95,9 @@ sed -e 's|listen 8080;|listen 127.0.0.1:8410;|' \
     -e "s|root /usr/share/nginx/html;|root $APP;|" \
     -e "s|\${ERSATZTV_URL}|$ERSATZTV_URL|g" \
     -e "s|alias /tmp/idle.json;|alias $IDLE_JSON;|" \
+    -e "s|\${CSP_FRAME_SRC}|$CSP_FRAME_SRC|g" \
+    -e "s|\${CSP_CONNECT_SRC}|$CSP_CONNECT_SRC|g" \
+    -e "s|alias /tmp/retro-tv-config.json;|alias $CONFIG_JSON;|" \
     "$REPO/docker/web/nginx.conf.template" |
     awk '{ line[NR] = $0 }
          END { n = NR
