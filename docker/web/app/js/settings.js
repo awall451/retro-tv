@@ -27,6 +27,13 @@ export const SETTINGS = [
     ],
   },
   {
+    id: 'epnum', label: 'Episode numbers', default: 'on',
+    options: [
+      ['on', 'On', 'Season and episode (S01E02) beside a show\'s title in the guide, the panel and the channel bar.'],
+      ['off', 'Off', 'Titles only, as the old guides printed them.'],
+    ],
+  },
+  {
     id: 'warm', label: 'Fast flipping', default: 'on',
     options: [
       ['on', 'On', 'While you flip channels, the next one is started ahead of time, so it appears at once.'],

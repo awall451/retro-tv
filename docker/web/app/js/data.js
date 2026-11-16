@@ -50,6 +50,26 @@ export function parseXmltvTime(value) {
   return m[7] === '+' ? utc - offset : utc + offset;
 }
 
+// Season and episode as "S01E02" (two digits at least, so S01E134 and
+// S1950E23 stay whole), or "S01E02-E03" for a double episode. '' when the
+// listing has no season and episode: films, and specials without numbers.
+// ErsatzTV writes two forms: "onscreen" (S01E02) and the zero-based
+// "xmltv_ns" (0.1.0/1). Onscreen is read first, as ErsatzTV writes a
+// season 0 special as season -1 in xmltv_ns; xmltv_ns is for other sources.
+export function episodeCode(onscreen, ns) {
+  let s, e, e2;
+  let m = /^S(\d+)\s*E(\d+)(?:\s*-?\s*E?(\d+))?$/i.exec((onscreen || '').trim());
+  if (m) {
+    [s, e, e2] = [+m[1], +m[2], m[3] ? +m[3] : 0];
+  } else if ((m = /^\s*(\d+)\s*(?:\/\s*\d*\s*)?\.\s*(\d+)(?:\s*-\s*(\d+))?\s*(?:\/\s*\d*\s*)?\./.exec(ns || ''))) {
+    [s, e, e2] = [+m[1] + 1, +m[2] + 1, m[3] ? +m[3] + 1 : 0];
+  } else {
+    return '';
+  }
+  const two = n => String(n).padStart(2, '0');
+  return `S${two(s)}E${two(e)}` + (e2 > e ? `-E${two(e2)}` : '');
+}
+
 export function parseXmltv(text, keepFrom, keepTo) {
   const doc = new DOMParser().parseFromString(text, 'text/xml');
   if (doc.querySelector('parsererror')) throw new Error('The guide data is not valid XML');
@@ -59,6 +79,7 @@ export function parseXmltv(text, keepFrom, keepTo) {
     const stop = parseXmltvTime(node.getAttribute('stop'));
     if (!(stop > start) || stop <= keepFrom || start >= keepTo) continue;
     const p = { start, stop, title: '', sub: '', desc: '', cats: [], rating: '', year: '', ep: '', poster: null, still: null };
+    let onscreen = '', ns = '';
     for (const c of node.children) {
       const value = c.textContent.trim();
       switch (c.tagName) {
@@ -69,9 +90,13 @@ export function parseXmltv(text, keepFrom, keepTo) {
         // ErsatzTV writes <date>0</date> for a film with no year.
         case 'date': p.year = /^[1-9]\d{3}/.test(value) ? value.slice(0, 4) : ''; break;
         case 'rating': p.rating = value; break;
-        case 'episode-num':
-          if (c.getAttribute('system') === 'onscreen') p.ep = value;
+        case 'episode-num': {
+          // XMLTV's default system is onscreen, for an element without one.
+          const system = c.getAttribute('system') || 'onscreen';
+          if (system === 'onscreen') onscreen = value;
+          else if (system === 'xmltv_ns') ns = value;
           break;
+        }
         case 'icon': p.poster = p.poster || localPath(c.getAttribute('src')); break;
         case 'image':
           if (c.getAttribute('type') === 'poster') p.poster = localPath(value) || p.poster;
@@ -80,6 +105,7 @@ export function parseXmltv(text, keepFrom, keepTo) {
       }
     }
     p.movie = p.cats[0] === 'Movie';
+    p.ep = p.movie ? '' : episodeCode(onscreen, ns);
     const id = node.getAttribute('channel');
     if (!byChannel.has(id)) byChannel.set(id, []);
     byChannel.get(id).push(p);
