@@ -642,12 +642,15 @@
     const keepFrom = fromSel.value, keepTo = toSel.value;
     fromSel.replaceChildren(...channelOptions(false, false));
     toSel.replaceChildren(...channelOptions(true, action === "note"));
-    // default "from": the channel being viewed, else a channel every selected item is on
+    // default "from": the channel being viewed, else a channel every selected
+    // item is on; once the user has picked one, theirs stays
     let from = keepFrom;
     const items = [...S.sel.values()];
     const common = items.reduce((acc, x) => acc.filter((c) => x.on.includes(c)), items[0].on.slice());
-    if (S.ctxFrom && S.view === "channel") from = `n:${S.ctxFrom}`;
-    else if (!bar.dataset.fromTouched && common.length) from = `n:${common[0]}`;
+    if (!bar.dataset.fromTouched) {
+      if (S.ctxFrom && S.view === "channel") from = `n:${S.ctxFrom}`;
+      else if (common.length) from = `n:${common[0]}`;
+    }
     if (from) fromSel.value = from;
     if (keepTo) toSel.value = keepTo;
     $("#qbFromWrap").classList.toggle("hidden", !(action === "remove" || action === "move"));
