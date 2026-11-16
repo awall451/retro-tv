@@ -46,7 +46,6 @@ const SCREEN_SHAPE = (() => {
 const LAST_CHANNEL_KEY = 'retro-tv.last-channel';
 const REFRESH_MS = 15 * 60 * 1000;       // re-read the listings this often
 const HIDDEN_STOP_MS = 5 * 60 * 1000;    // stop streaming in a tab hidden this long
-const HIDDEN_SLEEP_MS = 2 * 60 * 1000;   // with the sleep timer on: standby after this long hidden
 const BANNER_MS = 4000;
 const SURF_MS = 30 * 1000;               // warm-up ends this long after the last flip
 const SURF_SETTLE_MS = 900;              // start warming the next channel after this pause
@@ -1365,13 +1364,13 @@ setInterval(() => {
 
 // A forgotten tab must not keep the server streaming all night. Hidden for
 // five minutes, it stops, and picks the channel up again when it is looked
-// at. With the sleep timer on, it goes to standby after two minutes instead,
+// at. With the sleep timer on, it goes to standby at the same point instead,
 // and a key brings the channel back.
 let hiddenTimer = 0, suspendedId = null;
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     hiddenTimer = idle.on
-      ? setTimeout(() => { if (idlePlaying()) idle.standby('hidden'); }, HIDDEN_SLEEP_MS)
+      ? setTimeout(() => { if (idlePlaying()) idle.standby('hidden'); }, HIDDEN_STOP_MS)
       : setTimeout(() => {
         if (!player.channel) return;
         suspendedId = player.channel.id;
