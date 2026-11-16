@@ -1,0 +1,52 @@
+#!/bin/sh
+# Server settings for the viewer, in one file (see docker/README.md,
+# "Server settings"). At start this:
+#  - sources every piece in $CONFIG_D (*.sh, in name order). A piece reads
+#    its own environment variables, checks them, and calls
+#        config_set <key> <json value>     a top-level key of /config.json
+#        csp_frame  <origin>               adds to the CSP's frame-src
+#        csp_connect <origin>              adds to the CSP's connect-src
+#  - writes the result to $CONFIG_JSON, which nginx serves at /config.json,
+#  - exports CSP_FRAME_SRC and CSP_CONNECT_SRC, which the nginx template
+#    fills into its Content-Security-Policy (empty when nothing is added).
+#
+# A piece must not exit, must not fail under `set -eu` (bash and busybox sh),
+# and must skip a bad value with a warning on stderr rather than stop: the
+# container, and the Pi box's setup.sh, carry on with the default.
+#
+# The nginx entrypoint sources this file (*.envsh) before it fills in the
+# templates, so the exports reach them. The Pi box's setup.sh sources it
+# too, with CONFIG_D pointing at the checkout and CONFIG_JSON outside the
+# app folder (an app update with rsync --delete would remove it there).
+
+CONFIG_D=${CONFIG_D:-/etc/retro-tv/config.d}
+CONFIG_JSON=${CONFIG_JSON:-/tmp/retro-tv-config.json}
+CSP_FRAME_SRC=
+CSP_CONNECT_SRC=
+_config_members=
+
+config_set() {
+  _config_members="${_config_members:+$_config_members,
+}  \"$1\": $2"
+}
+csp_frame() {
+  case " $CSP_FRAME_SRC " in *" $1 "*) ;; *) CSP_FRAME_SRC="$CSP_FRAME_SRC $1" ;; esac
+}
+csp_connect() {
+  case " $CSP_CONNECT_SRC " in *" $1 "*) ;; *) CSP_CONNECT_SRC="$CSP_CONNECT_SRC $1" ;; esac
+}
+
+for _config_piece in "$CONFIG_D"/*.sh; do
+  [ -r "$_config_piece" ] || continue
+  . "$_config_piece"
+done
+
+if [ -n "$_config_members" ]; then
+  printf '{\n%s\n}\n' "$_config_members" > "$CONFIG_JSON.new"
+else
+  printf '{}\n' > "$CONFIG_JSON.new"
+fi
+mv -f "$CONFIG_JSON.new" "$CONFIG_JSON"
+unset _config_members _config_piece
+unset -f config_set csp_frame csp_connect
+export CSP_FRAME_SRC CSP_CONNECT_SRC
