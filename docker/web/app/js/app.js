@@ -48,6 +48,7 @@ const LAST_CHANNEL_KEY = 'retro-tv.last-channel';
 const REFRESH_MS = 15 * 60 * 1000;       // re-read the listings this often
 const HIDDEN_STOP_MS = 5 * 60 * 1000;    // stop streaming in a tab hidden this long
 const HIDDEN_SLEEP_MS = 2 * 60 * 1000;   // with the sleep timer on: standby after this long hidden
+const BEACON_MAX_IDLE_S = 30 * 86400;    // the tracker takes idle seconds up to this (MAX_IDLE)
 const BANNER_MS = 4000;
 const SURF_MS = 30 * 1000;               // warm-up ends this long after the last flip
 const SURF_SETTLE_MS = 900;              // start warming the next channel after this pause
@@ -680,12 +681,22 @@ function moveSetting(delta) {
 const warmer = new Warmer();
 
 // Watch beacons for the channel tracker (TRACKER_URL; js/beacon.js). Off
-// when the server has no tracker set.
+// when the server has no tracker set. The sleep timer's standby screen is
+// nothing watched; with the timer on, every beacon also says how long since
+// the last input and the sleep time, so the tracker can keep a TV left on
+// apart from watching (js/idle.js). With it off they carry neither, as
+// before.
 const beacon = new Beacon(loadTracker(), () => {
   const ch = tunedChannel();
-  if (!ch || !player.channel || player.state === 'idle' || player.state === 'error') return null;
+  if (!ch || idle.asleep || !player.channel || player.state === 'idle' || player.state === 'error') return null;
   return { channel: player.stream, kind: 'stream', hd: player.stream !== ch.num, warm: warmer.channels() };
-}, { tvMode: TV_MODE });
+}, {
+  tvMode: TV_MODE,
+  extra: () => (idle.on ? {
+    idle: Math.min(Math.round((Date.now() - idle.last) / 1000), BEACON_MAX_IDLE_S),
+    idleAfter: Math.min(Math.round(idle.timeoutMs / 1000), BEACON_MAX_IDLE_S),
+  } : {}),
+});
 let surfTimer = 0, surfSettleTimer = 0;
 
 function surf(direction) {
@@ -987,6 +998,7 @@ function sleep() {
   bars.reset();
   hideBanner();
   hideOsd();
+  beacon.changed();                      // a stop beacon for the tracker
 }
 
 // A key on the standby screen (or the TV switched back on): the same channel.

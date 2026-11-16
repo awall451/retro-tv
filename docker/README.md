@@ -221,7 +221,10 @@ POST to `<TRACKER_URL>/api/watch/beacon` with the channel number, HD or not, the
 warmed for fast flipping, the kind of screen (`tv`, `mobile`, `desktop`) and a random id kept in
 the browser's storage (`retro-tv.client-id`), so the tracker can join one screen's minutes.
 Nothing else: no titles, no names. A stream counts while it plays, also in a hidden tab until
-the viewer stops it there.
+the viewer stops it there. With the [sleep timer](#sleep-timer) on, each beacon also carries
+`idle` (seconds since the last key press, click or touch) and `idleAfter` (the sleep time in
+seconds), so the tracker can keep a TV left on with nobody at the controls apart from watching;
+going to standby sends a stop beacon. With the timer off, beacons carry neither.
 
 - `TRACKER_URL` is the address browsers use, so not `localhost` unless every viewer runs on this
   machine. If the viewer is opened over `https://`, the tracker must be `https://` too.

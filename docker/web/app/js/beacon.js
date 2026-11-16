@@ -9,9 +9,11 @@
 // watching, and on leaving: the channel number, HD or not, the channels
 // being warmed for fast flipping, the kind of screen (tv, mobile, desktop)
 // and a random id kept in this browser's storage, so the tracker can join
-// the minutes of one screen. Nothing else: no titles, no names. A stream
-// counts while it plays (also in a hidden tab, until the viewer stops it
-// there).
+// the minutes of one screen. Nothing else: no titles, no names. With the
+// sleep timer on, also the seconds since the last key press and its setting
+// (idle, idleAfter), so the tracker keeps a TV left on with nobody at the
+// controls apart. A stream counts while it plays (also in a hidden tab,
+// until the viewer stops it there or the sleep timer goes to standby).
 
 import { serverSetting } from './config.js';
 
@@ -45,9 +47,11 @@ export class Beacon {
   // watching(): what is being watched now, {channel, kind, hd, warm}, or null.
   // kind is 'stream' (the tracker also takes 'web', for a page shown instead
   // of a stream).
-  constructor(tracker, watching, { tvMode = false } = {}) {
+  // extra(): more fields for every beacon (the sleep timer's idle seconds).
+  constructor(tracker, watching, { tvMode = false, extra = () => ({}) } = {}) {
     this.url = null;
     this.watching = watching;
+    this.extra = extra;
     this.ua = uaClass(tvMode);
     this.client = null;
     this.last = null;
@@ -79,6 +83,7 @@ export class Beacon {
     else if (this.last) body = { ...this.last, event: 'stop' };
     else return;
     this.last = now;
+    Object.assign(body, this.extra());
     body.client = this.client;
     body.ua = this.ua;
     try {
