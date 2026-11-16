@@ -7,13 +7,19 @@ setup.sh leaves this service off there. It uses cec-ctl (v4l-utils):
   - registers the box on the HDMI-CEC bus as a playback device ("Retro TV"),
   - asks the TV for its power status every CEC_POLL_SEC seconds (10) and
     listens to the bus, so a <Standby> from the TV is seen at once,
-  - writes what it knows to /run/retro-tv/cec.json, which nginx serves to
-    the viewer as /pi/cec:  {"power": "on" | "standby" | "unknown", ...}
+  - writes what it knows to /run/retro-tv/cec/state.json, which nginx serves
+    to the viewer as /pi/cec:  {"power": "on" | "standby" | "unknown", ...}
 
-The viewer polls /pi/cec: "standby" stops the stream at once (its standby
-screen, as after the sleep timer), and "on" after "standby" resumes the
-channel. "unknown" (a TV that does not answer, or a converter that does not
-pass CEC on) changes nothing.
+The viewer (with its /pi/cec change, feat/idle-timeout) polls /pi/cec:
+"standby" stops the stream at once (its standby screen, as after the sleep
+timer), and "on" after "standby" resumes the channel. "unknown" (a TV that
+does not answer, or a converter that does not pass CEC on) changes nothing.
+
+With CEC=auto (the default) a TV that has not answered for a few minutes
+is asked only every QUIET_POLL_S seconds (300): an HDMI-to-composite
+converter usually drops CEC, and then nothing ever answers. Any message
+from the TV on the bus, or an answer, brings back the normal pace. CEC=1
+keeps the normal pace regardless.
 
 CEC_KEYS=1 also lets the TV's remote drive the viewer: the kernel turns the
 remote's <User Control Pressed> messages into key presses on its rc-cec
@@ -24,8 +30,12 @@ their remote's keys to the active source, so with CEC_KEYS=1 the box says it
 is the active source when the service starts; on most TVs that also
 switches the TV to the box's input.
 
-Settings from /etc/retro-tv.env: CEC_DEVICE (default: the cec device of
-the connected HDMI port), CEC_KEYS, CEC_POLL_SEC, CEC_OSD_NAME.
+Settings: CEC, CEC_DEVICE (default: the cec device of the connected HDMI
+port), CEC_KEYS, CEC_POLL_SEC, CEC_OSD_NAME. setup.sh copies them from
+/etc/retro-tv.env into /etc/retro-tv-cec.env, so the service (its own user,
+retro-tv-cec) sees these and nothing else from the box's settings. The rc-cec
+key map is loaded by udev through /etc/rc_maps.cfg (setup.sh triggers it),
+not by this service: that needs root.
 
 Untested on hardware so far: the parsing is unit-tested against cec-ctl's
 output format (pi-image/tests/test_cec.py).
@@ -39,13 +49,17 @@ import sys
 import threading
 import time
 
-STATE = os.environ.get("CEC_STATE") or "/run/retro-tv/cec.json"   # CEC_STATE: for tests
+# The service's RuntimeDirectory (retro-tv/cec), so its own user can write it.
+STATE = os.environ.get("CEC_STATE") or "/run/retro-tv/cec/state.json"   # CEC_STATE: for tests
 STATE_DIR = os.path.dirname(STATE)
 POLL_S = max(3.0, float(os.environ.get("CEC_POLL_SEC") or 10))
 KEYS = os.environ.get("CEC_KEYS", "0") == "1"
+AUTO = os.environ.get("CEC", "auto") != "1"     # auto: slow down while nothing answers
 OSD_NAME = (os.environ.get("CEC_OSD_NAME") or "Retro TV")[:14]   # CEC allows 14 characters
-KEYMAP = "/etc/rc_keymaps/retro-tv-cec.toml"
 UNKNOWN_AFTER = 3            # polls without an answer before the state is "unknown"
+QUIET_AFTER = 30             # polls without an answer (5 min at 10 s) before polling slows down
+QUIET_POLL_S = 300.0         # the slow pace (CEC=auto only)
+MIN_GAP_S = 2.0              # at least this long between two polls, however often the bus pokes
 
 # cec-ctl's names for the power states (newer and older spellings), and the codes.
 POWER_WORDS = {
@@ -74,6 +88,12 @@ def parse_message(line):
     """One monitor line -> (from logical address, opcode name), or None."""
     m = MSG_RE.search(line or "")
     return (int(m.group(3)), m.group(5)) if m else None
+
+
+def is_header(line):
+    """A monitor line that starts a message or event (its details are indented below it)."""
+    text = (line or "").strip()
+    return bool(text) and (not line[:1].isspace() or text.startswith(("Received ", "Transmit", "Event")))
 
 
 def parse_phys_addr(text):
@@ -110,6 +130,9 @@ class Tv:
         self.power = "unknown"
         self.since = time.time()
         self.misses = 0
+        self.seen = 0                # bus observations so far; a poll older than the last one is dropped
+        self.sender = None           # logical address of the monitor's last message header
+        self.last_poll = 0.0
         self.lock = threading.Lock()
         self.poll_now = threading.Event()
 
@@ -121,8 +144,15 @@ class Tv:
         except (OSError, subprocess.SubprocessError) as e:
             return f"error: {e}"
 
-    def set(self, power, why):
+    def set(self, power, why, seen=None):
+        """Publish a power state. A poll passes the observation count from
+        before its query: if the monitor has seen the TV since, the poll's
+        answer is older than that and is dropped."""
         with self.lock:
+            if seen is None:
+                self.seen += 1
+            elif seen != self.seen:
+                return
             if power == self.power:
                 return
             print(f"tv: {self.power} -> {power} ({why})", flush=True)
@@ -148,64 +178,74 @@ class Tv:
             pa = parse_phys_addr(self.cec("-x"))
             if pa:
                 self.cec("-t", "0", "--active-source", f"phys-addr={pa}")
-            load_keymap()
 
     def poll(self):
+        with self.lock:
+            seen = self.seen
         out = self.cec("-t", "0", "--give-device-power-status")
+        self.last_poll = time.monotonic()
         state = parse_power(out)
         if state:
             self.misses = 0
-            self.set(state, "poll")
+            self.set(state, "poll", seen)
         else:
             self.misses += 1
             if self.misses >= UNKNOWN_AFTER:
-                self.set("unknown", "no answer")
+                self.set("unknown", "no answer", seen)
+            if AUTO and self.misses == QUIET_AFTER:
+                print(f"tv: no answer for {QUIET_AFTER} polls, asking every {QUIET_POLL_S:.0f} s", flush=True)
+
+    def interval(self):
+        """Seconds to the next poll: slow while the TV has long been silent (CEC=auto)."""
+        return QUIET_POLL_S if AUTO and self.misses >= QUIET_AFTER else POLL_S
 
     def poller(self):
         while True:
             self.poll()
-            self.poll_now.wait(POLL_S)
+            self.poll_now.wait(self.interval())
             self.poll_now.clear()
+            # However often the bus pokes, never query back to back.
+            gap = MIN_GAP_S - (time.monotonic() - self.last_poll)
+            if gap > 0:
+                time.sleep(gap)
+
+    def see(self, line):
+        """One monitor line. A <Standby> from the TV is acted on at once, a
+        power report from it is taken as it is (also the TV's answer to our
+        own poll, which must not start another poll), and any other message
+        from it (it woke up, it changed input) means a fresh look. A
+        pwr-state line belongs to the header above it, and counts only when
+        that header is the TV's (logical address 0): an audio system in
+        standby says nothing about the TV."""
+        if is_header(line):
+            msg = parse_message(line)
+            self.sender = msg[0] if msg else None
+            if msg and msg[0] == 0:
+                if msg[1] == "STANDBY":
+                    self.set("standby", "TV sent standby")
+                elif msg[1] != "REPORT_POWER_STATUS":
+                    self.poll_now.set()
+        elif "pwr-state" in line and self.sender == 0:
+            state = parse_power(line)
+            if state:
+                if self.misses >= QUIET_AFTER:
+                    self.poll_now.set()      # it talks after all: back to the normal pace
+                self.misses = 0
+                self.set(state, "report")
 
     def monitor(self):
-        """Follow the bus: a <Standby> from the TV is acted on at once; any
-        other message from it (it woke up, it reports its power) means a
-        fresh look."""
+        """Follow the bus (see see())."""
         while True:
             try:
                 p = subprocess.Popen(["cec-ctl", "-d", self.device, "-s", "-m"], stdout=subprocess.PIPE,
                                      stderr=subprocess.DEVNULL, text=True)
+                self.sender = None
                 for line in p.stdout:
-                    msg = parse_message(line)
-                    if msg and msg[0] == 0 and msg[1] == "STANDBY":
-                        self.set("standby", "TV sent standby")
-                    elif msg and msg[0] == 0:
-                        self.poll_now.set()
-                    elif "pwr-state" in line:
-                        state = parse_power(line)
-                        if state:
-                            self.set(state, "report")
+                    self.see(line)
                 p.wait()
             except OSError as e:
                 print(f"monitor: {e}", flush=True)
             time.sleep(5)
-
-
-def load_keymap():
-    """Point the CEC adapter's rc device at the box's key map (the udev rule
-    from /etc/rc_maps.cfg does the same when the device appears)."""
-    if not os.path.exists(KEYMAP):
-        return
-    for uevent in glob.glob("/sys/class/rc/rc*/uevent"):
-        try:
-            with open(uevent, encoding="utf-8") as f:
-                if "NAME=rc-cec" not in f.read():
-                    continue
-        except OSError:
-            continue
-        rc = os.path.basename(os.path.dirname(uevent))
-        subprocess.run(["ir-keytable", "-s", rc, "-c", "-w", KEYMAP], check=False,
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 def main():

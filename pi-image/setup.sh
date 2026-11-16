@@ -126,20 +126,37 @@ systemctl set-default graphical.target
 # HDMI-CEC: whether the TV is on (/pi/cec), optionally its remote. Only for an
 # HDMI display mode on a Pi with a CEC device; otherwise off, and the viewer
 # simply finds no /pi/cec.
+# The service runs as its own user (group video: /dev/cec*) and gets only the
+# CEC_* settings, in a file of its own.
 install -m 755 "$HERE/config/retro-tv-cec.py" /usr/local/bin/retro-tv-cec.py
 install -m 644 "$HERE/config/retro-tv-cec.service" /etc/systemd/system/retro-tv-cec.service
+id retro-tv-cec >/dev/null 2>&1 ||
+    useradd --system --user-group --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin retro-tv-cec
+usermod -aG video retro-tv-cec
+{
+    echo "# Written by retro-tv setup.sh from $CFG (the CEC_* settings only); edit it there."
+    for v in CEC CEC_DEVICE CEC_KEYS CEC_POLL_SEC CEC_OSD_NAME; do
+        val=${!v:-}; val=${val//\\/\\\\}; val=${val//\"/\\\"}
+        if [ -n "$val" ]; then printf '%s="%s"\n' "$v" "$val"; fi
+    done
+} > /etc/retro-tv-cec.env
+chmod 644 /etc/retro-tv-cec.env
 mkdir -p /etc/rc_keymaps
 install -m 644 "$HERE/config/rc_keymaps/retro-tv-cec.toml" /etc/rc_keymaps/
 systemctl daemon-reload
 sed -i '/retro-tv-cec\.toml/d' /etc/rc_maps.cfg 2>/dev/null || true
 if [ "$DISPLAY_MODE" != composite ] && [ "$CEC" != 0 ] && ls /dev/cec* >/dev/null 2>&1; then
     log "HDMI-CEC on (keys: $CEC_KEYS)"
-    [ "$CEC_KEYS" = 1 ] && printf '*\trc-cec\tretro-tv-cec.toml\n' >> /etc/rc_maps.cfg
+    if [ "$CEC_KEYS" = 1 ]; then
+        printf '*\trc-cec\tretro-tv-cec.toml\n' >> /etc/rc_maps.cfg
+        # udev loads the map (ir-keytable, as root) for an rc device that is already there
+        udevadm trigger --subsystem-match=rc --action=add || true
+    fi
     systemctl enable retro-tv-cec.service
     systemctl restart retro-tv-cec.service
 else
+    # Stopping it removes its RuntimeDirectory, /run/retro-tv/cec: no /pi/cec.
     systemctl disable --now retro-tv-cec.service >/dev/null 2>&1 || true
-    rm -f /run/retro-tv/cec.json
 fi
 
 # ---- boot splash -------------------------------------------------------------------

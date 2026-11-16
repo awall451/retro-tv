@@ -1,6 +1,7 @@
 """retro-tv-cec.py: reading cec-ctl's output (no CEC hardware needed).
 Run: python3 -m unittest discover -s pi-image/tests"""
 import importlib.util
+import json
 import os
 import tempfile
 import unittest
@@ -56,6 +57,88 @@ class MonitorTest(unittest.TestCase):
                          (5, "SET_SYSTEM_AUDIO_MODE"))
         self.assertIsNone(cec.parse_message("\tpwr-state: on (0x00)"))
         self.assertIsNone(cec.parse_message("Transmit from Playback Device 1 to TV (4 to 0):"))
+
+
+class BusTest(unittest.TestCase):
+    """The monitor's lines, fed to Tv.see() as cec-ctl -m prints them; no cec-ctl runs."""
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.saved = cec.STATE, cec.STATE_DIR, cec.AUTO
+        cec.STATE_DIR = os.path.join(self.tmp.name, "cec")
+        cec.STATE = os.path.join(cec.STATE_DIR, "state.json")
+        cec.AUTO = True
+        self.tv = cec.Tv("/dev/cec0")
+        self.tv.write()                    # as main() does at start
+
+    def tearDown(self):
+        cec.STATE, cec.STATE_DIR, cec.AUTO = self.saved
+        self.tmp.cleanup()
+
+    def feed(self, text):
+        for line in text.splitlines(keepends=True):
+            self.tv.see(line)
+
+    def published(self):
+        with open(cec.STATE, encoding="utf-8") as f:
+            return json.load(f)["power"]
+
+    def test_tv_standby_and_report(self):
+        self.feed("Received from TV to all (0 to 15): STANDBY (0x36)\n")
+        self.assertEqual(self.published(), "standby")
+        self.feed("Received from TV to Playback Device 1 (0 to 4): REPORT_POWER_STATUS (0x90):\n"
+                  "\tpwr-state: on (0x00)\n")
+        self.assertEqual(self.published(), "on")
+
+    def test_power_report_does_not_start_a_poll(self):
+        self.feed("Received from TV to Playback Device 1 (0 to 4): REPORT_POWER_STATUS (0x90):\n"
+                  "\tpwr-state: on (0x00)\n")
+        self.assertFalse(self.tv.poll_now.is_set())
+        self.feed("Received from TV to all (0 to 15): REPORT_PHYSICAL_ADDR (0x84):\n"
+                  "\tphys-addr: 0.0.0.0\n\tprim-devtype: tv (0x00)\n")
+        self.assertTrue(self.tv.poll_now.is_set())
+
+    def test_other_senders_power_is_ignored(self):
+        self.feed("Received from TV to Playback Device 1 (0 to 4): REPORT_POWER_STATUS (0x90):\n"
+                  "\tpwr-state: on (0x00)\n")
+        self.feed("Received from Audio System to Playback Device 1 (5 to 4): REPORT_POWER_STATUS (0x90):\n"
+                  "\tpwr-state: standby (0x01)\n")
+        self.assertEqual(self.published(), "on")
+        # A header of another kind in between also ends the TV's message.
+        self.feed("Received from TV to Playback Device 1 (0 to 4): REPORT_POWER_STATUS (0x90):\n"
+                  "Transmit from Playback Device 1 to Audio System (4 to 5):\n"
+                  "\tpwr-state: standby (0x01)\n")
+        self.assertEqual(self.published(), "on")
+
+    def test_poll_older_than_bus_is_dropped(self):
+        tv = self.tv
+        def slow_cec(*args, **kw):        # the TV says "on", then sends <Standby> before we publish
+            tv.see("Received from TV to all (0 to 15): STANDBY (0x36)\n")
+            return REPLY_ON
+        tv.cec = slow_cec
+        tv.poll()
+        self.assertEqual(self.published(), "standby")
+        tv.cec = lambda *a, **k: REPLY_ON  # a later poll with nothing in between does count
+        tv.poll()
+        self.assertEqual(self.published(), "on")
+
+    def test_silent_tv_slows_polling_until_it_talks(self):
+        tv = self.tv
+        tv.cec = lambda *a, **k: REPLY_NACK
+        for _ in range(cec.QUIET_AFTER - 1):
+            tv.poll()
+        self.assertEqual(self.published(), "unknown")
+        self.assertEqual(tv.interval(), cec.POLL_S)
+        tv.poll()
+        self.assertEqual(tv.interval(), cec.QUIET_POLL_S)
+        cec.AUTO = False                   # CEC=1: the normal pace regardless
+        self.assertEqual(tv.interval(), cec.POLL_S)
+        cec.AUTO = True
+        # The TV turns up on the bus: a fresh look at once, and the normal pace after.
+        self.feed("Received from TV to Playback Device 1 (0 to 4): REPORT_POWER_STATUS (0x90):\n"
+                  "\tpwr-state: standby (0x01)\n")
+        self.assertTrue(tv.poll_now.is_set())
+        self.assertEqual(tv.interval(), cec.POLL_S)
+        self.assertEqual(self.published(), "standby")
 
 
 class AddressTest(unittest.TestCase):
