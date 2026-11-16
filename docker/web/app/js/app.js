@@ -328,13 +328,17 @@ function renderGrid() {
   el.rows.replaceChildren(rows);
   // A number that would leave too little of a long title (a wide theme
   // font, the small TV layout) gives way: the cell shows the title alone.
-  // A title cut by only a little keeps its number.
-  for (const node of el.rows.querySelectorAll('.with-ep')) {
+  // A title cut by only a little keeps its number. All the cells are
+  // measured before any is changed, so the page is laid out once, not once
+  // per cell: the grid redraws on every row move, many times a second
+  // while Up or Down is held, and the Pi box has little to spare.
+  const cramped = [...el.rows.querySelectorAll('.with-ep')].filter(node => {
     const name = node.firstChild;
-    if (name.scrollWidth > name.clientWidth && name.clientWidth < EP_KEEP * name.scrollWidth) {
-      node.classList.remove('with-ep');
-      node.textContent = name.textContent;
-    }
+    return name.scrollWidth > name.clientWidth && name.clientWidth < EP_KEEP * name.scrollWidth;
+  });
+  for (const node of cramped) {
+    node.classList.remove('with-ep');
+    node.textContent = node.firstChild.textContent;
   }
 
   const tick = now >= t0 && now < t1;
@@ -380,6 +384,7 @@ function render() {
   renderGrid();
   renderInfo();
   if (S.mode === 'details') fillDetails();
+  if (S.mode === 'settings') renderSettings();   // measures itself again (a new size, a theme's font)
 }
 
 // ---- Show details ---------------------------------------------------------
@@ -391,7 +396,7 @@ function fillDetails() {
   const meta = [];
   if (one) {
     const genres = one.cats.filter(c => c !== 'Series' && c !== 'Movie').slice(0, 3).join(', ');
-    meta.push(one.ep, one.year, one.rating, genres);
+    meta.push(epCode(one), one.year, one.rating, genres);
   } else if (first) {
     meta.push(`${cell.items.length} shorts`, first.rating);
   }
@@ -554,6 +559,29 @@ function renderSettings() {
   const focused = shownSettings()[S.setRow];
   el.setHelp.textContent = settingOption(focused)[2];
   if (focused.id === 'theme') el.setHelp.textContent += ' Tap it to see them all.';
+  fitSettings();
+}
+
+// The panel has the 270 design pixels under the picture. A Pi box with HD
+// channels lists seven rows (Power and Network as well), which do not fit
+// there at the normal spacing, and the short-screen rules in guide.css only
+// apply below 540 px: a box on a 1080p screen is scaled from the same
+// 640x480 design and does not get them. So the panel measures itself and
+// takes the compact spacing when the list would be squeezed. If even that
+// is too tall (a short portrait window), the list scrolls, keeping the
+// highlighted row in view for the remote.
+function fitSettings() {
+  const list = el.setRows;
+  el.settings.classList.remove('compact');
+  if (list.scrollHeight > list.clientHeight) el.settings.classList.add('compact');
+  if (list.scrollHeight <= list.clientHeight) return;
+  const sel = list.querySelector('.setLabel.sel');
+  if (!sel) return;
+  // The last setting also shows the Network line under it.
+  const last = S.setRow === shownSettings().length - 1;
+  const top = sel.offsetTop - 2, bottom = last ? list.scrollHeight : sel.offsetTop + sel.offsetHeight + 2;
+  if (top < list.scrollTop) list.scrollTop = top;
+  else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight;
 }
 
 const settingOption = s => (s.action ? s.options[0] : s.options.find(o => o[0] === getSetting(s.id)));

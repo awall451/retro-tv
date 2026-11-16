@@ -90,10 +90,13 @@ export function parseXmltv(text, keepFrom, keepTo) {
         // ErsatzTV writes <date>0</date> for a film with no year.
         case 'date': p.year = /^[1-9]\d{3}/.test(value) ? value.slice(0, 4) : ''; break;
         case 'rating': p.rating = value; break;
-        case 'episode-num':
-          if (c.getAttribute('system') === 'onscreen') onscreen = value;
-          else if (c.getAttribute('system') === 'xmltv_ns') ns = value;
+        case 'episode-num': {
+          // XMLTV's default system is onscreen, for an element without one.
+          const system = c.getAttribute('system') || 'onscreen';
+          if (system === 'onscreen') onscreen = value;
+          else if (system === 'xmltv_ns') ns = value;
           break;
+        }
         case 'icon': p.poster = p.poster || localPath(c.getAttribute('src')); break;
         case 'image':
           if (c.getAttribute('type') === 'poster') p.poster = localPath(value) || p.poster;

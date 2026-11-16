@@ -55,8 +55,9 @@ sub fetch()
             onscreen = ""
             ns = ""
             for each e in p.GetNamedElements("episode-num")
+                ' XMLTV's default system is onscreen, for an element without one.
                 scheme = e.GetAttributes().system
-                if scheme = invalid then scheme = ""
+                if scheme = invalid then scheme = "onscreen"
                 if scheme = "onscreen" then onscreen = e.GetText()
                 if scheme = "xmltv_ns" then ns = e.GetText()
             end for

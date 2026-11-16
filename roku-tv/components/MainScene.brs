@@ -1118,7 +1118,7 @@ sub renderDetails()
 
     meta = []
     if one <> invalid then
-        for each part in [one.ep, one.year, one.rating, one.genres]
+        for each part in [epCode(one), one.year, one.rating, one.genres]
             if part <> "" then meta.Push(part)
         end for
     else if first <> invalid then
