@@ -35,6 +35,7 @@ export class WebScreen {
     this.onLoad = onLoad;
     this.frame = null;
     this.url = null;
+    this.ours = false;           // the page is the viewer's own (same origin)
     // A page may still try to take the focus by script (an autofocus
     // field, a player). The keys would then go to it, not the viewer:
     // take the focus straight back.
@@ -42,6 +43,9 @@ export class WebScreen {
       if (this.frame && document.activeElement === this.frame) setTimeout(() => this.#refocus(), 0);
     });
   }
+
+  // A page is showing (or loading).
+  get showing() { return !!this.frame; }
 
   // Show this page. True if it was not already showing (a new load).
   show(url) {
@@ -63,7 +67,21 @@ export class WebScreen {
     this.box.insertBefore(frame, this.before);
     this.frame = frame;
     this.url = url;
+    this.ours = new URL(url, location.href).origin === location.origin;
     return true;
+  }
+
+  // A key press or click on the viewer. The page never gets input of its
+  // own, so a page of the viewer's own whose player is waiting for one
+  // before it turns its sound on (the TV Guide Channel page's promo) is
+  // told with an "rtv-wake" event; the browser counts the press for it
+  // too, as it shares the viewer's origin. A page from another site is
+  // never reached into.
+  wake() {
+    if (!this.frame || !this.ours) return;
+    try {
+      this.frame.contentWindow.dispatchEvent(new Event('rtv-wake'));
+    } catch { /* not loaded yet, or it went to another site */ }
   }
 
   hide() {
@@ -72,6 +90,7 @@ export class WebScreen {
     this.frame.remove();
     this.frame = null;
     this.url = null;
+    this.ours = false;
     if (wasFocused) this.#refocus();
   }
 

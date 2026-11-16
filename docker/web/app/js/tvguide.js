@@ -266,10 +266,13 @@ function startPromo() {
     onMuted(muted) {
       // A desktop browser refuses sound before the first key or click; the
       // TV's kiosk allows it. Either way the first input turns the sound on.
+      // Shown as a web channel in the viewer, this page gets no input of its
+      // own: the viewer passes its key presses and clicks on as "rtv-wake"
+      // (js/web.js).
       if (!muted) return;
-      const unmute = () => { promoPlayer.unmute(); window.removeEventListener('keydown', unmute); window.removeEventListener('pointerdown', unmute); };
-      window.addEventListener('keydown', unmute);
-      window.addEventListener('pointerdown', unmute);
+      const events = ['keydown', 'pointerdown', 'rtv-wake'];
+      const unmute = () => { promoPlayer.unmute(); for (const e of events) window.removeEventListener(e, unmute); };
+      for (const e of events) window.addEventListener(e, unmute);
     },
   });
   promoPlayer.tune({ num: PROMO, name: 'Promos' }, { stream: PROMO });
