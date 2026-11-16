@@ -457,6 +457,26 @@ def span(s: str | None) -> float:
     return -v if neg else v
 
 
+MIRROR = 1  # Channel.PlayoutSource: 0 Generated (its own playout), 1 Mirror
+
+
+def mirror_source(channels: dict, ch_id):
+    """The channel whose playout channel ch_id plays: itself, or for a mirror (an HD
+    twin: PlayoutSource Mirror, no playout of its own) its MirrorSourceChannelId,
+    followed through a mirror of a mirror. None when the chain ends at a channel
+    that is not there or comes round again. channels: Id -> row (a dict or
+    sqlite3.Row); an ErsatzTV without mirrors has no such columns."""
+    seen = set()
+    while ch_id in channels and ch_id not in seen:
+        seen.add(ch_id)
+        ch = channels[ch_id]
+        keys = ch.keys()
+        if "PlayoutSource" not in keys or ch["PlayoutSource"] != MIRROR:
+            return ch_id
+        ch_id = ch["MirrorSourceChannelId"] if "MirrorSourceChannelId" in keys else None
+    return None
+
+
 def res_label(w: int | None, h: int | None) -> str:
     w, h = w or 0, h or 0
     if w >= 3000 or h >= 2000:
@@ -683,8 +703,14 @@ def build(db_path: str, lineup_path: str | None, api_channels, api_version, sour
     for a in api_channels or []:
         api_by_num[str(a.get("number"))] = a
 
-    channels = []
-    for ch in q("select * from Channel order by SortNumber, Number"):
+    channel_rows = q("select * from Channel order by SortNumber, Number")
+    channel_by_id = {ch["Id"]: ch for ch in channel_rows}
+    schedules = {}
+
+    def schedule_of(ch):
+        """A channel's members and schedule, from its own playout."""
+        if ch["Id"] in schedules:
+            return schedules[ch["Id"]]
         pl = playouts.get(ch["Id"])
         items = q("select * from ProgramScheduleItem where ProgramScheduleId = ? order by \"Index\"",
                   pl["ProgramScheduleId"]) if pl else []
@@ -715,6 +741,23 @@ def build(db_path: str, lineup_path: str | None, api_channels, api_version, sour
                 for title in lu.get("shows", []):
                     for sid in show_by_title.get(title.casefold(), []):
                         member_ids |= {e for e, ep in episodes.items() if ep["show"] == sid and ep["season"] != 0}
+        res = schedules[ch["Id"]] = (pl, member_ids, methods, notes, orders, roles, colls)
+        return res
+
+    channels = []
+    for ch in channel_rows:
+        mirror_of = None
+        src_id = mirror_source(channel_by_id, ch["Id"])
+        if src_id is None:
+            pl, member_ids, methods, notes, orders, roles, colls = None, set(), set(), [], [], [], []
+            notes.append("mirror of a channel that is not there (Mirror Source Channel)")
+        else:
+            pl, member_ids, methods, notes, orders, roles, colls = schedule_of(channel_by_id[src_id])
+            notes, roles = list(notes), list(roles)
+            if src_id != ch["Id"]:
+                # An HD twin: no playout of its own, it plays its source's
+                mirror_of = channel_by_id[src_id]["Number"]
+                notes.insert(0, f"mirror of channel {mirror_of}: its members")
         if ch["FallbackFillerId"]:
             d = preset_desc(ch["FallbackFillerId"], "channel fallback")
             if d:
@@ -731,12 +774,14 @@ def build(db_path: str, lineup_path: str | None, api_channels, api_version, sour
         for sid, eps in grouped.items():
             a = show_agg(eps)
             members.append({"type": "show", "id": sid, "t": shows[sid]["t"], **a})
-            shows[sid]["on"].append(ch["Number"])
+            if mirror_of is None:
+                shows[sid]["on"].append(ch["Number"])
         for mid in mv_ids:
             m = mv_by_id[mid]
             members.append({"type": "movie", "id": mid, "t": m["t"], "y": m["y"], "m": m["m"],
                             "ch": m["ch"], "br": m["br"], "q": m["q"]})
-            m["on"].append(ch["Number"])
+            if mirror_of is None:
+                m["on"].append(ch["Number"])
         members.sort(key=lambda x: (shows[x["id"]]["st"] if x["type"] == "show" else mv_by_id[x["id"]]["st"]).casefold())
 
         n_items = len(ep_ids) + len(mv_ids)
@@ -753,7 +798,7 @@ def build(db_path: str, lineup_path: str | None, api_channels, api_version, sour
         a = api_by_num.get(str(ch["Number"]))
         channels.append({
             "id": ch["Id"], "number": ch["Number"], "name": ch["Name"], "group": ch["Group"],
-            "enabled": bool(ch["IsEnabled"]), "kind": kind,
+            "enabled": bool(ch["IsEnabled"]), "kind": kind, "mirrorOf": mirror_of,
             "profile": profiles.get(ch["FFmpegProfileId"]),
             "order": order or (", ".join(dict.fromkeys(orders)) if orders else None),
             "presets": roles, "collections": colls,

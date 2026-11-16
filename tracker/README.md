@@ -123,7 +123,8 @@ What it does:
    Bebop"` also matches "Cowboy Bebop (2021)", as in ErsatzTV. A query with anything else
    (wildcards such as `trek*`, fields such as `actor` or `language`, a group of only NOT
    clauses, which matches nothing in Lucene) and schedule items that are not smart collections
-   are not evaluated: that channel shows no members and a note saying why.
+   are not evaluated: that channel shows no members and a note saying why. An HD twin (Playout
+   Source **Mirror**, no playout of its own) shows the members of the channel it mirrors.
 3. **Checks the result** against the channel's current playout: every scheduled programme
    should be a member. The channel page shows the count that is not (`check.outsideMembers`),
    which flags a query the evaluator read differently from ErsatzTV.

@@ -86,6 +86,27 @@ class QueryTest(unittest.TestCase):
             with self.assertRaises(g.Unsupported):
                 g.parse_query(q)
 
+    def test_mirror_source(self):
+        # An HD twin (PlayoutSource 1 = Mirror) has no playout: its members are its source's
+        def ch(i, src=None):
+            return {"Id": i, "PlayoutSource": 1 if src is not None else 0, "MirrorSourceChannelId": src}
+        chans = {1: ch(1), 2: ch(2, 1), 3: ch(3, 2), 4: ch(4, 99), 5: ch(5, 6), 6: ch(6, 5)}
+        self.assertEqual(g.mirror_source(chans, 1), 1)
+        self.assertEqual(g.mirror_source(chans, 2), 1)
+        self.assertEqual(g.mirror_source(chans, 3), 1)        # a mirror of a mirror
+        self.assertIsNone(g.mirror_source(chans, 4))          # the source is gone
+        self.assertIsNone(g.mirror_source(chans, 5))          # round in a circle
+        self.assertEqual(g.mirror_source({7: {"Id": 7}}, 7), 7)   # an ErsatzTV without mirrors
+        # as build() sees them: sqlite3.Row
+        db = sqlite3.connect(":memory:")
+        db.row_factory = sqlite3.Row
+        db.execute("create table Channel (Id integer primary key, PlayoutSource integer, MirrorSourceChannelId integer)")
+        db.executemany("insert into Channel values (?, ?, ?)", [(1, 0, None), (2, 1, 1), (3, 1, None)])
+        rows = {r["Id"]: r for r in db.execute("select * from Channel")}
+        self.assertEqual(g.mirror_source(rows, 2), 1)
+        self.assertIsNone(g.mirror_source(rows, 3))
+        db.close()
+
     def test_break_rule(self):
         g.BREAK = g.parse_break_rule("240,180,300")
         # 100: too early; 350: a break; 700: a break (350 s later); 1000: only 300 s later;
