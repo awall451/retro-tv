@@ -52,7 +52,36 @@ class QueryTest(unittest.TestCase):
         self.assertTrue(self.match("type:movie AND NOT state:FileNotFound"))
         self.assertTrue(self.match("(type:episode OR type:movie) AND genre:fiction"))
 
+    def test_not_excludes(self):
+        # Lucene: NOT (or -) is a prohibited clause of its group, never "or everything else"
+        ep = {"type": ["episode"], "show_title": [g.analyze("Seinfeld")], "season_number": ["1"]}
+        for q in ("show_title:seinfeld NOT season_number:0", "show_title:seinfeld -season_number:0"):
+            self.assertTrue(self.match(q, **ep))
+            self.assertFalse(self.match(q, **{**ep, "season_number": ["0"]}))
+            self.assertFalse(self.match(q, **{**ep, "show_title": [g.analyze("Frasier")]}))
+        self.assertTrue(self.match("type:movie OR NOT genre:western"))
+        self.assertFalse(self.match("type:movie OR NOT genre:fiction"))
+
+    def test_lucene_precedence(self):
+        # Classic parser, default OR: AND makes the clause before it required as well, so
+        # "a OR b AND NOT c" is b without c (a no longer counts), "a AND b OR c" is a and b
+        q = "genre:western OR type:movie AND NOT state:FileNotFound"
+        self.assertTrue(self.match(q))
+        self.assertFalse(self.match(q, type=["episode"], genre=[g.analyze("Western")]))
+        self.assertFalse(self.match(q, state=["FileNotFound"], genre=[g.analyze("Western")]))
+        self.assertFalse(self.match("type:movie AND genre:western OR minutes:101"))
+        self.assertTrue(self.match("type:movie AND genre:fiction OR minutes:999"))
+        self.assertTrue(self.match("+type:movie genre:western"))
+        self.assertFalse(self.match("+type:episode genre:fiction"))
+        self.assertTrue(self.match("type:episode genre:fiction"))
+        self.assertFalse(self.match("(type:episode OR type:movie) AND NOT (genre:fiction OR genre:western)"))
+
     def test_unsupported(self):
+        # NOT alone matches nothing in Lucene: not guessed at
+        for q in ("NOT type:movie", "type:movie AND (NOT state:FileNotFound)", "-type:movie",
+                  "AND type:movie", "(type:movie", "type:movie)", "type:movie AND", "NOT NOT type:movie"):
+            with self.assertRaises(g.Unsupported, msg=q):
+                g.parse_query(q)
         for q in ("title:trek*", "language:english", "title:x~2"):
             with self.assertRaises(g.Unsupported):
                 g.parse_query(q)

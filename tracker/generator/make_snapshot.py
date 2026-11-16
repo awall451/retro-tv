@@ -271,6 +271,7 @@ EXACT = {"type", "state", "season_number", "episode_number", "release_date", "ye
 QTOKEN = re.compile(r'''\s*(?:
     (?P<lp>\() | (?P<rp>\)) |
     (?P<op>AND\b|OR\b|NOT\b|&&|\|\|) |
+    (?P<mod>[+-])(?=[a-z_(]) |
     (?P<field>[a-z_]+):(?:
         "(?P<phrase>(?:[^"\\]|\\.)*)" |
         (?P<range>[\[{]\s*\S+\s+TO\s+\S+\s*[\]}]) |
@@ -294,6 +295,8 @@ def tokenize_query(q: str):
         elif m.group("op"):
             op = {"&&": "AND", "||": "OR"}.get(m.group("op"), m.group("op"))
             out.append((op,))
+        elif m.group("mod"):
+            out.append(("NOT",) if m.group("mod") == "-" else ("+",))
         elif m.group("field"):
             f = m.group("field")
             if f not in ANALYZED and f not in EXACT:
@@ -315,38 +318,59 @@ def tokenize_query(q: str):
 
 
 def parse_query(q: str):
+    """The query as Lucene's classic parser reads it (ErsatzTV's, default operator OR).
+    Each group, the whole query or one in parentheses, is a flat list of clauses, each
+    required (+, or joined by AND), optional (plain, or joined by OR) or prohibited (- or
+    NOT): a document matches when it has every required clause and no prohibited one, and,
+    when nothing is required, at least one optional clause. So NOT never adds "everything
+    else": `a NOT b` is a without b, and `a OR b AND NOT c` is b without c (AND makes b
+    required, and a, still optional, no longer counts). A group of only prohibited clauses
+    matches nothing in Lucene; it is reported as unsupported rather than guessed at.
+    Tree: ("bool", must, should, must_not), or a single clause as it is."""
     toks = tokenize_query(q)
     i = 0
 
     def peek():
         return toks[i] if i < len(toks) else None
 
-    def parse_or():
+    def parse_group():
         nonlocal i
-        node = [parse_and()]
+        clauses = []  # [occur, node]; occur is "must", "should" or "must_not"
         while True:
             t = peek()
             if t is None or t == (")",):
                 break
-            if t == ("OR",):
+            conj = None
+            if t in (("AND",), ("OR",)):
+                if not clauses:
+                    raise Unsupported(f"{t[0]} at the start")
+                conj = t[0]
                 i += 1
-            node.append(parse_and())  # implicit OR (Lucene default operator)
-        return node[0] if len(node) == 1 else ("or", node)
-
-    def parse_and():
-        nonlocal i
-        node = [parse_not()]
-        while peek() == ("AND",):
-            i += 1
-            node.append(parse_not())
-        return node[0] if len(node) == 1 else ("and", node)
-
-    def parse_not():
-        nonlocal i
-        if peek() == ("NOT",):
-            i += 1
-            return ("not", parse_not())
-        return parse_primary()
+            mod = None
+            if peek() in (("NOT",), ("+",)):
+                mod = peek()[0]
+                i += 1
+            node = parse_primary()
+            # AND makes the clause before it required too, unless it is prohibited
+            if conj == "AND" and clauses[-1][0] != "must_not":
+                clauses[-1][0] = "must"
+            if mod == "NOT":
+                occur = "must_not"
+            elif mod == "+" or conj == "AND":
+                occur = "must"
+            else:
+                occur = "should"    # implicit OR (Lucene default operator)
+            clauses.append([occur, node])
+        if not clauses:
+            raise Unsupported("empty query")
+        if len(clauses) == 1 and clauses[0][0] != "must_not":
+            return clauses[0][1]
+        must = [n for o, n in clauses if o == "must"]
+        should = [n for o, n in clauses if o == "should"]
+        must_not = [n for o, n in clauses if o == "must_not"]
+        if not must and not should:
+            raise Unsupported("only NOT clauses (Lucene matches nothing)")
+        return ("bool", must, should, must_not)
 
     def parse_primary():
         nonlocal i
@@ -355,7 +379,7 @@ def parse_query(q: str):
             raise Unsupported("unexpected end")
         i += 1
         if t == ("(",):
-            node = parse_or()
+            node = parse_group()
             if peek() != (")",):
                 raise Unsupported("unbalanced parentheses")
             i += 1
@@ -364,9 +388,9 @@ def parse_query(q: str):
             return t
         raise Unsupported(f"unexpected {t}")
 
-    tree = parse_or()
+    tree = parse_group()
     if i != len(toks):
-        raise Unsupported("trailing tokens")
+        raise Unsupported("unbalanced parentheses")
     return tree
 
 
@@ -384,12 +408,13 @@ def phrase_match(doc: list[tuple[int, str]], query: list[tuple[int, str]]) -> bo
 
 def evaluate(node, doc) -> bool:
     kind = node[0]
-    if kind == "or":
-        return any(evaluate(n, doc) for n in node[1])
-    if kind == "and":
-        return all(evaluate(n, doc) for n in node[1])
-    if kind == "not":
-        return not evaluate(node[1], doc)
+    if kind == "bool":
+        _, must, should, must_not = node
+        if any(evaluate(n, doc) for n in must_not):
+            return False
+        if must:
+            return all(evaluate(n, doc) for n in must)
+        return any(evaluate(n, doc) for n in should)
     field = node[1]
     values = doc.get(field)
     if not values:
