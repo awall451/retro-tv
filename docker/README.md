@@ -186,9 +186,11 @@ the viewer stops it there.
 
 - `TRACKER_URL` is the address browsers use, so not `localhost` unless every viewer runs on this
   machine. If the viewer is opened over `https://`, the tracker must be `https://` too.
-- At start the setting is written to `/tracker.json` (`web/tracker.envsh`) and the tracker's
-  origin is added to the Content-Security-Policy's `connect-src`. Without it, `/tracker.json` is
-  `{}`, nothing is sent and `connect-src` is `'self'`.
+- At start the setting goes into `/config.json` as `"tracker": {"url": "<origin>"}`
+  (`web/config.d/tracker.sh`, see "Server settings") and the tracker's origin is added to the
+  Content-Security-Policy's `connect-src`. Without it (or with a value that is not a plain
+  `http(s)://host[:port]`, which is skipped with a warning in the log) the key is missing,
+  nothing is sent and `connect-src` is `'self'`.
 - The tracker accepts beacons only from the viewer's own address (`TRACKER_ORIGINS` there;
   localhost is always allowed).
 - On the [Retro TV box](../pi-image/README.md), set `TRACKER_URL` in `/etc/retro-tv.env` and run
@@ -328,6 +330,7 @@ docker/
 │   ├── nginx.conf.template   static files and the read-only /iptv/ proxy
 │   ├── config.envsh          server settings -> /config.json and the CSP (below, "Server settings")
 │   ├── config.d/             one piece per feature with a server setting
+│   │   └── tracker.sh        TRACKER_URL -> "tracker" and the CSP's connect-src (watch beacons)
 │   ├── uplink/               the uplink's nginx config (same image)
 │   └── app/
 │       ├── index.html

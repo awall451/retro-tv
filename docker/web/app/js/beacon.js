@@ -1,8 +1,9 @@
 // Watch beacons: tell the channel tracker which channel this viewer is
 // watching, so it can count watch time per channel (its "Popular" page).
-// The server says where the tracker is, in TRACKER_URL; the container turns
-// that into /tracker.json and lets it into the page's connect-src. Without
-// it the file is {} and nothing is sent. See docker/README.md.
+// The server says where the tracker is, in TRACKER_URL; the container puts
+// it in /config.json as "tracker" (web/config.d/tracker.sh) and lets it into
+// the page's connect-src. Without it the key is missing and nothing is sent.
+// See docker/README.md.
 //
 // What is sent, on each tune (once flipping settles), every minute while
 // watching, and on leaving: the channel number, HD or not, the channels
@@ -12,20 +13,16 @@
 // counts while it plays (also in a hidden tab, until the viewer stops it
 // there).
 
-const CONFIG_URL = '/tracker.json';
+import { serverSetting } from './config.js';
+
 const CLIENT_KEY = 'retro-tv.client-id';
 const HEARTBEAT_MS = 60 * 1000;
 const SETTLE_MS = 1500;
 
+// The tracker's origin, or '' when the server has none.
 export async function loadTracker() {
-  try {
-    const res = await fetch(CONFIG_URL, { cache: 'no-store' });
-    if (!res.ok) return '';
-    const cfg = await res.json();
-    return cfg && typeof cfg.url === 'string' && /^https?:\/\/[^/?#\s]+$/i.test(cfg.url) ? cfg.url : '';
-  } catch {
-    return '';
-  }
+  const cfg = await serverSetting('tracker');
+  return cfg && typeof cfg.url === 'string' && /^https?:\/\/[^/?#\s]+$/i.test(cfg.url) ? cfg.url : '';
 }
 
 function clientId() {

@@ -259,7 +259,7 @@ tracker/
 |---|---|
 | "no snapshot yet: run the generator" | Run `generator/make_snapshot.py` (above). |
 | Upload fails with 403 | Wrong token. `docker exec retro-tv-tracker cat /data/token`, or set `TRACKER_TOKEN`. |
-| Popular stays empty although people watch | No beacons and no poller. Check `TRACKER_URL` in the viewer's `.env` (`curl <viewer>/tracker.json`), `TRACKER_ORIGINS` (the browser's console shows a CORS error otherwise), and `poller.lastError` in `curl <tracker>/api/watch`. |
+| Popular stays empty although people watch | No beacons and no poller. Check `TRACKER_URL` in the viewer's `.env` (`curl <viewer>/config.json` shows a `tracker` key; the viewer's log says why when it skipped one), `TRACKER_ORIGINS` (the browser's console shows a CORS error otherwise), and `poller.lastError` in `curl <tracker>/api/watch`. |
 | Beacons refused from an `https://` viewer | The tracker must be `https://` too (browsers block plain-HTTP requests from a secure page): put it behind the same proxy. |
 | Every device is "browser (desktop)" | Fine: names come from `TRACKER_DEVICES`. Behind a proxy, also set `TRACKER_TRUST_PROXY=1`. |
 | A channel shows no members and a note | Its query uses search syntax the generator does not evaluate (see above). |
