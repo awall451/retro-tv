@@ -24,7 +24,7 @@ case "$variant" in
     *) echo "usage: $0 crt|hdmi" >&2; exit 1 ;;
 esac
 HERE=/userdata/system/display-profiles
-# Channel groups in ErsatzTV's list: the ordinary channels and their HD twins (number + 100).
+# Channel groups in ErsatzTV's list: the ordinary channels and their HD twins (number + 1000).
 # Home → TV opens the guide on one or the other, from the Quality setting. Kodi addresses a
 # group as pvr://channels/tv/<name>@<client id>/; the client id is read from Kodi's TV database
 # (it is the PVR add-on's id on this install).
