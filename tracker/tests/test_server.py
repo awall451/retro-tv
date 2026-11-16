@@ -1,5 +1,6 @@
 """Smoke tests for the tracker API. Run: python3 -m unittest discover -s tests"""
 
+import http.client
 import json
 import os
 import socket
@@ -103,6 +104,20 @@ class ApiTest(unittest.TestCase):
         self.assertIn("APPLIED", text)
         self.assertIn('"Die Hard" (movie 1)', text)
         self.assertEqual(len(self.call("GET", "/api/requests?status=pending")[1]), 0)
+
+    def test_bad_content_length(self):
+        # -1 would pass the size limit and read to the end; not a number used to be a 500
+        for n in ("-1", "abc", "+5", "1_0", ""):
+            for path in ("/api/requests", "/api/watch/beacon"):
+                c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+                c.putrequest("POST", path)
+                c.putheader("Content-Type", "application/json")
+                c.putheader("Origin", "http://localhost:8410")
+                c.putheader("Content-Length", n)
+                c.endheaders()
+                r = c.getresponse()
+                self.assertEqual(r.status, 400, (n, path))
+                c.close()
 
 
 class TokenFileTest(unittest.TestCase):

@@ -815,6 +815,11 @@ class Handler(BaseHTTPRequestHandler):
         n = self.headers.get("Content-Length")
         if n is None:
             raise BadRequest("Content-Length required", HTTPStatus.LENGTH_REQUIRED)
+        # Only a plain count: int() would also take -1 (which passes the limit
+        # and reads to the end), "+5" or "1_000".
+        n = n.strip()
+        if not (n.isascii() and n.isdigit()):
+            raise BadRequest("Content-Length must be a number of bytes")
         n = int(n)
         if n > limit:
             raise BadRequest("body too large", HTTPStatus.REQUEST_ENTITY_TOO_LARGE)
