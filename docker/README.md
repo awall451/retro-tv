@@ -76,6 +76,9 @@ COMPOSE_FILE=compose.yaml:compose.uplink.yaml
 That starts a second small container, `retro-tv-uplink`, on the host's network. The viewer sends
 its ErsatzTV requests to it and it passes them on. It listens on the Docker bridge address only
 (`172.17.0.1:8411`; change with `UPLINK_BIND` and `UPLINK_PORT`), so other machines cannot reach it.
+The [channel tracker](../tracker/README.md)'s session poller, when the tracker runs, goes through
+it too (only `GET /api/sessions`, with the tracker's own API key); the add-on does not start the
+tracker by itself.
 
 ## Reach it from other devices
 
