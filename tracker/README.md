@@ -114,14 +114,16 @@ What it does:
    bookkeeping.
 2. **Works out each channel's shows and films** the way ErsatzTV does: channel, playout,
    schedule items, smart collection, search query. The query is evaluated by a small evaluator
-   for the common part of ErsatzTV's search syntax: `field:term`, `field:"phrase"`,
-   `[a TO b]` ranges, AND / OR / NOT and parentheses, on the fields `type`, `title`,
-   `show_title`, `genre`, `tag`, `studio`, `director`, `library_name`, `content_rating`,
-   `state`, `season_number`, `episode_number`, `release_date`, `year`, `minutes`, `height`,
-   `width`. Titles match as analysed phrases, so `show_title:"Cowboy Bebop"` also matches
-   "Cowboy Bebop (2021)", as in ErsatzTV. A query with anything else (wildcards such as
-   `trek*`, fields such as `actor` or `language`) and schedule items that are not smart
-   collections are not evaluated: that channel shows no members and a note saying why.
+   for the common part of ErsatzTV's search syntax: `field:term`, `field:"phrase"`, `[a TO b]`
+   ranges, AND / OR / NOT / `+` / `-` and parentheses (read as Lucene's classic parser reads
+   them: `a NOT b` is a without b, and `a OR b AND NOT c` is b without c), on the fields `type`,
+   `title`, `show_title`, `genre`, `tag`, `studio`, `director`, `library_name`,
+   `content_rating`, `state`, `season_number`, `episode_number`, `release_date`, `year`,
+   `minutes`, `height`, `width`. Titles match as analysed phrases, so `show_title:"Cowboy
+   Bebop"` also matches "Cowboy Bebop (2021)", as in ErsatzTV. A query with anything else
+   (wildcards such as `trek*`, fields such as `actor` or `language`, a group of only NOT
+   clauses, which matches nothing in Lucene) and schedule items that are not smart collections
+   are not evaluated: that channel shows no members and a note saying why.
 3. **Checks the result** against the channel's current playout: every scheduled programme
    should be a member. The channel page shows the count that is not (`check.outsideMembers`),
    which flags a query the evaluator read differently from ErsatzTV.
