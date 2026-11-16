@@ -181,6 +181,11 @@ so the server encodes nothing for it. The channel's row in the guide, its name a
 still come from ErsatzTV as before, and devices that play ErsatzTV directly (Kodi, the Roku app)
 keep playing the channel's own stream. Give the channel something to play there.
 
+A web channel has to be a real channel in ErsatzTV. The viewer takes its channel list from
+ErsatzTV and matches each `WEB_CHANNELS` entry to it by channel number; a number ErsatzTV does
+not have is not in the guide, so its page never shows. Make the channel in ErsatzTV first (any
+content will do), then name its number here.
+
 Set `WEB_CHANNELS` in `.env`, then `docker compose up -d`:
 
 ```
@@ -189,9 +194,12 @@ WEB_CHANNELS=192=https://weather.example/?kiosk=true;250=https://cam.example/liv
 
 - **Format:** `<channel number>=<URL>`, entries separated by `;` (or spaces). The URL must
   start with `http://` or `https://`, or be a path on the viewer itself starting with a single
-  `/`, and must not contain spaces, `;`, quotes, backslashes, `<` or `>`: percent-encode those
-  (`%3B`, `%22`, ...). A bad entry is skipped with a line in the container log; the rest still
-  work.
+  `/`. It must be plain ASCII without spaces, `;`, quotes, backslashes, `<`, `>` or control
+  characters: percent-encode those (`%3B`, `%22`, ...). A site's host must be a name or an IPv4
+  address; a frame policy cannot name an IPv6 address (`http://[fd00::7]/`), so give such a
+  site a host name (in DNS or the hosts file of the machine that runs the browser). A bad entry
+  is skipped with a line in the container log; the rest still work. A channel listed twice
+  keeps its last entry.
 - **A page of the viewer's own** is given as a path, so it works under whatever address the
   viewer is opened with (the Pi box's `127.0.0.1:8410` as well as a browser's). For example the
   TV Guide Channel page (below) as a channel, its top half playing that channel's own stream:
@@ -219,8 +227,9 @@ WEB_CHANNELS=192=https://weather.example/?kiosk=true;250=https://cam.example/liv
 - **Sound:** the page may start its own sound (music on a weather loop) only if the browser
   allows it: after a key press or click on the viewer, or always on the [Pi box](../pi-image/README.md),
   whose kiosk runs Chromium with `--autoplay-policy=no-user-gesture-required`.
-- The map is served at `/web-channels.json`. On the Pi box, set `WEB_CHANNELS` in
-  `/etc/retro-tv.env` and run `setup.sh` again. That file is read by a shell, so put the
+- The map reaches the app as `webChannels` in the server settings (`/config.json`, see
+  "Server settings" below; written by `web/config.d/web-channels.sh`). On the Pi box, set
+  `WEB_CHANNELS` in `/etc/retro-tv.env` and run `setup.sh` again. That file is read by a shell, so put the
   value in single quotes (`WEB_CHANNELS='192=https://…?a=1&b=2'`): unquoted, a URL is cut off
   at its first `&` and the channel silently shows its stream.
 
@@ -280,6 +289,19 @@ seconds: the channel, the show in quotes with its rating, when it is on, the cha
 takes the same `?tv` and `&screen=4:3` parameters as the guide. The [Pi box](../pi-image/README.md) can show it as its page
 (`PAGE=tvguide`, `TVGUIDE_PROMO=`), and [tvguide/](tvguide/README.md) is the generator that
 streams it, so ErsatzTV can carry it as a channel of its own.
+
+### Server settings
+
+Settings that belong to the server rather than to one screen (those that
+come from `.env`, or from `/etc/retro-tv.env` on the Pi box) reach the app
+through one file, `/config.json`. When the container starts,
+`web/config.envsh` runs each piece in `web/config.d/` (one per feature);
+a piece checks its variables, adds its key to the file, and adds any other
+site the page has to reach to the Content-Security-Policy. A bad value is
+skipped with a warning in the log, and the container still starts. The
+Pi box's `setup.sh` runs the same script and keeps the file in
+`/var/lib/retro-tv/`, outside the app folder. With nothing set the file is
+`{}` and the policy is the same as before.
 
 ## Good to know
 
@@ -343,7 +365,8 @@ docker/
 ├── web/
 │   ├── Dockerfile            pinned nginx (unprivileged) + the app
 │   ├── nginx.conf.template   static files and the read-only /iptv/ proxy
-│   ├── web-channels.envsh    WEB_CHANNELS -> /web-channels.json and the CSP's frame-src (runs at start)
+│   ├── config.envsh          server settings -> /config.json and the CSP (below, "Server settings")
+│   ├── config.d/             one piece per feature with a server setting
 │   ├── uplink/               the uplink's nginx config (same image)
 │   └── app/
 │       ├── index.html
@@ -355,6 +378,7 @@ docker/
 │       ├── js/web.js         web channels: a page in the picture's box instead of the video
 │       ├── js/bars.js        finds black bars in the picture (for "Fill the screen")
 │       ├── js/settings.js    the settings and where they are kept
+│       ├── js/config.js      reads the server settings (/config.json) once
 │       ├── js/themes.js      the themes (Cable, Vaporwave and seven more): names, splash, browser tint
 │       ├── js/theme-boot.js  puts the saved theme on <html> before the first paint
 │       ├── js/splash.js      the splash scenes and the perspective floor grid

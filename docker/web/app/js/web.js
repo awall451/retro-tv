@@ -1,6 +1,7 @@
 // Web channels: a channel that shows a web page instead of its stream (a
-// weather page, a live camera). The server says which, in WEB_CHANNELS; the
-// container turns that into /web-channels.json and lets those sites into
+// weather page, a live camera). The server says which, in WEB_CHANNELS; at
+// start config.d/web-channels.sh turns that into "webChannels" in the
+// server settings (/config.json, js/config.js) and lets those sites into
 // the page's Content-Security-Policy (frame-src). See docker/README.md.
 //
 // The page goes in an <iframe> in the same box the <video> uses, so it
@@ -9,24 +10,19 @@
 // focus, so the remote, the keys and the controller keep steering the
 // viewer. Leaving the channel removes the frame (and stops its sound).
 
-const CONFIG_URL = '/web-channels.json';
+import { serverSetting } from './config.js';
 
 // The channel number -> page URL map. A server without web channels (or
-// an older image without the file) answers {} or 404: no web channels.
+// an older image without the setting) has none: {}.
 export async function loadWebChannels() {
-  try {
-    const res = await fetch(CONFIG_URL, { cache: 'no-store' });
-    if (!res.ok) return {};
-    const map = await res.json();
-    const out = {};
-    for (const [num, url] of Object.entries(map || {})) {
-      // An http(s) URL, or a page on the viewer itself ("/tvguide.html?tv").
-      if (/^\d+(\.\d+)?$/.test(num) && /^(https?:\/\/|\/(?!\/))/i.test(url)) out[num] = url;
-    }
-    return out;
-  } catch {
-    return {};
+  const map = await serverSetting('webChannels');
+  const out = {};
+  if (!map || typeof map !== 'object') return out;
+  for (const [num, url] of Object.entries(map)) {
+    // An http(s) URL, or a page on the viewer itself ("/tvguide.html?tv").
+    if (/^\d+(\.\d+)?$/.test(num) && typeof url === 'string' && /^(https?:\/\/|\/(?!\/))/i.test(url)) out[num] = url;
   }
+  return out;
 }
 
 export class WebScreen {

@@ -6,12 +6,13 @@
 FROM nginxinc/nginx-unprivileged:1.31.7-alpine
 
 # Only these are filled into the nginx config from the environment.
-ENV NGINX_ENVSUBST_FILTER="^(ERSATZTV_URL|WEB_FRAME_SRC|UPLINK_BIND|UPLINK_PORT)$" \
+ENV NGINX_ENVSUBST_FILTER="^(ERSATZTV_URL|CSP_FRAME_SRC|CSP_CONNECT_SRC|UPLINK_BIND|UPLINK_PORT)$" \
     HEALTH_URL=http://127.0.0.1:8080/healthz
 
-# Web channels: WEB_CHANNELS -> /web-channels.json and the frame-src list,
-# before the templates are filled in.
-COPY --chmod=755 web-channels.envsh /docker-entrypoint.d/15-web-channels.envsh
+# Server settings: the pieces in config.d/ -> /config.json and the CSP's
+# frame-src / connect-src, before the templates are filled in.
+COPY --chmod=755 config.envsh /docker-entrypoint.d/15-config.envsh
+COPY config.d/ /etc/retro-tv/config.d/
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY uplink/uplink.conf.template /etc/nginx/uplink-templates/default.conf.template
 COPY app/ /usr/share/nginx/html/

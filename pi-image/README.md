@@ -160,7 +160,10 @@ fonts for the rasterizer), `node render.mjs` renders every theme's scene at 640Ã
    than the converter did, the height did not change).
 
 `setup.sh` is written to be safe to run repeatedly: it installs what is missing, rewrites the
-files it owns, and leaves the rest alone. A full install takes about 4 minutes.
+files it owns, and leaves the rest alone. A full install takes about 4 minutes. Run it again
+after changing `/etc/retro-tv.env`: the viewer's server settings (such as `WEB_CHANNELS`) are
+written from it into `/var/lib/retro-tv/config.json`, outside the app folder, so an app update
+never removes them.
 
 ## Step 2: the image (`pi-gen`)
 

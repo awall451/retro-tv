@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+inheritance: true
+reviews:
+  # What makes a change risky here. The merge gate reads CodeRabbit's merge risk
+  # rating, so this is where the rating learns about the project.
+  merge_risk_instructions: >-
+    Nothing in this repository is covered by automated tests, so no change has been
+    run before it merges. Files under pi/ and pi-image/ run on a small computer wired
+    to a television: a mistake there can leave it without a picture or unable to
+    start, and putting it right needs someone at the device. docker/compose.yaml, the
+    nginx template and the Dockerfile decide whether the viewer starts at all. Code
+    under docker/web/app/, roku-tv/, ersatztv/ and tools/ is easy to roll back with a
+    revert. Docs-only and Markdown-only changes are minimal risk. A new program that
+    listens on the network, or a change that deletes or overwrites files on a device,
+    is at least moderate risk.
+  auto_review:
+    drafts: true
+  pre_merge_checks:
+    custom_checks:
+      - name: "Tests accompany code changes"
+        mode: "off"
+        instructions: "Not used here: this repository has no automated test suite."
+  path_instructions:
+    - path: "**/*.sh"
+      instructions: |
+        These scripts run on a Batocera Raspberry Pi or a home server with no
+        test suite. Flag anything that can leave the device unbootable or
+        without a picture, any unquoted variable in a path, and any destructive
+        command without a backup step before it.
+    - path: "docs/**"
+      instructions: |
+        Docs describe the project, not one person's setup. Flag a statement
+        that the changed code in the same pull request no longer makes true.

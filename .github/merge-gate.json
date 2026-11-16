@@ -1,0 +1,35 @@
+{
+  "mode": "merge",
+  "merge_method": "squash",
+  "max_fix_rounds": 2,
+  "trusted_authors": ["carlherbst"],
+  "blocking_severities": ["Critical", "Major"],
+  "protected_paths": [".github/*", ".coderabbit.yaml", ".coderabbit/*", "CLAUDE.md", "*/CLAUDE.md"],
+
+  "areas": [
+    {"name": "automation", "ceiling": null, "code": true,
+     "paths": [".github/*", ".coderabbit.yaml", ".coderabbit/*", "CLAUDE.md", "*/CLAUDE.md", ".gitignore", ".gitattributes", "LICENSE"]},
+    {"name": "docs", "ceiling": 9, "code": false,
+     "paths": ["docs/*", "*.md", "*.png", "*.jpg", "*.jpeg", "*.gif", "*.svg", "*.webp"]},
+    {"name": "device and deploy", "ceiling": 3, "code": true,
+     "paths": ["pi/*", "pi-image/*", "docker/compose*.yaml", "docker/.env.example", "Dockerfile", "*/Dockerfile",
+               "docker/web/nginx.conf.template", "docker/web/*.envsh"]},
+    {"name": "data", "ceiling": 7, "code": false,
+     "paths": ["*.tsv", "*.csv", "*.example.json", "*.ttf", "*.otf", "*.woff", "*.woff2"]},
+    {"name": "app", "ceiling": 6, "code": true,
+     "paths": ["docker/web/app/*", "roku-tv/*"]},
+    {"name": "services and scripts", "ceiling": 5, "code": true,
+     "paths": ["ersatztv/*", "tools/*", "docker/*"]}
+  ],
+  "default_area": "services and scripts",
+
+  "scores": {
+    "merge_risk": {"Minimal": 0, "Low": 1, "Moderate": 2},
+    "security_risk": {"Minimal": 0, "Low": 0, "Moderate": 1, "not rated": 1},
+    "size_lines": [500, 2000, 5000],
+    "spread_many_files": 10
+  },
+  "size_ignored": ["*.lock", "*-lock.json", "*-lock.yaml", "*.min.js", "*.min.css", "*/vendor/*"],
+  "test_paths": ["tests/*", "*/tests/*", "test/*", "*/test/*", "e2e/*", "*/e2e/*", "test_*.py", "*/test_*.py",
+                 "*_test.py", "*.test.*", "*.spec.*"]
+}

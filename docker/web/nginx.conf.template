@@ -1,8 +1,9 @@
 # Retro TV guide viewer: the static app plus a read-only door to ErsatzTV.
 #
-# The nginx image fills in ${ERSATZTV_URL} and ${WEB_FRAME_SRC} when the
-# container starts (see NGINX_ENVSUBST_FILTER in the Dockerfile; the second
-# comes from web-channels.envsh). Nothing else in this file is substituted.
+# The nginx image fills in ${ERSATZTV_URL}, ${CSP_FRAME_SRC} and
+# ${CSP_CONNECT_SRC} when the container starts (see NGINX_ENVSUBST_FILTER in
+# the Dockerfile; the last two come from config.envsh and are empty unless a
+# server setting adds a site). Nothing else in this file is substituted.
 #
 # ErsatzTV writes absolute URLs into its channel list, playlists and
 # guide, built from the Host header of the request. The proxy always
@@ -26,7 +27,7 @@ server {
 
   add_header X-Content-Type-Options "nosniff" always;
   add_header Referrer-Policy "no-referrer" always;
-  add_header Content-Security-Policy "default-src 'self'; img-src 'self' data:; media-src 'self' blob:; worker-src 'self' blob:; frame-src ${WEB_FRAME_SRC}; object-src 'none'; base-uri 'none'; frame-ancestors 'self'" always;
+  add_header Content-Security-Policy "default-src 'self'; img-src 'self' data:; media-src 'self' blob:; worker-src 'self' blob:; frame-src 'self'${CSP_FRAME_SRC}; connect-src 'self'${CSP_CONNECT_SRC}; object-src 'none'; base-uri 'none'; frame-ancestors 'self'" always;
 
   proxy_http_version 1.1;
   proxy_set_header Connection "";
@@ -58,12 +59,11 @@ server {
     add_header Cache-Control "no-cache" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header Referrer-Policy "no-referrer" always;
-    add_header Content-Security-Policy "default-src 'self'; img-src 'self' data:; media-src 'self' blob:; worker-src 'self' blob:; frame-src ${WEB_FRAME_SRC}; object-src 'none'; base-uri 'none'; frame-ancestors 'self'" always;
+    add_header Content-Security-Policy "default-src 'self'; img-src 'self' data:; media-src 'self' blob:; worker-src 'self' blob:; frame-src 'self'${CSP_FRAME_SRC}; connect-src 'self'${CSP_CONNECT_SRC}; object-src 'none'; base-uri 'none'; frame-ancestors 'self'" always;
   }
-  # Web channels: the channel -> page map, written from WEB_CHANNELS at
-  # start (web-channels.envsh). {} when there are none.
-  location = /web-channels.json {
-    alias /tmp/web-channels.json;
+  # Server settings, written at start by config.envsh. {} when none are set.
+  location = /config.json {
+    alias /tmp/retro-tv-config.json;
     default_type application/json;
     add_header Cache-Control "no-store" always;
     add_header X-Content-Type-Options "nosniff" always;

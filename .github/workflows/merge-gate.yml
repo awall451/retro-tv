@@ -1,0 +1,68 @@
+# Decides whether a pull request may merge without a person, says why in one comment
+# on the pull request, and merges it when the rules allow.
+#
+# The rules are in .github/merge-gate.json and are explained in .github/REVIEW-LOOP.md.
+# No model is involved in the decision: the same input gives the same answer.
+#
+# It runs when CodeRabbit finishes a review. CodeRabbit shows that in two ways and both
+# start this: its check completes, and it edits its summary comment. (The check alone
+# is not enough: GitHub starts nothing from a check on a commit that a workflow pushed,
+# and those are the commits the review loop makes.) The owner can also start it with
+# the comment "/gate", or by hand from the Actions tab.
+#
+# Every one of those uses this file and the scripts as they are on the default branch,
+# so a pull request cannot change its own gate.
+name: Merge gate
+
+on:
+  check_run:
+    types: [completed]
+  issue_comment:
+    types: [created, edited]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Pull request number
+        required: true
+
+permissions: {}
+
+jobs:
+  merge-gate:
+    if: >-
+      github.event_name == 'workflow_dispatch'
+      || (github.event_name == 'check_run' && github.event.check_run.app.slug == 'coderabbitai')
+      || (github.event_name == 'issue_comment'
+          && github.event.issue.pull_request
+          && ((github.event.comment.user.login == 'coderabbitai[bot]'
+               && contains(github.event.comment.body, 'Merge Risk:'))
+              || (github.event.action == 'created'
+                  && github.event.comment.author_association == 'OWNER'
+                  && startsWith(github.event.comment.body, '/gate'))))
+    # CodeRabbit edits its comment several times during one review. Only the newest
+    # run matters; an older one still waiting is dropped.
+    concurrency:
+      group: merge-gate-${{ github.event.issue.number || github.event.check_run.head_sha || inputs.pr }}
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      checks: read
+      statuses: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR_INPUT: ${{ inputs.pr || github.event.issue.number }}
+      HEAD_SHA: ${{ github.event.check_run.head_sha }}
+    steps:
+      - name: Get the scripts from the default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          sparse-checkout: .github
+          persist-credentials: false
+
+      - name: Check the rules, report, and merge if they allow
+        run: python3 .github/scripts/review_loop.py gate --post

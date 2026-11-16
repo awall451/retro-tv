@@ -63,7 +63,7 @@ const S = {
   tpIndex: 0,                  // highlighted tile in the theme picker
   setRow: 0,                   // highlighted row on the settings screen
   net: null,                   // how the Pi box is on the network, from /pi/net (null elsewhere)
-  box: false,                  // running on the Pi box (it answered /pi/net): offers Power off
+  box: false,                  // running on the Pi box (it answered /pi/theme or /pi/net): offers Power off
   powerArmed: 0,               // timer while "Power off" waits for its second press
   focusCh: 0,                  // index into channels
   focusTime: Date.now(),       // the time position of the highlight
@@ -546,10 +546,28 @@ function openSettings() {
   S.setRow = 0;
   setMode('settings');
   renderSettings();
-  fetch('/pi/net', { cache: 'no-store' })
+  // The box is recognised by its theme service, which answers from the moment it
+  // starts (anywhere else /pi/theme is a 404). How it is on the network comes
+  // separately: /pi/net is only there after the first network check, 90 seconds
+  // after start-up, and "Power off" must not wait for that.
+  detectBox();
+}
+
+// A 404 means this is not the box; anything else (the theme service not up yet,
+// a dropped connection) is tried again every few seconds while settings is open.
+function detectBox() {
+  clearTimeout(S.detectTimer);
+  let retry = false;
+  const theme = fetch('/pi/theme', { cache: 'no-store' })
+    .then(r => { if (r.ok) { S.box = true; if (S.mode === 'settings') renderSettings(); } else if (r.status !== 404) retry = true; })
+    .catch(() => { retry = true; });
+  const net = fetch('/pi/net', { cache: 'no-store' })
     .then(r => (r.ok ? r.json() : null))
-    .then(n => { S.net = n; S.box = !!n; if (S.mode === 'settings') renderSettings(); })
+    .then(n => { S.net = n; if (n) S.box = true; if (S.mode === 'settings') renderSettings(); })
     .catch(() => {});
+  Promise.all([theme, net]).then(() => {
+    if (!S.box && retry && S.mode === 'settings') S.detectTimer = setTimeout(detectBox, 5000);
+  });
 }
 
 // Power off (the Pi box only, through /pi/power): the first press arms the
