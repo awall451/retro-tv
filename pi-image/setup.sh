@@ -73,11 +73,6 @@ log "viewer -> $APP, nginx on 127.0.0.1:8410"
 mkdir -p "$APP"
 rsync -a --delete "$REPO/docker/web/app/" "$APP/"
 cp "$HERE"/config/www/* "$APP/"          # the box's own pages (the overscan test pattern)
-# Sleep timer (IDLE_TIMEOUT_MIN, IDLE_PROMPT_SEC in $CFG): the same script as the
-# container; it writes the app's /idle.json.
-IDLE_JSON="$APP/idle.json"
-export IDLE_TIMEOUT_MIN IDLE_PROMPT_SEC IDLE_JSON
-. "$REPO/docker/web/idle.envsh"
 # Server settings (docker/web/config.envsh): the same script and pieces as the
 # container, reading the settings in $CFG. The file is kept outside $APP, so an
 # app update with rsync --delete cannot remove it.
@@ -94,7 +89,6 @@ SITE=/etc/nginx/sites-available/retro-tv
 sed -e 's|listen 8080;|listen 127.0.0.1:8410;|' \
     -e "s|root /usr/share/nginx/html;|root $APP;|" \
     -e "s|\${ERSATZTV_URL}|$ERSATZTV_URL|g" \
-    -e "s|alias /tmp/idle.json;|alias $IDLE_JSON;|" \
     -e "s|\${CSP_FRAME_SRC}|$CSP_FRAME_SRC|g" \
     -e "s|\${CSP_CONNECT_SRC}|$CSP_CONNECT_SRC|g" \
     -e "s|alias /tmp/retro-tv-config.json;|alias $CONFIG_JSON;|" \

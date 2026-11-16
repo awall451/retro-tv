@@ -177,7 +177,8 @@ keeps one running. The sleep timer asks, the way streaming services do:
   has nothing to burn in. A key or a click (a moving mouse alone does not) starts the same
   channel again.
 - **A hidden tab** (another tab, a minimised window, a phone's home screen) goes to the same
-  standby screen after two minutes, without asking.
+  standby screen after two minutes, without asking, while the timer is on. With it off, a hidden
+  tab stops after five minutes and picks the channel up again by itself (see "Good to know").
 
 The server sets the time for every device; each device can choose its own under Settings, Sleep.
 
@@ -187,9 +188,10 @@ The server sets the time for every device; each device can choose its own under 
 | `IDLE_PROMPT_SEC` | `60` | How long the question waits for a key. |
 
 Put them in `.env` (compose passes them on) and run `docker compose up -d`; on the Pi box they go in
-`/etc/retro-tv.env`, then `sudo pi-image/setup.sh`. The container writes them to `/idle.json` at
-start (`web/idle.envsh`). To try it without waiting, add `?idle=1&idleprompt=15` to the address:
-a one-minute timer and a 15-second question, for that page only.
+`/etc/retro-tv.env`, then `sudo pi-image/setup.sh`. They reach the app as the `idle` key of
+`/config.json` (`web/config.d/idle.sh`, see "Server settings"). To try it without waiting, add
+`?idle=1&idleprompt=15` to the address: a one-minute timer and a 15-second question, for that
+page only.
 
 On the [Pi box](../pi-image/README.md) with an HDMI TV, switching the TV off goes to standby at
 once and switching it on resumes, when the box's HDMI-CEC service is running (`/pi/cec`).
@@ -292,8 +294,9 @@ Pi box's `setup.sh` runs the same script and keeps the file in
   channel keeps running there for a while after you leave it (about 90 seconds on ErsatzTV
   v26). Surfing through more than that in one stretch fills the server: the new channel then
   fails until older ones time out. The viewer retries by itself.
-- **A hidden tab stops after 2 minutes** and shows the standby screen when you come back; a key
-  picks the channel up again. A forgotten tab does not keep the server working all night (see
+- **A hidden tab stops after 5 minutes** and picks the channel up again when you come back, so a
+  forgotten tab does not keep the server working all night. With the sleep timer on it stops
+  after 2 minutes and shows the standby screen instead; a key picks the channel up again (see
   "Sleep timer").
 - **Sound may start off.** Browsers allow sound only after a key press or click on the page. A
   controller button does not count, so if you start with a controller you may see "Sound is off":
@@ -342,7 +345,6 @@ docker/
 ├── web/
 │   ├── Dockerfile            pinned nginx (unprivileged) + the app
 │   ├── nginx.conf.template   static files and the read-only /iptv/ proxy
-│   ├── idle.envsh            IDLE_TIMEOUT_MIN, IDLE_PROMPT_SEC -> /idle.json, at start
 │   ├── config.envsh          server settings -> /config.json and the CSP (below, "Server settings")
 │   ├── config.d/             one piece per feature with a server setting
 │   ├── uplink/               the uplink's nginx config (same image)

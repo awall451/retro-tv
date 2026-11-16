@@ -13,28 +13,24 @@
 // the same channel. A listing that runs more than three hours on, or no
 // listing at all, gets the question at once.
 //
-// The server sets the time in /idle.json (IDLE_TIMEOUT_MIN, 0 = off; the
-// countdown IDLE_PROMPT_SEC); each device can override it in Settings. For
-// trying it out: ?idle=<minutes> (fractions allowed) and ?idleprompt=<seconds>.
+// The server sets the time in /config.json, key "idle" (IDLE_TIMEOUT_MIN,
+// 0 = off; the countdown IDLE_PROMPT_SEC; docker/web/config.d/idle.sh); each
+// device can override it in Settings. For trying it out: ?idle=<minutes>
+// (fractions allowed) and ?idleprompt=<seconds>.
 
-const CONFIG_URL = '/idle.json';
+import { serverSetting } from './config.js';
+
 export const CAP_MS = 3 * 60 * 60 * 1000;   // a boundary further away than this is not waited for
 const DEFAULT_PROMPT_S = 60;
 const DRIFT_MS = 60 * 1000;                 // the standby card moves this often (no burn-in)
 
 // {timeoutMin, promptSec} from the server; off when it says nothing.
 export async function loadIdleConfig() {
-  try {
-    const res = await fetch(CONFIG_URL, { cache: 'no-store' });
-    if (!res.ok) return { timeoutMin: 0, promptSec: DEFAULT_PROMPT_S };
-    const cfg = await res.json();
-    return {
-      timeoutMin: Number.isFinite(cfg.timeoutMin) && cfg.timeoutMin > 0 ? cfg.timeoutMin : 0,
-      promptSec: Number.isFinite(cfg.promptSec) && cfg.promptSec > 0 ? cfg.promptSec : DEFAULT_PROMPT_S,
-    };
-  } catch {
-    return { timeoutMin: 0, promptSec: DEFAULT_PROMPT_S };
-  }
+  const cfg = (await serverSetting('idle')) || {};
+  return {
+    timeoutMin: Number.isFinite(cfg.timeoutMin) && cfg.timeoutMin > 0 ? cfg.timeoutMin : 0,
+    promptSec: Number.isFinite(cfg.promptSec) && cfg.promptSec > 0 ? cfg.promptSec : DEFAULT_PROMPT_S,
+  };
 }
 
 // When to ask, for a viewer idle since idleAt with the programme on then
@@ -57,7 +53,7 @@ export class Idle {
     this.promptMs = DEFAULT_PROMPT_S * 1000;
     this.last = Date.now();         // the last input
     this.state = 'watching';        // watching | waiting | prompt | standby
-    this.promptAt = 0;              // waiting: when the question goes up
+    this.idleAt = 0;                // waiting: when the sleep time ran out
     this.promptEnd = 0;             // prompt: when the countdown runs out
     this.reason = '';               // standby: why ('idle', 'hidden', 'tv-off')
     this.#build();
@@ -128,18 +124,22 @@ export class Idle {
 
   get asleep() { return this.state === 'standby'; }
 
+  // A sleep time is set (in Settings, by the server or on the address).
+  get on() { return this.timeoutMs > 0; }
+
   tick(now = Date.now()) {
     switch (this.state) {
       case 'watching': {
         if (!this.timeoutMs || !this.playing() || now - this.last < this.timeoutMs) return;
-        const idleAt = this.last + this.timeoutMs;
-        this.promptAt = promptTime(idleAt, this.boundary(idleAt));
+        this.idleAt = this.last + this.timeoutMs;
         this.state = 'waiting';
         return this.tick(now);
       }
       case 'waiting':
         if (!this.playing()) { this.state = 'watching'; return; }
-        if (now < this.promptAt) return;
+        // Asked again each time: a guide refresh can move the end of the
+        // programme (a show running long), and the question waits for it.
+        if (now < promptTime(this.idleAt, this.boundary(this.idleAt))) return;
         this.promptEnd = now + this.promptMs;
         this.#show('prompt');
         return this.#count(now);

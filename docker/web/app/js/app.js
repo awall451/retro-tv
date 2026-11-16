@@ -45,7 +45,8 @@ const SCREEN_SHAPE = (() => {
 })();
 const LAST_CHANNEL_KEY = 'retro-tv.last-channel';
 const REFRESH_MS = 15 * 60 * 1000;       // re-read the listings this often
-const HIDDEN_STOP_MS = 2 * 60 * 1000;    // stop streaming in a tab hidden this long
+const HIDDEN_STOP_MS = 5 * 60 * 1000;    // stop streaming in a tab hidden this long
+const HIDDEN_SLEEP_MS = 2 * 60 * 1000;   // with the sleep timer on: standby after this long hidden
 const BANNER_MS = 4000;
 const SURF_MS = 30 * 1000;               // warm-up ends this long after the last flip
 const SURF_SETTLE_MS = 900;              // start warming the next channel after this pause
@@ -733,7 +734,7 @@ function watch(ch) {
 let startPending = false;
 function autoStart() {
   const ch = focusChannel();
-  if (!ch || S.tunedId) return;
+  if (!ch || S.tunedId || idle.asleep) return;
   if (document.hidden) { startPending = true; return; }
   startPending = false;
   tune(ch);
@@ -945,8 +946,9 @@ function commitDigits() {
 // ---- Sleep timer ("Are you still watching?", js/idle.js) -------------------
 // No input for the sleep time: at the end of the programme on then, the
 // question; no answer, everything stops and a standby screen waits for a key,
-// which resumes the same channel. A tab hidden for two minutes, and on the Pi
-// box the TV being switched off, go to standby straight away.
+// which resumes the same channel. With the timer on, a tab hidden for two
+// minutes goes to standby straight away; on the Pi box, so does the TV being
+// switched off.
 
 const QUERY = new URLSearchParams(location.search);
 let idleServer = { timeoutMin: 0, promptSec: 60 };
@@ -978,10 +980,12 @@ function sleep() {
 }
 
 // A key on the standby screen (or the TV switched back on): the same channel.
+// Asleep since before anything was tuned (the TV was off at start-up): the
+// start-up channel, as autoStart() would have.
 function wakeUp() {
   const ch = S.channels.find(c => c.id === sleptId);
   sleptId = null;
-  if (!ch) return;
+  if (!ch) { autoStart(); return; }
   tune(ch);
   render();
   showBanner();
@@ -1105,10 +1109,17 @@ const KEYS = {
   i: 'info', g: 'back', r: 'refresh', m: 'mute', f: 'fullscreen', s: 'settings',
 };
 
+// Keys whose press the sleep timer used up: their auto-repeat, while still
+// held, does nothing either.
+const keysUsed = new Set();
+window.addEventListener('keyup', e => keysUsed.delete(e.code));
+window.addEventListener('blur', () => keysUsed.clear());
+
 window.addEventListener('keydown', e => {
   // Any key at all counts for the sleep timer; one that answers its
   // question (or wakes the standby screen) does nothing else.
-  if (idle.input()) { e.preventDefault(); return; }
+  if (e.repeat && keysUsed.has(e.code)) { e.preventDefault(); return; }
+  if (idle.input()) { keysUsed.add(e.code); e.preventDefault(); return; }
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   const action = /^\d$/.test(e.key) ? e.key : KEYS[e.key.length === 1 ? e.key.toLowerCase() : e.key];
   if (!action) return;
@@ -1265,6 +1276,7 @@ el.tpGrid.addEventListener('click', e => {
 const PAD_BUTTONS = { 0: 'select', 1: 'back', 2: 'info', 3: 'settings', 4: 'padL', 5: 'padR', 9: 'settings', 12: 'up', 13: 'down', 14: 'left', 15: 'right' };
 const PAD_REPEATS = new Set(['up', 'down', 'left', 'right', 'padL', 'padR']);
 const padHeld = new Map();   // action -> time of next repeat
+const padUsed = new Set();   // held buttons whose press the sleep timer used up
 
 function pollPads(now) {
   const down = new Set();
@@ -1281,13 +1293,16 @@ function pollPads(now) {
     const next = padHeld.get(action);
     if (next === undefined) {
       padHeld.set(action, now + 400);
-      if (!idle.input()) act(action);
-    } else if (PAD_REPEATS.has(action) && now >= next) {
+      if (idle.input()) padUsed.add(action);   // no repeats until it is let go
+      else act(action);
+    } else if (PAD_REPEATS.has(action) && now >= next && !padUsed.has(action)) {
       padHeld.set(action, now + 110);
       if (!idle.input()) act(action, true);
     }
   }
-  for (const action of padHeld.keys()) if (!down.has(action)) padHeld.delete(action);
+  for (const action of padHeld.keys()) {
+    if (!down.has(action)) { padHeld.delete(action); padUsed.delete(action); }
+  }
   requestAnimationFrame(pollPads);
 }
 requestAnimationFrame(pollPads);
@@ -1348,16 +1363,30 @@ setInterval(() => {
   if (!el.banner.hidden) fillBanner();
 }, 1000);
 
-// A forgotten tab must not keep the server streaming all night: hidden for
-// two minutes, it goes to standby (a key brings the channel back).
-let hiddenTimer = 0;
+// A forgotten tab must not keep the server streaming all night. Hidden for
+// five minutes, it stops, and picks the channel up again when it is looked
+// at. With the sleep timer on, it goes to standby after two minutes instead,
+// and a key brings the channel back.
+let hiddenTimer = 0, suspendedId = null;
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
-    hiddenTimer = setTimeout(() => { if (idlePlaying()) idle.standby('hidden'); }, HIDDEN_STOP_MS);
+    hiddenTimer = idle.on
+      ? setTimeout(() => { if (idlePlaying()) idle.standby('hidden'); }, HIDDEN_SLEEP_MS)
+      : setTimeout(() => {
+        if (!player.channel) return;
+        suspendedId = player.channel.id;
+        player.stop();
+        stopSurf();
+      }, HIDDEN_STOP_MS);
     return;
   }
   clearTimeout(hiddenTimer);
   if (startPending) autoStart();
+  if (suspendedId) {
+    const ch = S.channels.find(c => c.id === suspendedId);
+    suspendedId = null;
+    if (ch) { const st = streamOf(ch); player.tune(ch, { stream: st.num, watchSlow: st.hd }); }
+  }
   if (Date.now() - S.loadedAt > 60000) refresh();
   render();
 });

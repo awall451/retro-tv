@@ -9,8 +9,6 @@ FROM nginxinc/nginx-unprivileged:1.31.7-alpine
 ENV NGINX_ENVSUBST_FILTER="^(ERSATZTV_URL|CSP_FRAME_SRC|CSP_CONNECT_SRC|UPLINK_BIND|UPLINK_PORT)$" \
     HEALTH_URL=http://127.0.0.1:8080/healthz
 
-# Sleep timer: IDLE_TIMEOUT_MIN and IDLE_PROMPT_SEC -> /idle.json.
-COPY --chmod=755 idle.envsh /docker-entrypoint.d/17-idle.envsh
 # Server settings: the pieces in config.d/ -> /config.json and the CSP's
 # frame-src / connect-src, before the templates are filled in.
 COPY --chmod=755 config.envsh /docker-entrypoint.d/15-config.envsh

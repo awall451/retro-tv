@@ -68,14 +68,6 @@ server {
     add_header Cache-Control "no-store" always;
     add_header X-Content-Type-Options "nosniff" always;
   }
-  # Sleep timer: written from IDLE_TIMEOUT_MIN and IDLE_PROMPT_SEC at start
-  # (idle.envsh).
-  location = /idle.json {
-    alias /tmp/idle.json;
-    default_type application/json;
-    add_header Cache-Control "no-store" always;
-    add_header X-Content-Type-Options "nosniff" always;
-  }
   location /vendor/ { expires 30d; }
   location /fonts/  { expires 30d; }
 
