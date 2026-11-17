@@ -213,14 +213,19 @@ class Tv:
         """One monitor line. A <Standby> from the TV is acted on at once, a
         power report from it is taken as it is (also the TV's answer to our
         own poll, which must not start another poll), and any other message
-        from it (it woke up, it changed input) means a fresh look. A
-        pwr-state line belongs to the header above it, and counts only when
-        that header is the TV's (logical address 0): an audio system in
-        standby says nothing about the TV."""
+        from it (it woke up, it changed input) means a fresh look. Any
+        message from the TV also ends the quiet pace (CEC=auto): it talks,
+        so it is polled at the normal pace again. A pwr-state line belongs
+        to the header above it, and counts only when that header is the
+        TV's (logical address 0): an audio system in standby says nothing
+        about the TV."""
         if is_header(line):
             msg = parse_message(line)
             self.sender = msg[0] if msg else None
             if msg and msg[0] == 0:
+                if self.misses >= QUIET_AFTER:
+                    self.poll_now.set()      # it talks after all: back to the normal pace
+                self.misses = 0
                 if msg[1] == "STANDBY":
                     self.set("standby", "TV sent standby")
                 elif msg[1] != "REPORT_POWER_STATUS":
@@ -228,9 +233,6 @@ class Tv:
         elif "pwr-state" in line and self.sender == 0:
             state = parse_power(line)
             if state:
-                if self.misses >= QUIET_AFTER:
-                    self.poll_now.set()      # it talks after all: back to the normal pace
-                self.misses = 0
                 self.set(state, "report")
 
     def monitor(self):

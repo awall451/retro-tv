@@ -245,8 +245,15 @@ CRT) usually does not pass CEC either: then the TV never answers and nothing cha
 - **Untested on hardware.** The first box is on composite. `tests/test_cec.py` checks how the
   service reads cec-ctl's output (power reports, bus messages, the physical address, which
   device to use) against samples written from cec-ctl's output format, not captured from a TV.
-  On the first HDMI box, check: `journalctl -u retro-tv-cec`, `curl -s 127.0.0.1:8410/pi/cec`
-  with the TV on and off, and (with `CEC_KEYS=1`) `ir-keytable -t -s rcN` for the `rc-cec` device.
+  On the first HDMI box, check:
+  - `journalctl -u retro-tv-cec`: the service runs as user `retro-tv-cec` and its bus monitor
+    (`cec-ctl -m`, which needs `CAP_NET_ADMIN`) keeps running; `--playback` and
+    `--give-device-power-status` work with group `video` alone.
+  - The real `cec-ctl -m` lines look as the parser expects: message headers flush left, their
+    details (`pwr-state: ...`) indented below them. `curl -s 127.0.0.1:8410/pi/cec` follows the
+    TV on and off.
+  - The back-off (after 30 polls without an answer, one every 300 s) feels right.
+  - With `CEC_KEYS=1`: `ir-keytable -t -s rcN` for the `rc-cec` device.
 
 ## Things that bit, and their fixes
 

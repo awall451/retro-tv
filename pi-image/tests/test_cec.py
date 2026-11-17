@@ -140,6 +140,20 @@ class BusTest(unittest.TestCase):
         self.assertEqual(tv.interval(), cec.POLL_S)
         self.assertEqual(self.published(), "standby")
 
+    def test_any_tv_message_ends_the_quiet_pace(self):
+        tv = self.tv
+        tv.cec = lambda *a, **k: REPLY_NACK
+        for _ in range(cec.QUIET_AFTER):
+            tv.poll()
+        self.assertEqual(tv.interval(), cec.QUIET_POLL_S)
+        # Not a power report: the TV is starting up and announces itself.
+        self.feed("Received from TV to all (0 to 15): REPORT_PHYSICAL_ADDR (0x84):\n"
+                  "\tphys-addr: 0.0.0.0\n\tprim-devtype: tv (0x00)\n")
+        self.assertTrue(tv.poll_now.is_set())
+        tv.poll_now.clear()
+        tv.poll()                          # the immediate query goes unanswered while it starts
+        self.assertEqual(tv.interval(), cec.POLL_S)
+
 
 class AddressTest(unittest.TestCase):
     def test_phys_addr(self):

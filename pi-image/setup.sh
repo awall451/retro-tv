@@ -133,14 +133,22 @@ install -m 644 "$HERE/config/retro-tv-cec.service" /etc/systemd/system/retro-tv-
 id retro-tv-cec >/dev/null 2>&1 ||
     useradd --system --user-group --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin retro-tv-cec
 usermod -aG video retro-tv-cec
-{
-    echo "# Written by retro-tv setup.sh from $CFG (the CEC_* settings only); edit it there."
-    for v in CEC CEC_DEVICE CEC_KEYS CEC_POLL_SEC CEC_OSD_NAME; do
-        val=${!v:-}; val=${val//\\/\\\\}; val=${val//\"/\\\"}
-        if [ -n "$val" ]; then printf '%s="%s"\n' "$v" "$val"; fi
-    done
-} > /etc/retro-tv-cec.env
-chmod 644 /etc/retro-tv-cec.env
+# Built aside and moved into place (same directory, so the move is atomic); the
+# old file is kept as .prev until the new one is in, as for the nginx site.
+CEC_ENV=/etc/retro-tv-cec.env
+[ -f "$CEC_ENV" ] && cp -p "$CEC_ENV" "$CEC_ENV.prev"
+body="# Written by retro-tv setup.sh from $CFG (the CEC_* settings only); edit it there."$'\n'
+for v in CEC CEC_DEVICE CEC_KEYS CEC_POLL_SEC CEC_OSD_NAME; do
+    val=${!v:-}; val=${val//\\/\\\\}; val=${val//\"/\\\"}
+    if [ -n "$val" ]; then body+="$v=\"$val\""$'\n'; fi
+done
+if printf '%s' "$body" > "$CEC_ENV.new" && chmod 644 "$CEC_ENV.new" && mv -f "$CEC_ENV.new" "$CEC_ENV"; then
+    rm -f "$CEC_ENV.prev"
+else
+    rm -f "$CEC_ENV.new"
+    echo "could not write $CEC_ENV; the previous one (if any) is left in place" >&2
+    exit 1
+fi
 mkdir -p /etc/rc_keymaps
 install -m 644 "$HERE/config/rc_keymaps/retro-tv-cec.toml" /etc/rc_keymaps/
 systemctl daemon-reload
