@@ -20,9 +20,20 @@ export async function loadWebChannels() {
   if (!map || typeof map !== 'object') return out;
   for (const [num, url] of Object.entries(map)) {
     // An http(s) URL, or a page on the viewer itself ("/tvguide.html?tv").
-    if (/^\d+(\.\d+)?$/.test(num) && typeof url === 'string' && /^(https?:\/\/|\/(?!\/))/i.test(url)) out[num] = url;
+    if (/^\d+(\.\d+)?$/.test(num) && typeof url === 'string' && /^(https?:\/\/|\/(?!\/))/i.test(url) && parses(url)) out[num] = url;
   }
   return out;
+}
+
+// The browser can load it: a URL it cannot parse (a port above 65535) or
+// one with port 0 is left out, so the channel keeps its stream.
+function parses(url) {
+  try {
+    const u = new URL(url, location.href);
+    return /^https?:$/.test(u.protocol) && u.port !== '0';
+  } catch {
+    return false;
+  }
 }
 
 export class WebScreen {
@@ -51,6 +62,7 @@ export class WebScreen {
   show(url) {
     if (this.frame && this.url === url) return false;
     this.hide();
+    const ours = new URL(url, location.href).origin === location.origin;
     const frame = document.createElement('iframe');
     frame.className = 'web';
     frame.src = url;
@@ -67,7 +79,7 @@ export class WebScreen {
     this.box.insertBefore(frame, this.before);
     this.frame = frame;
     this.url = url;
-    this.ours = new URL(url, location.href).origin === location.origin;
+    this.ours = ours;
     return true;
   }
 

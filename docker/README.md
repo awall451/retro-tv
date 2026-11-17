@@ -197,9 +197,10 @@ WEB_CHANNELS=192=https://weather.example/?kiosk=true;250=https://cam.example/liv
   `/`. It must be plain ASCII without spaces, `;`, quotes, backslashes, `<`, `>` or control
   characters: percent-encode those (`%3B`, `%22`, ...). A site's host must be a name or an IPv4
   address; a frame policy cannot name an IPv6 address (`http://[fd00::7]/`), so give such a
-  site a host name (in DNS or the hosts file of the machine that runs the browser). A bad entry
-  is skipped with a line in the container log; the rest still work. A channel listed twice
-  keeps its last entry.
+  site a host name (in DNS or the hosts file of the machine that runs the browser). A port
+  must be 1-65535, and the URL cannot carry a user name or password (`user:pw@host`). A bad
+  entry is skipped with a line in the container log that names only its channel number and
+  the reason, never the URL; the rest still work. A channel listed twice keeps its last entry.
 - **A page of the viewer's own** is given as a path, so it works under whatever address the
   viewer is opened with (the Pi box's `127.0.0.1:8410` as well as a browser's). For example the
   TV Guide Channel page (below) as a channel, its top half playing that channel's own stream:
