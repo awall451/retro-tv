@@ -9,7 +9,7 @@
   (m3uRefreshMode 1 = repeated), so a rebuilt schedule shows up within 15 minutes.
 - installs the live-TV controller keymap.
 - loads every channel group from ErsatzTV (tvGroupMode 0), the server's HD twins (channels
-  101+, group "HD") included, and shows the server's channel numbers. The retro skin's guide opens on the Standard or the HD group
+  1001+, group "HD") included, and shows the server's channel numbers. The retro skin's guide opens on the Standard or the HD group
   from its Quality setting (make_kodi_skin.sh); Kodi's own channel list shows both.
 """
 import os, re, shutil
@@ -42,7 +42,7 @@ if os.path.exists(GROUPS_FILE):
 
 set_settings(os.path.join(KODI, "guisettings.xml"),
              {"epg.selectaction": "1", "epg.epgupdate": "15",
-              # channel numbers as the server sends them (the HD twins are 101+), not Kodi's own count
+              # channel numbers as the server sends them (the HD twins are 1001+), not Kodi's own count
               "pvrmanager.usebackendchannelnumbers": "true"})
 set_settings(IPTV, {"m3uRefreshMode": "1", "m3uRefreshIntervalMins": "15"})
 

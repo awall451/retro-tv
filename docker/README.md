@@ -154,6 +154,7 @@ The cog opens settings. They are kept by the browser they were set in, so each d
 | Theme | **Cable**: the late-90s guide, navy and yellow, flat cells. **Vaporwave**: purple cells, pink highlights, cyan text, chrome titles. **Digital Cable**: black and deep blue, glossy rounded bars, a glowing light-blue highlight. **Satellite**: navy into purple, rounded tabs, gold. **DVR**: soft blues, rounded white pills, green highlight. **Media Center**: glassy see-through tiles, green glow, a thin face. **Aqua**: light pinstripes, white rounded cells, a blue gel highlight. **Set-Top Web**: purple and black, chunky bevelled buttons, capitals. **TV Guide**: the look of the TV Guide Channel page below (channel 1), with its colours, 3-D frames, shadowed lettering and the PrevueGrid font; the highlight is a solid yellow box. Each theme has its own splash (below); changing the theme replays it. The looks are in the style of their era; no real logos or names. |
 | Quality | **Standard**: the 4:3 picture made for the old TV. **HD**: the same channels in widescreen 1080p. The guide, names and numbers do not change. Only shown when the server has HD twins (below). |
 | Picture | **Original**: the whole 4:3 picture, as on the TV. **Fill the screen**: while watching, zooms in until the black bars around a widescreen show are off the screen; a true 4:3 show is left as it is. For wide monitors. The zoom follows the picture, so it can change when a 4:3 commercial follows a widescreen film. |
+| Episode numbers | **On** (the default): a show's season and episode, as `S01E02` (`S01E02-E03` for a double episode), after its title in the guide and before the episode's name in the panel and the channel bar. A long title is cut short before the number is; a cell too small for both shows only the title. Films and programmes without numbers show none. **Off**: titles only. The numbers come from the guide data (ErsatzTV's `episode-num`). |
 | Fast flipping | **On**: the next channel is warmed up while you flip (see below). **Off**: channels start only when tuned. |
 | Power | Only on the [Pi box](../pi-image/README.md): **Power off**, pressed twice, shuts the box down cleanly. A read-only **Network** line under it shows how the box is connected (wired, or the Wi-Fi band and signal). |
 
@@ -165,7 +166,8 @@ viewer ask for the twin instead. The viewer recognises a twin in ErsatzTV's chan
 things:
 
 - its **Group** is `HD`
-- its **number** is the channel's number plus 100 (channel 1 → 101)
+- its **number** is the channel's number plus 1000 (channel 1 → 1001); plus 100, the older
+  numbering, is still recognised
 
 In ErsatzTV a twin is a channel with Playout Source **Mirror**, Mirror Source Channel set to the
 channel it copies, an HD FFmpeg profile, Streaming Engine **Next**, and **Show In EPG** on (so Kodi gets guide data for it).
@@ -229,6 +231,19 @@ takes the same `?tv` and `&screen=4:3` parameters as the guide. The [Pi box](../
 (`PAGE=tvguide`, `TVGUIDE_PROMO=`), and [tvguide/](tvguide/README.md) is the generator that
 streams it, so ErsatzTV can carry it as a channel of its own.
 
+### Server settings
+
+Settings that belong to the server rather than to one screen (those that
+come from `.env`, or from `/etc/retro-tv.env` on the Pi box) reach the app
+through one file, `/config.json`. When the container starts,
+`web/config.envsh` runs each piece in `web/config.d/` (one per feature);
+a piece checks its variables, adds its key to the file, and adds any other
+site the page has to reach to the Content-Security-Policy. A bad value is
+skipped with a warning in the log, and the container still starts. The
+Pi box's `setup.sh` runs the same script and keeps the file in
+`/var/lib/retro-tv/`, outside the app folder. With nothing set the file is
+`{}` and the policy is the same as before.
+
 ## Good to know
 
 - **One stream while watching.** Each stream is a live transcode on the server. Highlighting
@@ -291,6 +306,8 @@ docker/
 ├── web/
 │   ├── Dockerfile            pinned nginx (unprivileged) + the app
 │   ├── nginx.conf.template   static files and the read-only /iptv/ proxy
+│   ├── config.envsh          server settings -> /config.json and the CSP (below, "Server settings")
+│   ├── config.d/             one piece per feature with a server setting
 │   ├── uplink/               the uplink's nginx config (same image)
 │   └── app/
 │       ├── index.html
@@ -301,6 +318,7 @@ docker/
 │       ├── js/warm.js        keeps the next channel running while flipping
 │       ├── js/bars.js        finds black bars in the picture (for "Fill the screen")
 │       ├── js/settings.js    the settings and where they are kept
+│       ├── js/config.js      reads the server settings (/config.json) once
 │       ├── js/themes.js      the themes (Cable, Vaporwave and seven more): names, splash, browser tint
 │       ├── js/theme-boot.js  puts the saved theme on <html> before the first paint
 │       ├── js/splash.js      the splash scenes and the perspective floor grid
