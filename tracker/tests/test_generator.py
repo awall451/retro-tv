@@ -357,5 +357,140 @@ class SnapshotTest(unittest.TestCase):
         self.assertEqual(self.ch["24"]["check"], {"playoutItems": 2, "outsideMembers": 0})
 
 
+# The rest of ErsatzTV's schema that build() reads where it is there: people, tags with
+# their type, plots, episode metadata of its own.
+FIELDS_SCHEMA = """
+alter table Genre add column EpisodeMetadataId integer;
+alter table Studio add column EpisodeMetadataId integer;
+alter table Director add column EpisodeMetadataId integer;
+alter table Tag add column MovieMetadataId integer;
+alter table Tag add column EpisodeMetadataId integer;
+alter table Tag add column ShowMetadataId integer;
+alter table Tag add column ExternalTypeId text;
+alter table MovieMetadata add column Plot text;
+alter table EpisodeMetadata add column Plot text;
+create table Actor (Id integer primary key, Name text, MovieMetadataId integer, EpisodeMetadataId integer,
+                    OtherVideoMetadataId integer, ShowMetadataId integer);
+create table Writer (Id integer primary key, Name text, MovieMetadataId integer, EpisodeMetadataId integer,
+                     OtherVideoMetadataId integer);
+"""
+
+
+class FieldsTest(unittest.TestCase):
+    """Fields as ErsatzTV v26.11.6 indexes and parses them."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.db = os.path.join(cls.tmp.name, "ersatztv.sqlite3")
+        make_db(cls.db)
+        c = sqlite3.connect(cls.db)
+        c.executescript(FIELDS_SCHEMA)
+        c.execute("insert into Actor (Name, MovieMetadataId) values ('Bruce Willis', 1)")
+        c.execute("insert into Writer (Name, EpisodeMetadataId) values ('Larry David', 1)")
+        c.execute("insert into Genre (Name, EpisodeMetadataId) values ('Mystery', 2)")
+        c.execute("insert into Tag (Name, MovieMetadataId, ExternalTypeId) values ('USA', 1, 'nfo/country')")
+        c.execute("insert into Tag (Name, MovieMetadataId) values ('Christmas', 1)")
+        c.execute("insert into Tag (Name, ShowMetadataId, ExternalTypeId) values ('NBC', 1, '319')")
+        c.execute("update MovieMetadata set Plot = 'A cop takes on the terrorists in a tower.' where Id = 1")
+        c.execute("update MovieMetadata set Title = 'It', ContentRating = 'PG-13/R' where Id = 2")
+        c.execute("update ShowMetadata set Title = 'Star Trek: Voyager' where Id = 1")
+        # a second version of Die Hard, in 720p
+        c.execute("insert into MediaVersion values (6, null, 20, null, '02:12:00', 1280, 720)")
+        c.commit()
+        c.close()
+        cls.snap = g.build(cls.db, None, None, None, "test")
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    def members(self, query):
+        """The ids a query matches in the test library (via build(): a channel of its own)."""
+        c = sqlite3.connect(self.db)
+        c.execute("update SmartCollection set Query = ? where Id = 1", (query,))
+        c.commit()
+        c.close()
+        snap = g.build(self.db, None, None, None, "test")
+        ch = next(x for x in snap["channels"] if x["number"] == "24")
+        ids = {(m["type"], m["id"]) for m in ch["members"]}
+        return ids, ch["notes"]
+
+    def test_text_fields_whitespace_lowercase(self):
+        # CustomAnalyzer: split on whitespace, lowercased, no stop words
+        self.assertEqual(g.analyze("Star Trek: The Next Generation"),
+                         [(0, "star"), (1, "trek:"), (2, "the"), (3, "next"), (4, "generation")])
+        self.assertEqual(self.members("title:it")[0], {("movie", 21)})       # not a stop word
+        self.assertEqual(self.members("title:IT")[0], {("movie", 21)})
+        self.assertEqual(self.members('show_title:"star trek:"')[0], {("show", 1)})
+        self.assertEqual(self.members("show_title:trek")[0], set())         # "trek:" is the token
+
+    def test_plot_standard_analyzer(self):
+        self.assertEqual(self.members('plot:"terrorists in a tower"')[0], {("movie", 20)})
+        self.assertEqual(self.members("plot:Tower")[0], {("movie", 20)})
+        with self.assertRaises(g.Unsupported):
+            g.parse_query("type:movie AND plot:the")      # Lucene drops the clause
+
+    def test_exact_fields_keep_case(self):
+        self.assertEqual(self.members("content_rating:R")[0], {("movie", 20), ("movie", 21)})
+        self.assertEqual(self.members("content_rating:PG-13")[0], {("movie", 21)})   # "PG-13/R": both
+        self.assertEqual(self.members("content_rating:r")[0], set())
+        self.assertEqual(self.members("type:Movie")[0], set())
+        self.assertEqual(self.members("tag_full:Christmas")[0], {("movie", 20)})
+        self.assertEqual(self.members("tag_full:christmas")[0], set())
+
+    def test_people_tags_country(self):
+        self.assertEqual(self.members('type:movie AND actor:"Bruce Willis"')[0], {("movie", 20)})
+        self.assertEqual(self.members("writer:david")[0], {("show", 1)})
+        self.assertEqual(self.members("tag:christmas")[0], {("movie", 20)})
+        self.assertEqual(self.members("country:usa")[0], {("movie", 20)})
+        self.assertEqual(self.members("tag:usa")[0], set())                 # a country is not a tag
+
+    def test_unreadable_fields_are_unsupported(self):
+        for q in ("year:1988", "type:movie AND year:[1980 TO 1989]", "network:nbc", "language:english"):
+            ids, notes = self.members(q)
+            self.assertEqual(ids, set(), q)
+            self.assertTrue(any(n.startswith("query not evaluated") for n in notes), (q, notes))
+        self.assertIn("ErsatzTV has no year field", " ".join(self.members("year:1988")[1]))
+
+    def test_episode_and_show_metadata_apart(self):
+        # the show is a comedy; its episodes have no genre of their own (one is a mystery)
+        self.assertEqual(self.members("type:episode AND genre:comedy")[0], set())
+        self.assertEqual(self.members("type:episode AND show_genre:comedy")[0], {("show", 1)})
+        snap = self.members("type:episode AND genre:mystery")
+        self.assertEqual(snap[0], {("show", 1)})
+        self.assertEqual(self.members("show_content_rating:TV-PG")[0], {("show", 1)})
+        self.assertEqual(self.members("type:episode AND content_rating:TV-PG")[0], set())
+        self.assertEqual(self.members("show_network:nbc")[0], {("show", 1)})
+        self.assertEqual(self.members("show_tag:nbc")[0], set())
+
+    def test_every_media_version(self):
+        # Die Hard in 1080p and 720p: a range or a term on either height finds it
+        self.assertEqual(self.members("type:movie AND height:[700 TO 800]")[0], {("movie", 20)})
+        self.assertEqual(self.members("type:movie AND height:1080")[0], {("movie", 20), ("movie", 21)})
+        self.assertEqual(self.members("type:movie AND width:[* TO 1300}")[0], {("movie", 20)})
+
+    def test_text_ranges(self):
+        # a range on a text field compares its words, the bounds lowercased (TermRangeQuery)
+        self.assertEqual(self.members("type:movie AND title:[A TO Z]")[0], {("movie", 20), ("movie", 21)})
+        self.assertEqual(self.members("type:movie AND title:[h TO hz]")[0], {("movie", 20)})    # "hard"
+        self.assertEqual(self.members("release_date:[1988 TO 1989]")[0], {("movie", 20)})      # as text
+        with self.assertRaises(g.Unsupported):
+            g.parse_query("minutes:[a TO b]")
+
+    def test_evaluator_error_is_a_note(self):
+        real = g.evaluate
+
+        def broken(node, doc):
+            raise AttributeError("boom")
+        g.evaluate = broken
+        try:
+            ids, notes = self.members("type:movie")
+        finally:
+            g.evaluate = real
+        self.assertEqual(ids, set())
+        self.assertIn("query not evaluated (evaluator error: AttributeError: boom)", notes)
+
+
 if __name__ == "__main__":
     unittest.main()

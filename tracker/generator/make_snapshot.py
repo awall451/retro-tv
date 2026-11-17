@@ -243,30 +243,47 @@ def api_get(base: str, path: str, key: str | None):
 
 # --------------------------------------------------------------------------
 # Query evaluation (subset of ErsatzTV's Lucene syntax)
+#
+# As ErsatzTV v26.11.6 indexes and parses (Infrastructure/Search: SearchQueryParser,
+# CustomAnalyzer, CustomMultiFieldQueryParser, LuceneSearchIndex):
+#   text fields      split on whitespace and lowercased, nothing dropped (CustomAnalyzer)
+#   plot             Lucene's StandardAnalyzer: word tokens, lowercased, English stop words out
+#   exact fields     the whole value, case and all (KeywordAnalyzer / StringField)
+#   whole numbers    Int32 fields: a term or a range of whole numbers
 
+# Lucene's English stop words (StandardAnalyzer's default set): plot only.
 STOP = set("a an and are as at be but by for if in into is it no not of on or such that the "
            "their then there these they this to was will with".split())
 TOKEN_RE = re.compile(r"\w+(?:['’]\w+)*", re.UNICODE)
 
 
-def analyze(text: str | None) -> list[tuple[int, str]]:
-    """StandardAnalyzer-like: lowercase word tokens, stop words dropped, positions kept."""
-    out = []
-    for i, m in enumerate(TOKEN_RE.finditer((text or "").lower())):
-        t = m.group(0).replace("’", "'")
-        if t not in STOP:
-            out.append((i, t))
-    return out
+def analyze(text: str | None, field: str = "title") -> list[tuple[int, str]]:
+    """A text field's tokens with their positions, as ErsatzTV's analyzer for that field makes
+    them: plot like StandardAnalyzer, everything else split on whitespace and lowercased."""
+    text = text or ""
+    if field == "plot":
+        out = []
+        for i, m in enumerate(TOKEN_RE.finditer(text.lower())):
+            t = m.group(0).replace("’", "'")
+            if t not in STOP:
+                out.append((i, t))     # a stop word leaves its position empty, as in Lucene
+        return out
+    return list(enumerate(text.lower().split()))
 
 
 class Unsupported(Exception):
     pass
 
 
-ANALYZED = {"title", "show_title", "genre", "tag", "studio", "actor", "director", "plot",
-            "library_name", "network", "writer"}
-EXACT = {"type", "state", "season_number", "episode_number", "release_date", "year",
-         "content_rating", "minutes", "height", "width"}
+ANALYZED = {"title", "show_title", "genre", "tag", "studio", "actor", "director", "writer", "plot",
+            "library_name", "country", "show_genre", "show_tag", "show_studio", "show_network"}
+EXACT = {"type", "state", "content_rating", "show_content_rating", "release_date", "tag_full"}
+INT = {"season_number", "episode_number", "minutes", "seconds", "height", "width", "chapters"}
+# Fields ErsatzTV knows that the generator cannot reproduce: said, not guessed at.
+NOT_READ = {
+    "year": "ErsatzTV has no year field (year: matches nothing there); use release_date",
+    "network": "network is a field of shows only; the generator reads films, episodes and other videos",
+}
 
 QTOKEN = re.compile(r'''\s*(?:
     (?P<lp>\() | (?P<rp>\)) |
@@ -279,6 +296,14 @@ QTOKEN = re.compile(r'''\s*(?:
     ) |
     (?P<bad>\S+)
 )''', re.X)
+
+
+def as_int(s: str):
+    """.NET int.TryParse: a whole number in Int32 range, else None."""
+    if not re.fullmatch(r"\s*[+-]?\d+\s*", s):
+        return None
+    n = int(s)
+    return n if -2**31 <= n < 2**31 else None
 
 
 def tokenize_query(q: str):
@@ -299,19 +324,28 @@ def tokenize_query(q: str):
             out.append(("NOT",) if m.group("mod") == "-" else ("+",))
         elif m.group("field"):
             f = m.group("field")
-            if f not in ANALYZED and f not in EXACT:
+            if f in NOT_READ:
+                raise Unsupported(f"field {f}: {NOT_READ[f]}")
+            if f not in ANALYZED and f not in EXACT and f not in INT:
                 raise Unsupported(f"field {f}")
             if m.group("phrase") is not None:
-                out.append(("phrase", f, m.group("phrase").replace('\\"', '"')))
+                tok = ("phrase", f, m.group("phrase").replace('\\"', '"'))
             elif m.group("range"):
                 r = m.group("range")
                 mm = re.match(r"([\[{])\s*(\S+)\s+TO\s+(\S+)\s*([\]}])", r)
-                out.append(("range", f, mm.group(2), mm.group(3), mm.group(1) == "[", mm.group(4) == "]"))
+                lo, hi = mm.group(2), mm.group(3)
+                if f in INT and any(b != "*" and as_int(b) is None for b in (lo, hi)):
+                    raise Unsupported(f"range {r} on {f} is not whole numbers")
+                tok = ("range", f, lo, hi, mm.group(1) == "[", mm.group(4) == "]")
             else:
                 t = m.group("term")
                 if any(ch in t for ch in "*?~^"):
                     raise Unsupported(f"operator in {t}")
-                out.append(("term", f, t))
+                tok = ("term", f, t)
+            if tok[0] != "range" and f in ANALYZED and not analyze(tok[2], f):
+                # Lucene drops such a clause from the query altogether
+                raise Unsupported(f"{f}:{tok[2]} is only stop words (Lucene drops the clause)")
+            out.append(tok)
         elif m.group("bad") and m.group("bad").strip():
             raise Unsupported(f"token {m.group('bad')}")
     return out
@@ -406,19 +440,29 @@ def phrase_match(doc: list[tuple[int, str]], query: list[tuple[int, str]]) -> bo
     return False
 
 
-def in_range(v: str, lo: str, hi: str, inc_lo: bool, inc_hi: bool) -> bool:
-    """v within [lo TO hi] (or {lo TO hi}, exclusive); * leaves that end open, as in
-    Lucene (`release_date:[* TO 19891231]`). Numbers compare as numbers when the value
-    and every given bound are digits, else as text (dates are yyyymmdd, so both agree)."""
-    bounds = [b for b in (lo, hi) if b != "*"]
-    num = v.isdigit() and all(b.isdigit() for b in bounds)
-    key = int if num else (lambda x: x)
-    x = key(v)
-    if lo != "*" and not (x >= key(lo) if inc_lo else x > key(lo)):
+def in_range(v, lo, hi, inc_lo: bool, inc_hi: bool) -> bool:
+    """v within [lo TO hi] (or {lo TO hi}, exclusive); None leaves that end open."""
+    if lo is not None and not (v >= lo if inc_lo else v > lo):
         return False
-    if hi != "*" and not (x <= key(hi) if inc_hi else x < key(hi)):
+    if hi is not None and not (v <= hi if inc_hi else v < hi):
         return False
     return True
+
+
+def range_match(field: str, values: list, lo: str, hi: str, inc_lo: bool, inc_hi: bool) -> bool:
+    """A range clause as ErsatzTV's parser builds it. * leaves that end open
+    (`release_date:[* TO 19891231]`). Whole-number fields compare as numbers
+    (NumericRangeQuery); every other field compares the indexed terms as text
+    (TermRangeQuery), with the bounds lowercased as Lucene's parser does, so on a text
+    field `title:[a TO c]` is any title word from a to c."""
+    if field in INT:
+        lo_v = None if lo == "*" else as_int(lo)
+        hi_v = None if hi == "*" else as_int(hi)
+        return any(in_range(int(v), lo_v, hi_v, inc_lo, inc_hi) for v in values)
+    lo_v = None if lo == "*" else lo.lower()
+    hi_v = None if hi == "*" else hi.lower()
+    terms = (t for v in values for _, t in v) if field in ANALYZED else values
+    return any(in_range(t, lo_v, hi_v, inc_lo, inc_hi) for t in terms)
 
 
 def query_fields(node) -> set:
@@ -433,7 +477,7 @@ def query_types(node, every: set) -> set:
     required type: clause, by a group of type: alternatives, or by NOT type:."""
     if node[0] != "bool":
         if node[1] == "type" and node[0] in ("term", "phrase"):
-            return {node[2].lower()} & every
+            return {node[2]} & every
         return set(every)
     _, must, should, must_not = node
     out = set(every)
@@ -443,7 +487,7 @@ def query_types(node, every: set) -> set:
         out &= set().union(*(query_types(n, every) for n in should))
     for n in must_not:
         if n[0] in ("term", "phrase") and n[1] == "type":
-            out.discard(n[2].lower())
+            out.discard(n[2])
     return out
 
 
@@ -509,13 +553,17 @@ def evaluate(node, doc) -> bool:
     if not values:
         return False
     if kind == "range":
-        return any(in_range(v, *node[2:6]) for v in values)
+        return range_match(field, values, *node[2:6])
     text = node[2]
+    if field in INT:
+        n = as_int(text)
+        return n is not None and any(int(v) == n for v in values)
     if field in EXACT:
-        return any(v.lower() == text.lower() for v in values)
-    q = analyze(text)
-    if kind == "term" and len(q) == 1:
-        return any(any(t == q[0][1] for _, t in v) for v in values)
+        return text in values          # case and all, as a StringField
+    q = analyze(text, field)
+    if kind == "term":
+        # an unquoted term: one token, or (plot) any of its tokens, Lucene's default OR
+        return any(any(t == tok for _, t in v) for v in values for _, tok in q)
     return any(phrase_match(v, q) for v in values)
 
 
@@ -591,13 +639,23 @@ def breaks_for(chapter_starts: list[float], duration: float) -> int:
     return n
 
 
-def size_fields(v: dict) -> dict:
-    """minutes (rounded up, as ErsatzTV indexes it), height and width."""
-    out = {"minutes": [str(math.ceil(v["dur"] / 60))] if v["dur"] else []}
-    for k, f in (("h", "height"), ("w", "width")):
-        out[f] = [str(v[k])] if v[k] else []
-    return out
+# MediaItemState, as ErsatzTV indexes it (its name)
+ITEM_STATE = {0: "Normal", 1: "FileNotFound", 2: "Unavailable", 3: "RemoteOnly"}
+COUNTRY_TAG, NETWORK_TAG = "nfo/country", "319"   # Tag.NfoCountryTypeId, Tag.PlexNetworkTypeId
 
+
+def size_fields(versions: list, chapters: dict) -> dict:
+    """minutes and seconds (rounded up, as ErsatzTV indexes them), height, width and the
+    number of chapters, for every media version of the item."""
+    out = {"minutes": [], "seconds": [], "height": [], "width": [], "chapters": []}
+    for v in versions:
+        out["minutes"].append(str(math.ceil(v["dur"] / 60)))
+        out["seconds"].append(str(math.ceil(v["dur"])))
+        out["chapters"].append(str(len(chapters.get(v["vid"], []))))
+        for k, f in (("h", "height"), ("w", "width")):
+            if v[k]:
+                out[f].append(str(v[k]))
+    return out
 
 def ymd(s: str | None) -> str | None:
     if not s or s.startswith("0001"):
@@ -613,22 +671,66 @@ def build(db_path: str, lineup_path: str | None, api_channels, api_version, sour
     c.row_factory = sqlite3.Row
     q = lambda sql, *a: c.execute(sql, a).fetchall()  # noqa: E731
 
-    def multi(table, col):
+    def columns(table):
+        return {r["name"] for r in q(f"pragma table_info({table})")}
+
+    def multi(table, col, where=""):
+        """{metadata id: [names]} from a Genre, Tag, Actor, ... table; empty where this
+        ErsatzTV's table has no such column."""
         d = collections.defaultdict(list)
-        for r in q(f"select {col} k, Name from {table} where {col} is not null order by Id"):
+        if col not in columns(table):
+            return d
+        for r in q(f"select {col} k, Name from {table} where {col} is not null {where} order by Id"):
             if r["Name"] not in d[r["k"]]:
                 d[r["k"]].append(r["Name"])
         return d
 
-    genres_m, genres_s = multi("Genre", "MovieMetadataId"), multi("Genre", "ShowMetadataId")
-    studios_m, studios_s = multi("Studio", "MovieMetadataId"), multi("Studio", "ShowMetadataId")
-    directors_m = multi("Director", "MovieMetadataId")
-    tags_o = multi("Tag", "OtherVideoMetadataId")
+    # The people and words ErsatzTV indexes for each kind of metadata (LuceneSearchIndex):
+    # genre, tag, studio, actor, director, writer. A tag of type nfo/country is a film's
+    # country; a show's tag of type 319 (Plex) is its network.
+    tag_cols = columns("Tag")
+    tag_kind = (lambda kinds: f"and coalesce(ExternalTypeId, '') {kinds}") if "ExternalTypeId" in tag_cols \
+        else (lambda kinds: "and 0" if kinds.startswith("=") else "")
+    people = {}
+    for kind, md in (("movie", "MovieMetadataId"), ("episode", "EpisodeMetadataId"),
+                     ("other_video", "OtherVideoMetadataId"), ("show", "ShowMetadataId")):
+        p = {f: multi(t, md) for f, t in (("genre", "Genre"), ("studio", "Studio"), ("actor", "Actor"),
+                                          ("director", "Director"), ("writer", "Writer"))}
+        if kind == "movie":
+            p["tag"] = multi("Tag", md, tag_kind(f"!= '{COUNTRY_TAG}'"))
+            p["country"] = multi("Tag", md, tag_kind(f"= '{COUNTRY_TAG}'"))
+        elif kind == "show":
+            p["tag"] = multi("Tag", md, tag_kind(f"!= '{NETWORK_TAG}'"))
+            p["network"] = multi("Tag", md, tag_kind(f"= '{NETWORK_TAG}'"))
+        else:
+            p["tag"] = multi("Tag", md)
+        people[kind] = p
+    genres_m, genres_s = people["movie"]["genre"], people["show"]["genre"]
+    studios_s, directors_m = people["show"]["studio"], people["movie"]["director"]
 
-    # media versions, chapters
-    ver = {}
-    for r in q("select Id, coalesce(EpisodeId, MovieId, OtherVideoId) item, Duration, Width, Height from MediaVersion"):
-        ver[r["item"]] = {"vid": r["Id"], "dur": span(r["Duration"]), "w": r["Width"], "h": r["Height"]}
+    def words(kind, mid, include_full_tags=True):
+        """The analysed text fields of one item's metadata (and tag_full, the whole tags)."""
+        out = {f: [analyze(x, f) for x in d.get(mid, [])] for f, d in people[kind].items()}
+        if include_full_tags:
+            out["tag_full"] = list(people[kind]["tag"].get(mid, []))
+        return out
+
+    def plots(table, key):
+        if "Plot" not in columns(table):
+            return {}
+        return {r["k"]: r["Plot"] for r in q(f"select {key} k, Plot from {table}") if r["Plot"] and r["Plot"].strip()}
+
+    def ratings(s):
+        """ErsatzTV indexes each part of "TV-14/PG" on its own."""
+        return [x.strip() for x in (s or "").split("/") if x.strip()]
+
+    # media versions, chapters. ErsatzTV indexes the statistics of every version of an
+    # item (a film in 720p and 1080p has both heights); the library shows the last one.
+    vers = collections.defaultdict(list)
+    for r in q("select Id, coalesce(EpisodeId, MovieId, OtherVideoId) item, Duration, Width, Height "
+               "from MediaVersion order by Id"):
+        vers[r["item"]].append({"vid": r["Id"], "dur": span(r["Duration"]), "w": r["Width"], "h": r["Height"]})
+    ver = {item: vs[-1] for item, vs in vers.items()}
     chap = collections.defaultdict(list)
     for r in q("select MediaVersionId v, StartTime s from MediaChapter order by MediaVersionId, StartTime"):
         chap[r["v"]].append(max(0.0, span(r["s"])))
@@ -644,21 +746,26 @@ def build(db_path: str, lineup_path: str | None, api_channels, api_version, sour
         inner = [s for s in starts if s > 1.0]
         return v, nch, breaks_for(inner, v["dur"])
 
+    def common(item_id, kind, title):
+        """Fields every item has: type, title, state, library, the statistics of all versions."""
+        return {"type": [kind], "title": [analyze(title)] if title else [],
+                "state": [ITEM_STATE.get(state.get(item_id), "Normal")],
+                "library_name": [analyze(lib_of_item.get(item_id))],
+                **size_fields(vers.get(item_id, []), chap)}
+
     # documents for the query evaluator
     docs = {}
     movies = []
+    plot_m = plots("MovieMetadata", "Id")
     for r in q("select m.Id, mm.Id mid, mm.Title, mm.Year, mm.ReleaseDate, mm.ContentRating, mm.SortTitle "
                "from Movie m join MovieMetadata mm on mm.MovieId = m.Id"):
         v, nch, br = media_stats(r["Id"])
         g = genres_m.get(r["mid"], [])
         rd = ymd(r["ReleaseDate"])
-        docs[r["Id"]] = {"type": ["movie"], "title": [analyze(r["Title"])], "release_date": [rd] if rd else [],
-                         "year": [str(r["Year"])] if r["Year"] else [], "genre": [analyze(x) for x in g],
-                         "studio": [analyze(x) for x in studios_m.get(r["mid"], [])],
-                         "director": [analyze(x) for x in directors_m.get(r["mid"], [])],
-                         "content_rating": [r["ContentRating"]] if r["ContentRating"] else [],
-                         "state": ["FileNotFound" if state.get(r["Id"]) == 1 else "Normal"],
-                         "library_name": [analyze(lib_of_item.get(r["Id"]))], **size_fields(v)}
+        docs[r["Id"]] = {**common(r["Id"], "movie", r["Title"]), **words("movie", r["mid"]),
+                         "release_date": [rd] if rd else [],
+                         "content_rating": ratings(r["ContentRating"]),
+                         "plot": [analyze(plot_m[r["mid"]], "plot")] if r["mid"] in plot_m else []}
         p = paths.get(v["vid"]) or ""
         movies.append({"id": r["Id"], "t": r["Title"], "st": r["SortTitle"] or r["Title"], "y": r["Year"],
                        "r": r["ContentRating"], "g": g, "d": directors_m.get(r["mid"], [])[:2],
@@ -672,8 +779,18 @@ def build(db_path: str, lineup_path: str | None, api_channels, api_version, sour
         shows[r["Id"]] = {"id": r["Id"], "t": r["Title"], "st": r["SortTitle"] or r["Title"], "y": r["Year"],
                           "r": r["ContentRating"], "g": genres_s.get(r["mid"], []),
                           "studio": studios_s.get(r["mid"], [])[:2], "_mid": r["mid"]}
+    # An episode's own metadata fills genre, tag, studio, ...; its show's fills show_title,
+    # show_genre, show_tag, show_studio, show_network and show_content_rating (ErsatzTV
+    # gives an episode no content_rating of its own).
+    show_fields = {}
+    for sid, sh in shows.items():
+        w = words("show", sh["_mid"], include_full_tags=False)
+        show_fields[sid] = {"show_title": [analyze(sh["t"])], "show_genre": w["genre"], "show_tag": w["tag"],
+                            "show_studio": w["studio"], "show_network": w["network"],
+                            "show_content_rating": ratings(sh["r"])}
+    plot_e = plots("EpisodeMetadata", "Id")
     episodes = {}
-    for r in q("select e.Id, se.ShowId, se.SeasonNumber, em.Title, em.EpisodeNumber, em.ReleaseDate "
+    for r in q("select e.Id, se.ShowId, se.SeasonNumber, em.Id mid, em.Title, em.EpisodeNumber, em.ReleaseDate "
                "from Episode e join Season se on se.Id = e.SeasonId "
                "left join EpisodeMetadata em on em.EpisodeId = e.Id"):
         v, nch, br = media_stats(r["Id"])
@@ -683,28 +800,23 @@ def build(db_path: str, lineup_path: str | None, api_channels, api_version, sour
         episodes[r["Id"]] = {"show": r["ShowId"], "season": r["SeasonNumber"], "dur": v["dur"],
                              "ch": nch, "br": br, "q": res_label(v["w"], v["h"])}
         rd = ymd(r["ReleaseDate"])
-        docs[r["Id"]] = {"type": ["episode"], "title": [analyze(r["Title"])], "show_title": [analyze(sh["t"])],
-                         "season_number": [str(r["SeasonNumber"])],
+        docs[r["Id"]] = {**common(r["Id"], "episode", r["Title"]), **words("episode", r["mid"]),
+                         **show_fields[r["ShowId"]],
+                         "season_number": [str(r["SeasonNumber"] or 0)],
                          "episode_number": [str(r["EpisodeNumber"])] if r["EpisodeNumber"] is not None else [],
-                         "release_date": [rd] if rd else [], "genre": [analyze(x) for x in sh["g"]],
-                         "content_rating": [sh["r"]] if sh["r"] else [],
-                         "state": ["FileNotFound" if state.get(r["Id"]) == 1 else "Normal"],
-                         "library_name": [analyze(lib_of_item.get(r["Id"]))], **size_fields(v)}
+                         "release_date": [rd] if rd else [],
+                         "plot": [analyze(plot_e[r["mid"]], "plot")] if r["mid"] in plot_e else []}
     # Other videos (news tapes, newsreels, home recordings) mostly have a title and
-    # tags only; a year, a date or genres where ErsatzTV has them (from an .nfo).
-    ov_cols = {r["name"] for r in q("pragma table_info(OtherVideoMetadata)")}
-    genre_cols = {r["name"] for r in q("pragma table_info(Genre)")}
-    genres_o = multi("Genre", "OtherVideoMetadataId") if "OtherVideoMetadataId" in genre_cols else {}
-    extra = "".join(f", om.{col}" if col in ov_cols else f", null {col}" for col in ("Year", "ReleaseDate"))
+    # tags only; a date, a rating or genres where ErsatzTV has them (from an .nfo).
+    ov_cols = columns("OtherVideoMetadata")
+    plot_o = plots("OtherVideoMetadata", "Id")
+    extra = "".join(f", om.{col}" if col in ov_cols else f", null {col}" for col in ("ReleaseDate", "ContentRating"))
     for r in q(f"select o.Id, om.Id mid, om.Title{extra} from OtherVideo o "
                "join OtherVideoMetadata om on om.OtherVideoId = o.Id"):
         rd = ymd(r["ReleaseDate"])
-        docs[r["Id"]] = {"type": ["other_video"], "title": [analyze(r["Title"])],
-                         "tag": [analyze(x) for x in tags_o.get(r["mid"], [])],
-                         "genre": [analyze(x) for x in genres_o.get(r["mid"], [])],
-                         "release_date": [rd] if rd else [], "year": [str(r["Year"])] if r["Year"] else [],
-                         "state": ["FileNotFound" if state.get(r["Id"]) == 1 else "Normal"],
-                         "library_name": [analyze(lib_of_item.get(r["Id"]))]}
+        docs[r["Id"]] = {**common(r["Id"], "other_video", r["Title"]), **words("other_video", r["mid"]),
+                         "release_date": [rd] if rd else [], "content_rating": ratings(r["ContentRating"]),
+                         "plot": [analyze(plot_o[r["mid"]], "plot")] if r["mid"] in plot_o else []}
 
     # per-show library aggregates
     by_show = collections.defaultdict(list)
@@ -739,6 +851,9 @@ def build(db_path: str, lineup_path: str | None, api_channels, api_version, sour
             res = (ids, "query", missing_field_notes(tree, docs))
         except Unsupported as e:
             res = (None, "unsupported", str(e))
+        except Exception as e:   # noqa: BLE001 - one channel's query never stops the build
+            res = (None, "unsupported", f"evaluator error: {type(e).__name__}: {e}")
+            log(f"smart collection {sc['name']!r}: evaluator error ({type(e).__name__}: {e}); query: {sc['query']}")
         resolved_cache[sc_id] = res
         return res
 
@@ -879,7 +994,7 @@ def build(db_path: str, lineup_path: str | None, api_channels, api_version, sour
         members.sort(key=lambda x: (shows[x["id"]]["st"] if x["type"] == "show" else mv_by_id[x["id"]]["st"]).casefold())
 
         n_items = len(ep_ids) + len(mv_ids)
-        dur = sum(episodes[e]["dur"] for e in ep_ids) + sum(ver.get(m, {}).get("dur", 0) for m in mv_ids)
+        dur = sum(episodes[e]["dur"] for e in ep_ids) + sum(ver[m]["dur"] if m in ver else 0 for m in mv_ids)
         chaptered = sum(1 for e in ep_ids if episodes[e]["ch"] >= 2) + sum(1 for m in mv_ids if mv_by_id[m]["ch"] >= 2)
         with_breaks = sum(1 for e in ep_ids if episodes[e]["br"] > 0) + sum(1 for m in mv_ids if mv_by_id[m]["br"] > 0)
         breaks = sum(episodes[e]["br"] for e in ep_ids) + sum(mv_by_id[m]["br"] for m in mv_ids)
