@@ -1037,6 +1037,7 @@ function commitDigits() {
   clearTimeout(digitTimer);
   const num = String(parseInt(digits, 10));
   digits = '';
+  if (idle.asleep) return;     // nothing tunes behind the standby screen
   const at = S.channels.findIndex(c => c.num === num);
   if (at < 0) return showOsd('No such channel', 1500);
   hideOsd();
@@ -1076,6 +1077,8 @@ function idleBoundary(t) {
 function sleep() {
   sleptId = S.tunedId;
   wakeOnShow = false;
+  clearTimeout(digitTimer);    // a number half typed is dropped, not tuned later
+  digits = '';
   player.stop();
   stopSurf();
   bars.reset();
