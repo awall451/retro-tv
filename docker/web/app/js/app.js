@@ -1089,9 +1089,11 @@ let sleptId = null;                      // the channel to resume after standby
 let wakeOnShow = false;                  // woken while hidden: resume once looked at
 const idle = new Idle({ playing: idlePlaying, boundary: idleBoundary, stop: sleep, resume: wakeUp });
 
-// Something the timer should stop is playing.
+// Something the timer should stop is playing: a stream, or a web channel's
+// page (which has no stream in the player, but may play sound or a stream of
+// its own).
 function idlePlaying() {
-  return !!player.channel;
+  return !!player.channel || web.showing;
 }
 
 // When the programme on the channel being watched at instant t ends (NaN:
@@ -1108,6 +1110,7 @@ function sleep() {
   sleptId = S.tunedId;
   wakeOnShow = false;
   player.stop();
+  web.hide();                            // a web channel's page, sound and all
   stopSurf();
   bars.reset();
   hideBanner();
