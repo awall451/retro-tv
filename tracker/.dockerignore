@@ -1,0 +1,4 @@
+*
+!app/server.py
+!app/static/**
+!tools/renumber.py

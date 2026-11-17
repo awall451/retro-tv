@@ -13,6 +13,7 @@ import { SETTINGS, getSetting, cycleSetting, setSetting } from './settings.js';
 import { applyTheme, THEMES } from './themes.js';
 import { showSplash, isSplashShowing } from './splash.js';
 import { loadWebChannels, WebScreen } from './web.js';
+import { loadTracker, Beacon } from './beacon.js';
 import { Idle, loadIdleConfig } from './idle.js';
 
 const $ = id => document.getElementById(id);
@@ -48,6 +49,7 @@ const SCREEN_SHAPE = (() => {
 const LAST_CHANNEL_KEY = 'retro-tv.last-channel';
 const REFRESH_MS = 15 * 60 * 1000;       // re-read the listings this often
 const HIDDEN_STOP_MS = 5 * 60 * 1000;    // stop streaming in a tab hidden this long
+const BEACON_MAX_IDLE_S = 30 * 86400;    // the tracker takes idle seconds up to this (MAX_IDLE)
 const BANNER_MS = 4000;
 const SURF_MS = 30 * 1000;               // warm-up ends this long after the last flip
 const SURF_SETTLE_MS = 900;              // start warming the next channel after this pause
@@ -445,8 +447,11 @@ function closeDetails() {
 const SOUND_HINT = 'Sound is off: press a key or click';
 let autoMuted = false;
 
+let playerStateHook = () => {};          // set once the watch beacon exists (below)
+
 const player = new Player(el.video, {
   onState(state, ch) {
+    playerStateHook(state);
     const text = {
       tuning: ch && `Tuning to ${ch.num} ${ch.name}…`,
       error: 'Channel unavailable, retrying…',
@@ -746,6 +751,45 @@ function moveSetting(delta) {
 // next flip lands on a running stream. It stops 30 s after the last flip:
 // while simply watching, only the channel on screen is streamed.
 const warmer = new Warmer();
+
+// Watch beacons for the channel tracker (TRACKER_URL; js/beacon.js). Off
+// when the server has no tracker set. The sleep timer's standby screen is
+// nothing watched; with the timer on, every beacon also says how long since
+// the last input and the sleep time, so the tracker can keep a TV left on
+// apart from watching (js/idle.js). With it off they carry neither, as
+// before.
+// A stream counts only while its picture moves: from the player's first
+// frame ('playing'), and not once the video has stood still for
+// BEACON_STUCK_MS (a stream stuck buffering, a player retrying for ever).
+// Tuning, retrying and errors count for nothing; the beacon says stop.
+const BEACON_STUCK_MS = 20 * 1000;
+let progress = { channel: null, t: -1, at: 0 };
+function noteProgress() {
+  const t = el.video.currentTime;
+  if (progress.channel !== player.channel || t !== progress.t) progress = { channel: player.channel, t, at: Date.now() };
+}
+el.video.addEventListener('timeupdate', noteProgress);
+function videoMoving() {
+  noteProgress();
+  return Date.now() - progress.at < BEACON_STUCK_MS;
+}
+const beacon = new Beacon(loadTracker(), () => {
+  const ch = tunedChannel();
+  if (!ch || idle.asleep) return null;
+  // A web channel counts while its page is on screen.
+  if (ch.web && web.showing) return { channel: ch.num, kind: 'web', hd: false, warm: [] };
+  if (!player.channel || player.state !== 'playing' || !videoMoving()) return null;
+  return { channel: player.stream, kind: 'stream', hd: player.stream !== ch.num, warm: warmer.channels() };
+}, {
+  tvMode: TV_MODE,
+  extra: () => (idle.on ? {
+    idle: Math.min(Math.round((Date.now() - idle.last) / 1000), BEACON_MAX_IDLE_S),
+    idleAfter: Math.min(Math.round(idle.timeoutMs / 1000), BEACON_MAX_IDLE_S),
+  } : {}),
+});
+// The player started, stopped or failed: tell the tracker once it settles
+// (a tune's beacon goes out before the first frame and counts for nothing).
+playerStateHook = () => beacon.changed();
 let surfTimer = 0, surfSettleTimer = 0;
 
 function surf(direction) {
@@ -770,6 +814,7 @@ function stopSurf() {
 
 function tune(ch, direction = 0) {
   S.tunedId = ch.id;
+  beacon.changed();
   try { localStorage.setItem(LAST_CHANNEL_KEY, ch.id); } catch { /* private mode */ }
   applyLayout();               // the picture's shape can change with the channel
   if (el.screen.hidden) {
@@ -790,6 +835,7 @@ function tune(ch, direction = 0) {
     }
     if (direction) surf(direction);
     else stopSurf();
+    beacon.changed();
     return;
   }
   web.hide();
@@ -1066,6 +1112,7 @@ function sleep() {
   bars.reset();
   hideBanner();
   hideOsd();
+  beacon.changed();                      // a stop beacon for the tracker
 }
 
 // A key on the standby screen (or the TV switched back on): the same channel.
@@ -1469,6 +1516,7 @@ setInterval(() => {
 // stream goes to standby at the same point instead, and a key brings it back.
 let hiddenTimer = 0, suspendedId = null;
 document.addEventListener('visibilitychange', () => {
+  beacon.changed();
   if (document.hidden) {
     hiddenTimer = setTimeout(() => {
       if (idle.on && idlePlaying()) { idle.standby('hidden'); return; }
@@ -1477,12 +1525,14 @@ document.addEventListener('visibilitychange', () => {
         suspendedId = ch.id;
         web.hide();
         stopSurf();
+        beacon.changed();
         return;
       }
       if (!player.channel) return;
       suspendedId = player.channel.id;
       player.stop();
       stopSurf();
+      beacon.changed();
     }, HIDDEN_STOP_MS);
     return;
   }

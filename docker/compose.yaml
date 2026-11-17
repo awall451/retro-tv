@@ -12,6 +12,9 @@ services:
       ERSATZTV_URL: ${ERSATZTV_URL:?copy .env.example to .env and set ERSATZTV_URL}
       # Optional: channels that show a web page instead of their stream (README.md).
       WEB_CHANNELS: ${WEB_CHANNELS:-}
+      # Optional: the channel tracker that counts watch time (README.md,
+      # "Watch beacons"). Empty: no beacons.
+      TRACKER_URL: ${TRACKER_URL:-}
       # The sleep timer (README, "Sleep timer"): 0 = off.
       IDLE_TIMEOUT_MIN: ${IDLE_TIMEOUT_MIN:-0}
       IDLE_PROMPT_SEC: ${IDLE_PROMPT_SEC:-60}
@@ -63,6 +66,48 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  # The channel tracker: a page for browsing the channels and the library,
+  # a queue of change requests, and which channels get watched.
+  # Off by default; start it with:  docker compose --profile tracker up -d --build
+  # See ../tracker/README.md.
+  tracker:
+    container_name: retro-tv-tracker
+    profiles: ["tracker"]
+    build: ../tracker
+    image: retro-tv-tracker:local
+    restart: unless-stopped
+    environment:
+      # The session poller (optional): ErsatzTV's address and API key.
+      ERSATZTV_URL: ${ERSATZTV_URL:-}
+      ERSATZTV_API_KEY: ${ERSATZTV_API_KEY:-}
+      # Empty: a token is made at first start, in the data volume (/data/token).
+      TRACKER_TOKEN: ${TRACKER_TOKEN:-}
+      TRACKER_TZ: ${TRACKER_TZ:-UTC}
+      TRACKER_ORIGINS: ${TRACKER_ORIGINS:-}
+      TRACKER_DEVICES: ${TRACKER_DEVICES:-}
+      TRACKER_TV_LABEL: ${TRACKER_TV_LABEL:-}
+      TRACKER_TRUST_PROXY: ${TRACKER_TRUST_PROXY:-}
+      TRACKER_HD_OFFSET: ${TRACKER_HD_OFFSET:-}
+      TRACKER_IDLE_MIN: ${TRACKER_IDLE_MIN:-}
+    # Loopback by default, like the viewer: TRACKER_BIND=0.0.0.0, or a proxy,
+    # for other devices. Browsers send their beacons here too.
+    ports:
+      - "${TRACKER_BIND:-127.0.0.1}:${TRACKER_PORT:-8413}:8080"
+    volumes:
+      - tracker-data:/data
+    networks:
+      - retro
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
 networks:
   retro:
     name: retro-tv
+
+volumes:
+  # Snapshot, queue, planned channels, watch statistics and the token.
+  tracker-data:
+    name: retro-tv-tracker-data

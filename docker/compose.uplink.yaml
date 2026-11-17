@@ -9,9 +9,21 @@
 # The viewer then sends its ErsatzTV requests to "uplink", a second small
 # container on the host's network, which passes them on. The uplink
 # listens on the Docker bridge address only: other machines cannot reach it.
+# The channel tracker's session poller (profile "tracker") goes the same
+# way; the tracker still starts only with --profile tracker.
 
 services:
   web:
+    environment:
+      ERSATZTV_URL: http://host.docker.internal:${UPLINK_PORT:-8411}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - uplink
+
+  # Only the session poller's address; the profile stays the one in
+  # compose.yaml, so this does not start the tracker.
+  tracker:
     environment:
       ERSATZTV_URL: http://host.docker.internal:${UPLINK_PORT:-8411}
     extra_hosts:
