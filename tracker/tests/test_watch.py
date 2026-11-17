@@ -32,6 +32,7 @@ def load_server():
     spec = importlib.util.spec_from_file_location("tracker_server", os.path.join(ROOT, "app", "server.py"))
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
+    mod.snapshot.refresh()      # sd_of() and the beacon checks read it; a test run alone needs it too
     return mod
 
 
@@ -168,6 +169,31 @@ class RulesTest(unittest.TestCase):
         w.poll_once([{"channelNumber": "24", "startedAt": iso(self.T0), "lastAccess": iso(self.T0 + 300)}], t=self.T0 + 310)
         self.assertEqual(w.live(t=self.T0 + 320), [])
 
+    def test_session_before_snapshot_is_reclassified(self):
+        # The poller saw HD twin 113 before any snapshot: counted as 113. Once the snapshot
+        # is there, it counts under 13 as an HD twin, so a beacon on 13 claims it.
+        s = self.s
+        saved = dict(s.snapshot.__dict__)
+        iso = lambda t: dt.datetime.fromtimestamp(t, dt.timezone.utc).isoformat()  # noqa: E731
+        sess = [{"channelNumber": "113", "startedAt": iso(self.T0), "lastAccess": iso(self.T0 + 600)}]
+        w = s.Watch()
+        try:
+            s.snapshot.__init__()
+            s.snapshot.refresh = lambda: None       # no snapshot yet
+            w.poll_once(sess, t=self.T0 + 610)
+            (e,) = w.etv.values()
+            self.assertEqual((e["c"], e["hd"]), ("113", 0))
+        finally:
+            s.snapshot.__dict__.clear()
+            s.snapshot.__dict__.update(saved)
+        w.dirty = False
+        w.poll_once(sess, t=self.T0 + 620)
+        self.assertEqual((e["c"], e["hd"]), ("13", 1))
+        self.assertTrue(w.dirty)
+        days = s.watch_days([e, self.bea("13", "Laptop", 0, 600, hd=1)])["2026-11-10"]
+        self.assertEqual(days["13"]["dev"], {"Laptop": 600})
+        self.assertNotIn("113", days)
+
     def test_etv_time(self):
         t = self.s.parse_etv_time("2026-11-15T08:37:40.0255048-05:00")
         self.assertAlmostEqual(t, dt.datetime(2026, 11, 15, 13, 37, 40, 25504, tzinfo=dt.timezone.utc).timestamp(), 3)
@@ -285,12 +311,14 @@ class WatchApiTest(unittest.TestCase):
         self.assertEqual(st, 200)
         self.assertIsNone(w["poller"]["lastError"])
         self.assertEqual(w["poller"]["sessions"], 2)
-        today = w["days"][w["today"]]
-        self.assertGreaterEqual(today["24"]["s"], 590)            # a direct client on 24 for ~10 min
-        self.assertEqual(today["24"]["dev"].keys(), {"direct"})
-        self.assertNotIn("201", today)                            # 10 s session: a probe or a warm-up
-        self.assertEqual(today["12"]["s"], 0)                     # unattended only
-        self.assertGreaterEqual(today["12"]["u"], 1)
+        # Summed over the days reported: a run just after midnight (UTC) splits the sessions.
+        days = w["days"].values()
+        total = lambda ch, k: sum(d.get(ch, {}).get(k, 0) for d in days)  # noqa: E731
+        self.assertGreaterEqual(total("24", "s"), 590)            # a direct client on 24 for ~10 min
+        self.assertEqual(set().union(*(d["24"]["dev"].keys() for d in days if "24" in d)), {"direct"})
+        self.assertFalse(any("201" in d for d in days))           # 10 s session: a probe or a warm-up
+        self.assertEqual(total("12", "s"), 0)                     # unattended only
+        self.assertGreaterEqual(total("12", "u"), 1)
         self.assertEqual(w["rules"]["idleMin"], 90)
         live = {x["channel"]: x["devices"] for x in w["live"]}
         self.assertEqual(live["24"], ["direct"])

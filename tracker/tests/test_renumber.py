@@ -88,6 +88,44 @@ class RenumberTest(unittest.TestCase):
         with open(os.path.join(self.d, next(b for b in baks if b.startswith("watch-daily")))) as f:
             self.assertEqual(json.load(f), DAILY)
 
+    def test_backups_are_never_overwritten(self):
+        # two applications within the same second: the first one's backups stay as they were
+        real = rn.backup_stamp
+        rn.backup_stamp = lambda: "20261117T000000"
+        try:
+            self.run_tool("24=1024", apply=True)
+            self.run_tool("1024=2024", apply=True)
+        finally:
+            rn.backup_stamp = real
+        baks = sorted(f for f in os.listdir(self.d) if f.startswith("watch-daily.json.bak-"))
+        self.assertEqual(baks, ["watch-daily.json.bak-20261117T000000", "watch-daily.json.bak-20261117T000000-2"])
+        with open(os.path.join(self.d, baks[0])) as f:
+            self.assertEqual(json.load(f), DAILY)                 # the original history
+        with open(os.path.join(self.d, baks[1])) as f:
+            self.assertIn("1024", json.load(f)["days"]["2026-11-01"])
+
+    def test_failed_apply_changes_neither_file(self):
+        # the second file cannot be replaced: the first is put back, so the two never disagree
+        before = {n: self.read(n) for n in ("watch-daily.json", "watch-events.json")}
+        real, calls = rn.os.replace, []
+
+        def failing(src, dst):
+            calls.append(dst)
+            if len(calls) == 2:
+                raise OSError("disk full")
+            return real(src, dst)
+        rn.os.replace = failing
+        try:
+            with self.assertRaises(OSError):
+                self.run_tool("1=2", "24=1024", "13=113", apply=True)
+        finally:
+            rn.os.replace = real
+        self.assertEqual({n: self.read(n) for n in before}, before)
+        self.assertFalse([f for f in os.listdir(self.d) if f.endswith(".tmp")])   # no temp files left
+        rc, out = self.run_tool("24=1024", apply=True)             # a retry applies once, cleanly
+        self.assertEqual(rc, 0)
+        self.assertEqual([e["c"] for e in self.read("watch-events.json")][:2], ["1024", "1024"])
+
     def test_merge_and_swap(self):
         # 124's own minutes (an HD twin before the snapshot knew it) folded into 24; 13 and 201 swapped
         self.run_tool("124=24", "13=201", "201=13", apply=True)
