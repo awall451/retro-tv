@@ -113,6 +113,7 @@ class Snapshot:
         self.index = {}
         self.channels = {}
         self.groups = {}
+        self.mirrors = {}
         self.generated = None
 
     def refresh(self):
@@ -142,6 +143,9 @@ class Snapshot:
             self.index[("movie", m.get("id"))] = m.get("t")
         self.channels = {str(c.get("number")): c.get("name") for c in obj.get("channels") or []}
         self.groups = {str(c.get("number")): c.get("group") for c in obj.get("channels") or []}
+        # mirror (an HD twin, no schedule of its own) -> the channel it plays
+        self.mirrors = {str(c.get("number")): str(c["mirrorOf"]) for c in obj.get("channels") or []
+                        if c.get("mirrorOf") is not None}
         self.generated = obj.get("generatedAt")
 
 
@@ -199,6 +203,10 @@ def channel_ref(v, name, planned):
     nm = snapshot.channels.get(num)
     if snapshot.channels and nm is None:
         raise BadRequest(f"{name}: no channel {num} in the snapshot")
+    src = snapshot.mirrors.get(num)
+    if src is not None and src in snapshot.channels:
+        # A mirror (HD twin) has no schedule: the change is made on its source.
+        return {"number": src, "name": snapshot.channels[src], "via": num}
     return {"number": num, "name": nm or clean_str(v.get("name"), f"{name}.name", 80)}
 
 
@@ -231,8 +239,10 @@ def build_request(body, planned):
         raise BadRequest(f"{action} needs a target channel")
     if action in ("remove", "move") and not source:
         raise BadRequest(f"{action} needs a from channel")
-    if action == "move" and target == source:
-        raise BadRequest("move needs two different channels")
+    if action == "move" and target and source and \
+            (target.get("planned"), target.get("number")) == (source.get("planned"), source.get("number")):
+        raise BadRequest("move needs two different channels"
+                         + (" (a mirror and its source are one channel)" if target.get("via") or source.get("via") else ""))
     if action in ("add", "remove", "move") and not items:
         raise BadRequest(f"{action} needs at least one item")
     if action == "note" and not note and not items:
@@ -249,7 +259,8 @@ def describe(r) -> str:
             return "?"
         if c.get("planned") is not None:
             return f"planned channel #{c['planned']} \"{c['name']}\"" + (f" (number {c['number']})" if c.get("number") else "")
-        return f"ch{c['number']} {c.get('name') or ''}".strip()
+        s = f"ch{c['number']} {c.get('name') or ''}".strip()
+        return s + (f" (asked as its mirror ch{c['via']})" if c.get("via") else "")
     titles = ", ".join(f"\"{i['title']}\" ({i['type']} {i['id']})" for i in r["items"])
     a = r["action"]
     if a == "add":

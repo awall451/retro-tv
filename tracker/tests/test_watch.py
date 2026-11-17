@@ -131,6 +131,27 @@ class RulesTest(unittest.TestCase):
         self.assertEqual(self.s.sd_of("13"), ("13", False))
         self.assertEqual(self.s.sd_of("112"), ("112", False))   # 12 + 100, but not in group HD
 
+    def test_request_on_a_mirror(self):
+        # A mirror (HD twin) has no schedule: a request naming it goes to its source
+        s = self.s
+        saved = dict(s.snapshot.__dict__)
+        snap = dict(SNAP, channels=SNAP["channels"] + [{"number": "124", "name": "Sitcom TV HD", "group": "HD",
+                                                         "mirrorOf": "24"}])
+        try:
+            s.snapshot.load(json.dumps(snap).encode())
+            r = s.build_request({"action": "remove", "items": [{"type": "show", "id": 10}], "from": "124"}, [])
+            self.assertEqual(r["from"], {"number": "24", "name": "Sitcom TV", "via": "124"})
+            self.assertIn("REMOVE from ch24 Sitcom TV (asked as its mirror ch124)", s.describe(r))
+            r = s.build_request({"action": "add", "items": [{"type": "movie", "id": 1}], "channel": "124"}, [])
+            self.assertEqual(r["channel"]["number"], "24")
+            r = s.build_request({"action": "move", "items": [{"type": "movie", "id": 1}], "from": "201", "channel": "24"}, [])
+            self.assertEqual((r["from"], r["channel"]), ({"number": "201", "name": "Favorites"}, {"number": "24", "name": "Sitcom TV"}))
+            with self.assertRaisesRegex(s.BadRequest, "a mirror and its source are one channel"):
+                s.build_request({"action": "move", "items": [{"type": "show", "id": 10}], "from": "24", "channel": "124"}, [])
+        finally:
+            s.snapshot.__dict__.clear()
+            s.snapshot.__dict__.update(saved)
+
     def test_device_pairs(self):
         self.assertEqual(self.s.parse_pairs("192.0.2.58=Pi box; 192.0.2.60 = Laptop;bad;=x"),
                          {"192.0.2.58": "Pi box", "192.0.2.60": "Laptop"})

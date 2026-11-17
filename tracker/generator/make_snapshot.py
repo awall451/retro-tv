@@ -406,6 +406,95 @@ def phrase_match(doc: list[tuple[int, str]], query: list[tuple[int, str]]) -> bo
     return False
 
 
+def in_range(v: str, lo: str, hi: str, inc_lo: bool, inc_hi: bool) -> bool:
+    """v within [lo TO hi] (or {lo TO hi}, exclusive); * leaves that end open, as in
+    Lucene (`release_date:[* TO 19891231]`). Numbers compare as numbers when the value
+    and every given bound are digits, else as text (dates are yyyymmdd, so both agree)."""
+    bounds = [b for b in (lo, hi) if b != "*"]
+    num = v.isdigit() and all(b.isdigit() for b in bounds)
+    key = int if num else (lambda x: x)
+    x = key(v)
+    if lo != "*" and not (x >= key(lo) if inc_lo else x > key(lo)):
+        return False
+    if hi != "*" and not (x <= key(hi) if inc_hi else x < key(hi)):
+        return False
+    return True
+
+
+def query_fields(node) -> set:
+    """The fields a query looks at (type and state aside: every item has them)."""
+    if node[0] == "bool":
+        return set().union(*(query_fields(n) for part in node[1:] for n in part))
+    return {node[1]} - {"type", "state"}
+
+
+def query_types(node, every: set) -> set:
+    """The item types (movie, episode, other_video) a query can match: narrowed by a
+    required type: clause, by a group of type: alternatives, or by NOT type:."""
+    if node[0] != "bool":
+        if node[1] == "type" and node[0] in ("term", "phrase"):
+            return {node[2].lower()} & every
+        return set(every)
+    _, must, should, must_not = node
+    out = set(every)
+    for n in must:
+        out &= query_types(n, every)
+    if not must and should:
+        out &= set().union(*(query_types(n, every) for n in should))
+    for n in must_not:
+        if n[0] in ("term", "phrase") and n[1] == "type":
+            out.discard(n[2].lower())
+    return out
+
+
+TYPE_NAMES = {"movie": "films", "episode": "episodes", "other_video": "other videos"}
+
+
+def could_match(node, doc, missing: set) -> tuple[bool, bool]:
+    """(would match if the fields in `missing` matched anything, some clause on a field the
+    doc has did match). A prohibited clause on a missing field excludes nothing, as in
+    evaluate()."""
+    if node[0] == "bool":
+        _, must, should, must_not = node
+        if any(evaluate(n, doc) for n in must_not):
+            return False, False
+        parts = [could_match(n, doc, missing) for n in (must or should)]
+        ok = all(p[0] for p in parts) if must else any(p[0] for p in parts)
+        if must and should:
+            parts += [could_match(n, doc, missing) for n in should]
+        return ok, any(p[1] for p in parts)
+    if node[1] in missing:
+        return True, False
+    hit = evaluate(node, doc)
+    return hit, hit
+
+
+def missing_field_notes(tree, docs: dict) -> list[str]:
+    """Items a query cannot match only because they lack a field it filters on: other
+    videos (news tapes, newsreels) have no genre and often no date, so in
+    `type:other_video AND release_date:[* TO 19591231]` or `tag:news AND genre:news`
+    they drop out, here and in ErsatzTV. Said in the channel's notes, so a channel that
+    comes out short or empty is not a silent surprise. A type is named when none of its
+    items match, the query names it or matches them on some other field, and they would
+    match if the missing fields did."""
+    by_type, have = collections.defaultdict(list), collections.defaultdict(set)
+    for d in docs.values():
+        t = d["type"][0]
+        by_type[t].append(d)
+        have[t].update(f for f, v in d.items() if v)
+    fields = query_fields(tree)
+    notes = []
+    for t in sorted(query_types(tree, set(by_type))):
+        lacking = {f for f in fields if f not in have[t]}
+        if not lacking or any(evaluate(tree, d) for d in by_type[t]):
+            continue
+        n = sum(1 for d in by_type[t] if could_match(tree, d, lacking) == (True, True))
+        if n:
+            names = ", ".join(sorted(lacking))
+            notes.append(f"{n} {TYPE_NAMES.get(t, t)} cannot match: none have {names}")
+    return notes
+
+
 def evaluate(node, doc) -> bool:
     kind = node[0]
     if kind == "bool":
@@ -420,16 +509,7 @@ def evaluate(node, doc) -> bool:
     if not values:
         return False
     if kind == "range":
-        lo, hi, inc_lo, inc_hi = node[2], node[3], node[4], node[5]
-        for v in values:
-            a = (v >= lo) if inc_lo else (v > lo)
-            b = (v <= hi) if inc_hi else (v < hi)
-            if lo.isdigit() and hi.isdigit() and v.isdigit():
-                a = int(v) >= int(lo) if inc_lo else int(v) > int(lo)
-                b = int(v) <= int(hi) if inc_hi else int(v) < int(hi)
-            if a and b:
-                return True
-        return False
+        return any(in_range(v, *node[2:6]) for v in values)
     text = node[2]
     if field in EXACT:
         return any(v.lower() == text.lower() for v in values)
@@ -610,9 +690,19 @@ def build(db_path: str, lineup_path: str | None, api_channels, api_version, sour
                          "content_rating": [sh["r"]] if sh["r"] else [],
                          "state": ["FileNotFound" if state.get(r["Id"]) == 1 else "Normal"],
                          "library_name": [analyze(lib_of_item.get(r["Id"]))], **size_fields(v)}
-    for r in q("select o.Id, om.Id mid, om.Title from OtherVideo o join OtherVideoMetadata om on om.OtherVideoId = o.Id"):
+    # Other videos (news tapes, newsreels, home recordings) mostly have a title and
+    # tags only; a year, a date or genres where ErsatzTV has them (from an .nfo).
+    ov_cols = {r["name"] for r in q("pragma table_info(OtherVideoMetadata)")}
+    genre_cols = {r["name"] for r in q("pragma table_info(Genre)")}
+    genres_o = multi("Genre", "OtherVideoMetadataId") if "OtherVideoMetadataId" in genre_cols else {}
+    extra = "".join(f", om.{col}" if col in ov_cols else f", null {col}" for col in ("Year", "ReleaseDate"))
+    for r in q(f"select o.Id, om.Id mid, om.Title{extra} from OtherVideo o "
+               "join OtherVideoMetadata om on om.OtherVideoId = o.Id"):
+        rd = ymd(r["ReleaseDate"])
         docs[r["Id"]] = {"type": ["other_video"], "title": [analyze(r["Title"])],
                          "tag": [analyze(x) for x in tags_o.get(r["mid"], [])],
+                         "genre": [analyze(x) for x in genres_o.get(r["mid"], [])],
+                         "release_date": [rd] if rd else [], "year": [str(r["Year"])] if r["Year"] else [],
                          "state": ["FileNotFound" if state.get(r["Id"]) == 1 else "Normal"],
                          "library_name": [analyze(lib_of_item.get(r["Id"]))]}
 
@@ -646,7 +736,7 @@ def build(db_path: str, lineup_path: str | None, api_channels, api_version, sour
         try:
             tree = parse_query(sc["query"])
             ids = {i for i, d in docs.items() if evaluate(tree, d)}
-            res = (ids, "query", None)
+            res = (ids, "query", missing_field_notes(tree, docs))
         except Unsupported as e:
             res = (None, "unsupported", str(e))
         resolved_cache[sc_id] = res
@@ -731,6 +821,10 @@ def build(db_path: str, lineup_path: str | None, api_channels, api_version, sour
                 if ids is not None:
                     member_ids |= ids
                     methods.add("query")
+                    name = smart[sc_id]["name"]
+                    notes.extend(f"{name}: {n}" for n in why if f"{name}: {n}" not in notes)
+                    if not ids:
+                        notes.append(f"{name}: the query matches nothing in the library")
                     continue
                 notes.append(f"query not evaluated ({why})")
             else:
@@ -774,14 +868,14 @@ def build(db_path: str, lineup_path: str | None, api_channels, api_version, sour
         for sid, eps in grouped.items():
             a = show_agg(eps)
             members.append({"type": "show", "id": sid, "t": shows[sid]["t"], **a})
-            if mirror_of is None:
-                shows[sid]["on"].append(ch["Number"])
+            # A mirror (HD twin) plays the same items: it is listed too, so the
+            # library's channel filter finds them under either number.
+            shows[sid]["on"].append(ch["Number"])
         for mid in mv_ids:
             m = mv_by_id[mid]
             members.append({"type": "movie", "id": mid, "t": m["t"], "y": m["y"], "m": m["m"],
                             "ch": m["ch"], "br": m["br"], "q": m["q"]})
-            if mirror_of is None:
-                m["on"].append(ch["Number"])
+            m["on"].append(ch["Number"])
         members.sort(key=lambda x: (shows[x["id"]]["st"] if x["type"] == "show" else mv_by_id[x["id"]]["st"]).casefold())
 
         n_items = len(ep_ids) + len(mv_ids)

@@ -67,6 +67,12 @@
     const i = h("i"); i.style.width = `${Math.min(100, pct(value, max))}%`;
     return h("div", { class: "bar" + (alt ? " alt" : ""), role: "img", "aria-label": `${value} of ${max}` }, i);
   }
+  // A mirror (an HD twin) has no schedule of its own: a change to it is a
+  // change to the channel it mirrors (the server maps it the same way).
+  function srcNum(num) {
+    const c = channelsByNum.get(String(num));
+    return c && c.mirrorOf != null ? String(c.mirrorOf) : String(num);
+  }
   function chChip(num) {
     const c = channelsByNum.get(String(num));
     return h("a", { class: "chip", href: `#channel/${encodeURIComponent(num)}`, title: c ? c.name : "" }, num);
@@ -621,7 +627,7 @@
   function channelOptions(includePlanned, includeNone) {
     const o = [];
     if (includeNone) o.push(h("option", { value: "" }, "— none —"));
-    if (S.snap) for (const c of S.snap.channels) o.push(h("option", { value: `n:${c.number}` }, `${c.number} ${c.name}`));
+    if (S.snap) for (const c of S.snap.channels) o.push(h("option", { value: `n:${c.number}` }, `${c.number} ${c.name}${c.mirrorOf != null ? ` (mirror of ${c.mirrorOf})` : ""}`));
     if (includePlanned) for (const p of S.planned) o.push(h("option", { value: `p:${p.id}` }, `${p.number ? p.number + " " : ""}${p.name} (planned)`));
     return o;
   }
@@ -643,13 +649,14 @@
     fromSel.replaceChildren(...channelOptions(false, false));
     toSel.replaceChildren(...channelOptions(true, action === "note"));
     // default "from": the channel being viewed, else a channel every selected
-    // item is on; once the user has picked one, theirs stays
+    // item is on; a mirror (HD twin) stands for its source channel. Once the
+    // user has picked one, theirs stays
     let from = keepFrom;
     const items = [...S.sel.values()];
     const common = items.reduce((acc, x) => acc.filter((c) => x.on.includes(c)), items[0].on.slice());
     if (!bar.dataset.fromTouched) {
-      if (S.ctxFrom && S.view === "channel") from = `n:${S.ctxFrom}`;
-      else if (common.length) from = `n:${common[0]}`;
+      if (S.ctxFrom && S.view === "channel") from = `n:${srcNum(S.ctxFrom)}`;
+      else if (common.length) from = `n:${srcNum(common[0])}`;
     }
     if (from) fromSel.value = from;
     if (keepTo) toSel.value = keepTo;
