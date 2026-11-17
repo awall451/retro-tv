@@ -115,7 +115,7 @@ What it does:
 2. **Works out each channel's shows and films** the way ErsatzTV does: channel, playout,
    schedule items, smart collection, search query. The query is evaluated by a small evaluator
    for the common part of ErsatzTV's search syntax: `field:term`, `field:"phrase"`, `[a TO b]`
-   ranges, AND / OR / NOT / `+` / `-` and parentheses (read as Lucene's classic parser reads
+   ranges (open at either end with `*`: `release_date:[* TO 19891231]`), AND / OR / NOT / `+` / `-` and parentheses (read as Lucene's classic parser reads
    them: `a NOT b` is a without b, and `a OR b AND NOT c` is b without c), on the fields `type`,
    `title`, `show_title`, `genre`, `tag`, `studio`, `director`, `library_name`,
    `content_rating`, `state`, `season_number`, `episode_number`, `release_date`, `year`,
@@ -123,8 +123,12 @@ What it does:
    Bebop"` also matches "Cowboy Bebop (2021)", as in ErsatzTV. A query with anything else
    (wildcards such as `trek*`, fields such as `actor` or `language`, a group of only NOT
    clauses, which matches nothing in Lucene) and schedule items that are not smart collections
-   are not evaluated: that channel shows no members and a note saying why. An HD twin (Playout
-   Source **Mirror**, no playout of its own) shows the members of the channel it mirrors.
+   are not evaluated: that channel shows no members and a note saying why. A query that filters
+   on a field some of the items it could match never have (other videos, such as news tapes,
+   usually have no genre and no date, so `genre:news` or a `release_date` range cannot match
+   them, in ErsatzTV either) gets a note saying so, as does a query that matches nothing. An HD
+   twin (Playout Source **Mirror**, no playout of its own) shows the members of the channel it
+   mirrors, and the library lists both numbers on each of those titles.
 3. **Checks the result** against the channel's current playout: every scheduled programme
    should be a member. The channel page shows the count that is not (`check.outsideMembers`),
    which flags a query the evaluator read differently from ErsatzTV.
@@ -147,7 +151,9 @@ channels are then marked `membership: "lineup"`.
 Pick titles on the TV or Movies tab and queue **add** (to a channel), **remove** (from one),
 **move** (between two) or a **note**. A target can be a planned channel, made on the Queue tab
 with a name, an optional number and a kind. Each request stores the titles and their
-ErsatzTV ids (`Show.Id`, `Movie.Id`), checked against the snapshot.
+ErsatzTV ids (`Show.Id`, `Movie.Id`), checked against the snapshot. A mirror (HD twin) has no
+schedule of its own, so a request naming one is stored against the channel it mirrors (with
+`"via"` keeping the number asked for), and the page's **From** starts at the source channel.
 
 Whoever runs the server applies the requests in ErsatzTV (usually by changing a smart
 collection's query and resetting the playout; see [docs/tv.html](../docs/tv.html)) and closes
@@ -190,8 +196,8 @@ How they are combined, per channel:
   their channel, with the HD share kept.
 - **Unattended time.** A viewer that sends `idle` (seconds since the last key press) and
   `idleAfter` (its sleep timer) in its beacons gets the minutes past that point kept apart as
-  unattended: not watch time, not in the rankings. The viewer in this repo does not send these
-  yet; the tracker works without them (`TRACKER_IDLE_MIN`, default 90 minutes, is the
+  unattended: not watch time, not in the rankings. The viewer in this repo sends these while
+  its sleep timer is on; the tracker works without them (`TRACKER_IDLE_MIN`, default 90 minutes, is the
   threshold when only `idle` is sent).
 
 Limits: a channel left playing to an empty room counts as watched; a direct player is only
@@ -207,6 +213,45 @@ channel, device and hour 400 days (`watch-daily.json`).
 `application/json` (plain text needs no CORS preflight); the channel must be in the snapshot;
 at most 20 a minute per browser, 60 per address and 600 in all. A beacon can only add watch
 time.
+
+## Known limits
+
+- The query evaluator assumes ErsatzTV's default operator is OR (Lucene's default, and
+  ErsatzTV's); a query read with AND as the default would resolve differently.
+- Stop words (a list close to Lucene's English one) are dropped from titles and query text
+  alike, but a clause of only stop words (`title:the`) is not dropped as Lucene drops it: here
+  it matches nothing, so `... AND title:the` leaves the channel empty. The playout check
+  (`check.outsideMembers`) shows such a difference.
+- A new channel gets no watch time from the viewer until the snapshot is generated again: its
+  beacons are refused (ErsatzTV's own sessions still count, as **direct**), and its HD twin is
+  not recognised.
+- History is kept by channel number. Renumbering channels in ErsatzTV leaves their past
+  minutes under the old numbers until they are moved (below).
+
+## Renumbering channels
+
+`tools/renumber.py` moves stored watch time (`watch-events.json`, `watch-daily.json`) to new
+channel numbers. It is in the image as `/app/renumber.py`. Stop the tracker first (it keeps
+the recent history in memory and would write the old numbers back), look at the dry run, then
+apply:
+
+```bash
+cd docker
+docker compose --profile tracker stop tracker
+docker compose --profile tracker run --rm --no-deps tracker python3 -I /app/renumber.py 24=124 25=125
+docker compose --profile tracker run --rm --no-deps tracker python3 -I /app/renumber.py 24=124 25=125 --apply
+docker compose --profile tracker start tracker
+```
+
+Pairs are `OLD=NEW`, or a range `LO-HI=+N` (`101-199=+900`); all apply at once, so `1=2 2=1`
+swaps. Channels moved onto one number have their minutes added up. `--apply` first copies each
+file it changes to `<file>.bak-<time>` in the data folder. Without Docker:
+`python3 tools/renumber.py --data-dir <folder> ...`.
+
+HD twins are counted under their channel's own number, so moving the twins (from number + 100
+to + 1000, say) moves no history: set `TRACKER_HD_OFFSET=1000` (or `100,1000` while both
+exist) and regenerate the snapshot. The dry run shows whether anything was kept under a twin's
+own number (from before the snapshot listed it); `124=24` folds such minutes into channel 24.
 
 ## API
 
@@ -253,6 +298,7 @@ tracker/
 ├── app/server.py         the API, the poller and the static files (standard library only)
 ├── app/static/           the page: plain HTML, CSS and JavaScript, no build step
 ├── generator/make_snapshot.py   builds and uploads the snapshot
+├── tools/renumber.py     moves watch history to new channel numbers
 └── tests/                API and counting rules (against a fake ErsatzTV), generator
 ```
 

@@ -19,6 +19,8 @@ RUN addgroup -S -g 10001 tracker && adduser -S -D -H -u 10001 -G tracker tracker
 WORKDIR /app
 COPY app/server.py /app/server.py
 COPY app/static /app/static
+# The history renumbering tool (README.md, "Renumbering channels"); run by hand.
+COPY tools/renumber.py /app/renumber.py
 
 USER 10001:10001
 EXPOSE 8080
