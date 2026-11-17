@@ -33,7 +33,9 @@ Roku remote has no digits).
 **Settings** (Replay or `*`): **Theme** (OK opens the picker: all nine themes as tiles in their own
 colours and faces; arrows move, OK takes one, the whole guide changes at once and the new theme's
 splash plays for two seconds), **Quality** (Standard or HD; HD needs the channel's
-twin, see `../ersatztv/README.md`), and the **TV server** address. They are kept on the Roku, so
+twin, see `../ersatztv/README.md`), **Episode numbers** (On or Off: a show's season and episode,
+`S01E02`, in the panel and the channel bar, and in guide cells an hour wide or more), and the
+**TV server** address. They are kept on the Roku, so
 each Roku has its own.
 
 On first start it asks for the ErsatzTV address (`<server-ip>:8409`). It remembers that and the

@@ -53,6 +53,8 @@ const SURF_MS = 30 * 1000;               // warm-up ends this long after the las
 const SURF_SETTLE_MS = 900;              // start warming the next channel after this pause
 const ROW = 29;                          // a 27 px row and its 2 px line
 const NARROW = 30;                       // cells narrower than this get no label
+const EP_ROOM = 110;                     // cells narrower than this leave the episode number to the panel
+const EP_KEEP = 0.6;                     // ...and so does a cell where less than this share of the title would show
 
 const S = {
   channels: [],
@@ -267,6 +269,15 @@ function cellLabel(cell) {
   return cell.items.length > 1 ? `${cell.title} · ${cell.items.length} shorts` : cell.title;
 }
 
+// The season and episode of a programme ("S01E02"), when the setting is on.
+const epCode = p => (p && getSetting('epnum') === 'on' ? p.ep : '');
+
+// The panel's and the bar's second line: episode number, then the
+// episode's name (or a film's year).
+function epLine(p) {
+  return [epCode(p), p.sub ? `"${p.sub}"` : (p.movie && p.year ? p.year : '')].filter(Boolean).join(' · ');
+}
+
 function renderGrid() {
   const L = S.L, t0 = S.winStart, t1 = t0 + L.span, now = Date.now();
   const x = t => L.timeX + Math.round((t - t0) / L.span * L.timeW);
@@ -296,7 +307,19 @@ function renderGrid() {
       const start = Math.max(cell.start, t0), stop = Math.min(cell.stop, t1);
       const left = x(start), width = x(stop) - left - (stop < t1 ? 2 : 0);
       if (width >= 2) {
-        const node = cellNode('show', cellLabel(cell), left, y, width);
+        // The episode number goes after the title and is never cut: a long
+        // title gives way first. A small cell leaves it to the panel.
+        const code = cell.items.length === 1 && width >= EP_ROOM ? epCode(cell.items[0]) : '';
+        const node = cellNode('show', code ? '' : cellLabel(cell), left, y, width);
+        if (code) {
+          const title = document.createElement('span'), ep = document.createElement('span');
+          title.className = 'name';
+          title.textContent = cell.title;
+          ep.className = 'num';
+          ep.textContent = code;
+          node.classList.add('with-ep');
+          node.append(title, ep);
+        }
         node.dataset.ci = ci;
         node.dataset.t = start;
         node.classList.toggle('none', !!cell.gap);
@@ -310,6 +333,20 @@ function renderGrid() {
   }
   el.chans.replaceChildren(chans);
   el.rows.replaceChildren(rows);
+  // A number that would leave too little of a long title (a wide theme
+  // font, the small TV layout) gives way: the cell shows the title alone.
+  // A title cut by only a little keeps its number. All the cells are
+  // measured before any is changed, so the page is laid out once, not once
+  // per cell: the grid redraws on every row move, many times a second
+  // while Up or Down is held, and the Pi box has little to spare.
+  const cramped = [...el.rows.querySelectorAll('.with-ep')].filter(node => {
+    const name = node.firstChild;
+    return name.scrollWidth > name.clientWidth && name.clientWidth < EP_KEEP * name.scrollWidth;
+  });
+  for (const node of cramped) {
+    node.classList.remove('with-ep');
+    node.textContent = node.firstChild.textContent;
+  }
 
   const tick = now >= t0 && now < t1;
   el.nowTick.hidden = !tick;
@@ -322,7 +359,7 @@ function describe(cell) {
   const rating = (one || cell.items[0] || {}).rating;
   let ep = '', plot = '';
   if (one) {
-    ep = one.sub ? `"${one.sub}"` : (one.movie && one.year ? one.year : '');
+    ep = epLine(one);
     plot = one.desc;
   } else if (cell.items.length) {
     ep = `${cell.items.length} shorts`;
@@ -354,6 +391,7 @@ function render() {
   renderGrid();
   renderInfo();
   if (S.mode === 'details') fillDetails();
+  if (S.mode === 'settings') renderSettings();   // measures itself again (a new size, a theme's font)
 }
 
 // ---- Show details ---------------------------------------------------------
@@ -365,7 +403,7 @@ function fillDetails() {
   const meta = [];
   if (one) {
     const genres = one.cats.filter(c => c !== 'Series' && c !== 'Movie').slice(0, 3).join(', ');
-    meta.push(one.ep, one.year, one.rating, genres);
+    meta.push(epCode(one), one.year, one.rating, genres);
   } else if (first) {
     meta.push(`${cell.items.length} shorts`, first.rating);
   }
@@ -528,6 +566,29 @@ function renderSettings() {
   const focused = shownSettings()[S.setRow];
   el.setHelp.textContent = settingOption(focused)[2];
   if (focused.id === 'theme') el.setHelp.textContent += ' Tap it to see them all.';
+  fitSettings();
+}
+
+// The panel has the 270 design pixels under the picture. A Pi box with HD
+// channels lists eight rows (Power and Network as well), which do not fit
+// there at the normal spacing, and the short-screen rules in guide.css only
+// apply below 540 px: a box on a 1080p screen is scaled from the same
+// 640x480 design and does not get them. So the panel measures itself and
+// takes the compact spacing when the list would be squeezed. If even that
+// is too tall (a short portrait window), the list scrolls, keeping the
+// highlighted row in view for the remote.
+function fitSettings() {
+  const list = el.setRows;
+  el.settings.classList.remove('compact');
+  if (list.scrollHeight > list.clientHeight) el.settings.classList.add('compact');
+  if (list.scrollHeight <= list.clientHeight) return;
+  const sel = list.querySelector('.setLabel.sel');
+  if (!sel) return;
+  // The last setting also shows the Network line under it.
+  const last = S.setRow === shownSettings().length - 1;
+  const top = sel.offsetTop - 2, bottom = last ? list.scrollHeight : sel.offsetTop + sel.offsetHeight + 2;
+  if (top < list.scrollTop) list.scrollTop = top;
+  else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight;
 }
 
 const settingOption = s => (s.action ? s.options[0] : s.options.find(o => o[0] === getSetting(s.id)));
@@ -792,7 +853,7 @@ function fillBanner() {
   el.banCh.textContent = `Ch ${ch.num} · ${ch.name}`;
   el.banClock.textContent = fmtTime(now);
   el.banTitle.textContent = p ? p.title : 'No information';
-  el.banEp.textContent = p ? (p.sub ? `"${p.sub}"` : (p.movie && p.year ? p.year : '')) : '';
+  el.banEp.textContent = p ? epLine(p) : '';
   el.banTime.textContent = p ? fmtRange(p.start, p.stop) + (p.rating ? ` · ${p.rating}` : '') : '';
   el.banFill.style.width = p ? `${clamp((now - p.start) / (p.stop - p.start), 0, 1) * 100}%` : '0';
 }
@@ -973,6 +1034,7 @@ function commitDigits() {
 const QUERY = new URLSearchParams(location.search);
 let idleServer = { timeoutMin: 0, promptSec: 60 };
 let sleptId = null;                      // the channel to resume after standby
+let wakeOnShow = false;                  // woken while hidden: resume once looked at
 const idle = new Idle({ playing: idlePlaying, boundary: idleBoundary, stop: sleep, resume: wakeUp });
 
 // Something the timer should stop is playing.
@@ -992,6 +1054,7 @@ function idleBoundary(t) {
 // server ends its transcode) and any warm-up.
 function sleep() {
   sleptId = S.tunedId;
+  wakeOnShow = false;
   player.stop();
   stopSurf();
   bars.reset();
@@ -1001,12 +1064,18 @@ function sleep() {
 }
 
 // A key on the standby screen (or the TV switched back on): the same channel.
-// Asleep since before anything was tuned (the TV was off at start-up): the
-// start-up channel, as autoStart() would have.
+// Asleep since before anything was tuned (the TV was off at start-up), or
+// the channel has left the guide meanwhile: the focused channel, as
+// autoStart() would have; the stale tuned channel is forgotten first, or
+// autoStart() would take it as still playing and do nothing.
+// The TV switched on while the tab is hidden (the Pi box's CEC poll): nothing
+// starts unseen; the channel is kept and resumes once the tab is looked at.
 function wakeUp() {
+  if (document.hidden) { wakeOnShow = true; return; }
+  wakeOnShow = false;
   const ch = S.channels.find(c => c.id === sleptId);
   sleptId = null;
-  if (!ch) { autoStart(); return; }
+  if (!ch) { S.tunedId = null; autoStart(); return; }
   tune(ch);
   render();
   showBanner();
@@ -1159,7 +1228,9 @@ let drag = null;
 // first. A press that answers its question or wakes the standby screen is
 // used up there, with the click that follows it.
 {
-  let swallowUntil = 0, lastX = -1, lastY = -1;
+  // The first move only sets where the pointer is (screen coordinates can
+  // be negative on a monitor left of the main one, so no marker value).
+  let swallowUntil = 0, seen = false, lastX = 0, lastY = 0;
   const swallow = e => { e.preventDefault(); e.stopImmediatePropagation(); };
   window.addEventListener('pointerdown', e => {
     if (idle.input()) { swallowUntil = performance.now() + 800; swallow(e); }
@@ -1170,8 +1241,9 @@ let drag = null;
   window.addEventListener('wheel', e => { if (idle.input()) swallow(e); }, { capture: true, passive: false });
   window.addEventListener('pointermove', e => {
     // Not the "moves" some browsers send when the page under a still pointer changes.
-    if (e.screenX === lastX && e.screenY === lastY) return;
-    const first = lastX < 0;
+    if (seen && e.screenX === lastX && e.screenY === lastY) return;
+    const first = !seen;
+    seen = true;
     lastX = e.screenX; lastY = e.screenY;
     if (!first) idle.nudge();
   }, { capture: true, passive: true });
@@ -1404,6 +1476,7 @@ document.addEventListener('visibilitychange', () => {
     return;
   }
   clearTimeout(hiddenTimer);
+  if (wakeOnShow) wakeUp();
   if (startPending) autoStart();
   if (suspendedId) {
     const ch = S.channels.find(c => c.id === suspendedId);
@@ -1415,6 +1488,9 @@ document.addEventListener('visibilitychange', () => {
 });
 
 window.addEventListener('resize', () => { applyLayout(); applyZoom(); render(); });
+// The grid measures its titles to place the episode numbers: measure
+// again once a theme's font has arrived.
+if (document.fonts) document.fonts.addEventListener('loadingdone', () => render());
 
 // Start: the theme, then the splash over the loading guide. The guide is
 // read in the meantime and is usually ready by the time the splash fades.
