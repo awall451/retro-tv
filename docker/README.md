@@ -54,6 +54,7 @@ Then open <http://localhost:8410>.
 | `ERSATZTV_URL` | Where ErsatzTV answers, as seen from this machine: `http://<server-ip>:8409`. No trailing slash. If the server is also on your tailnet, use its tailnet address and the viewer works at home and away. |
 | `VIEWER_PORT` | Port the viewer is published on. Default `8410`. |
 | `VIEWER_BIND` | Where that port is open. Default `127.0.0.1` (this machine only; see "Reach it from other devices" below). `0.0.0.0` also opens it to every device on the local network, with no login. |
+| `WEB_CHANNELS` | Optional. Channels that show a web page instead of their stream, as `<channel number>=<page URL>`, separated by `;`. See "Web channels" below. |
 | `TRACKER_URL` | Optional. The [channel tracker](../tracker/README.md) that counts watch time, as `http://<host>:<port>`. See "Watch beacons" below. The tracker's own settings are in its README. |
 | `COMPOSE_FILE`, `UPLINK_PORT`, `UPLINK_BIND` | Only for the uplink add-on, below. |
 
@@ -216,6 +217,67 @@ In ErsatzTV a twin is a channel with Playout Source **Mirror**, Mirror Source Ch
 channel it copies, an HD FFmpeg profile, Streaming Engine **Next**, and **Show In EPG** on (so Kodi gets guide data for it).
 See `../ersatztv/README.md` ("HD copies of every channel") for why not Legacy.
 A channel without a twin simply plays in Standard.
+
+### Web channels
+
+A channel can show a web page instead of its stream: a weather loop, a live camera, a clock.
+The page runs in the browser that watches it, full window (and in the corner box in the guide),
+so the server encodes nothing for it. The channel's row in the guide, its name and its listings
+still come from ErsatzTV as before, and devices that play ErsatzTV directly (Kodi, the Roku app)
+keep playing the channel's own stream. Give the channel something to play there.
+
+A web channel has to be a real channel in ErsatzTV. The viewer takes its channel list from
+ErsatzTV and matches each `WEB_CHANNELS` entry to it by channel number; a number ErsatzTV does
+not have is not in the guide, so its page never shows. Make the channel in ErsatzTV first (any
+content will do), then name its number here.
+
+Set `WEB_CHANNELS` in `.env`, then `docker compose up -d`:
+
+```
+WEB_CHANNELS=192=https://weather.example/?kiosk=true;250=https://cam.example/live
+```
+
+- **Format:** `<channel number>=<URL>`, entries separated by `;` (or spaces). The URL must
+  start with `http://` or `https://`, or be a path on the viewer itself starting with a single
+  `/`. It must be plain ASCII without spaces, `;`, quotes, backslashes, `<`, `>` or control
+  characters: percent-encode those (`%3B`, `%22`, ...). A site's host must be a name or an IPv4
+  address; a frame policy cannot name an IPv6 address (`http://[fd00::7]/`), so give such a
+  site a host name (in DNS or the hosts file of the machine that runs the browser). A port
+  must be 1-65535, and the URL cannot carry a user name or password (`user:pw@host`). A bad
+  entry is skipped with a line in the container log that names only its channel number and
+  the reason, never the URL; the rest still work. A channel listed twice keeps its last entry.
+- **A page of the viewer's own** is given as a path, so it works under whatever address the
+  viewer is opened with (the Pi box's `127.0.0.1:8410` as well as a browser's). For example the
+  TV Guide Channel page (below) as a channel, its top half playing that channel's own stream:
+  `7=/tvguide.html?tv&promo=7`. Give ErsatzTV's channel 7 the promos and trailers to play; Kodi
+  and the Roku app show that stream on 7. Such a page shares the viewer's origin, so the sandbox
+  below does not hold it in: list only the viewer's own pages that way.
+- **Security:** the viewer's Content-Security-Policy allows frames only from the sites named in
+  the setting (`frame-src`, built from each URL's scheme, host and port; never `*`), plus the
+  viewer itself (`'self'`). Without the setting it stays as it was. The page itself must allow
+  being framed by the viewer's address: no `X-Frame-Options`, or a `frame-ancestors` that names
+  the viewer. The viewer's own pages allow it (`frame-ancestors 'self'`): only the viewer can
+  frame them.
+- **The page is to watch, not to use.** It gets no clicks and never keeps the keyboard focus,
+  so the keys, remote and controller go on steering the viewer: channel up and down, the guide
+  and typed numbers work as on any channel. It runs sandboxed (scripts and its own storage; no
+  popups, forms or navigating away) with `allow="autoplay; fullscreen"`. **Mute** cannot reach
+  a page's own sound.
+  The page is told the viewer's origin (`Referer` with scheme, host and port, never a path):
+  embedded players such as YouTube's refuse to play without it (error 153). A YouTube playlist
+  works as a channel through its embed address,
+  `https://www.youtube-nocookie.com/embed/videoseries?list=<playlist>&autoplay=1&loop=1&rel=0&controls=0`,
+  if its videos allow embedding; it starts at the playlist's first video on every tune.
+- **Leaving the channel removes the page,** sound and all. HD and "Fill the screen" do not
+  apply to web channels; the box is 4:3.
+- **Sound:** the page may start its own sound (music on a weather loop) only if the browser
+  allows it: after a key press or click on the viewer, or always on the [Pi box](../pi-image/README.md),
+  whose kiosk runs Chromium with `--autoplay-policy=no-user-gesture-required`.
+- The map reaches the app as `webChannels` in the server settings (`/config.json`, see
+  "Server settings" below; written by `web/config.d/web-channels.sh`). On the Pi box, set
+  `WEB_CHANNELS` in `/etc/retro-tv.env` and run `setup.sh` again. That file is read by a shell, so put the
+  value in single quotes (`WEB_CHANNELS='192=https://…?a=1&b=2'`): unquoted, a URL is cut off
+  at its first `&` and the channel silently shows its stream.
 
 ### Watch beacons
 
@@ -389,6 +451,8 @@ docker/
 │       ├── js/data.js        reads the channel list and listings
 │       ├── js/player.js      the one video player (hls.js, or Safari's own)
 │       ├── js/warm.js        keeps the next channel running while flipping
+│       ├── js/web.js         web channels: a page in the picture's box instead of the video
+
 │       ├── js/beacon.js      watch beacons for the channel tracker (TRACKER_URL)
 │       ├── js/bars.js        finds black bars in the picture (for "Fill the screen")
 │       ├── js/settings.js    the settings and where they are kept

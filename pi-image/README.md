@@ -46,7 +46,9 @@ Where it stands: the script route (step 1, below) works on real hardware; the on
   dependency on another machine being up; and the viewer's theme can be read by the box (below).
 - **Kiosk: `cage` + Chromium.** `cage` is a Wayland compositor that shows exactly one window, full
   screen, no desktop, no cursor. Chromium runs in kiosk mode with sound allowed from the start
-  (the "press a key for sound" problem does not exist here) and its profile on a writable data
+  (`--autoplay-policy=no-user-gesture-required`: the "press a key for sound" problem does not
+  exist here, and a web channel's page, such as a weather loop, plays its music at once; set
+  `WEB_CHANNELS` in `/etc/retro-tv.env`, single-quoted, see `../docker/README.md`) and its profile on a writable data
   area so the theme and other settings survive reboots. The page is `http://127.0.0.1:8410/?tv`:
   the plain 640Ã—480 layout.
 - **Boot splash: Plymouth, in the current theme.** The Pi's rainbow square and the scrolling boot
@@ -158,7 +160,10 @@ fonts for the rasterizer), `node render.mjs` renders every theme's scene at 640Ã
    than the converter did, the height did not change).
 
 `setup.sh` is written to be safe to run repeatedly: it installs what is missing, rewrites the
-files it owns, and leaves the rest alone. A full install takes about 4 minutes.
+files it owns, and leaves the rest alone. A full install takes about 4 minutes. Run it again
+after changing `/etc/retro-tv.env`: the viewer's server settings (such as `WEB_CHANNELS`) are
+written from it into `/var/lib/retro-tv/config.json`, outside the app folder, so an app update
+never removes them.
 
 ## Step 2: the image (`pi-gen`)
 

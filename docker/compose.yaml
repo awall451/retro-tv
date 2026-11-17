@@ -10,6 +10,8 @@ services:
     restart: unless-stopped
     environment:
       ERSATZTV_URL: ${ERSATZTV_URL:?copy .env.example to .env and set ERSATZTV_URL}
+      # Optional: channels that show a web page instead of their stream (README.md).
+      WEB_CHANNELS: ${WEB_CHANNELS:-}
       # Optional: the channel tracker that counts watch time (README.md,
       # "Watch beacons"). Empty: no beacons.
       TRACKER_URL: ${TRACKER_URL:-}
