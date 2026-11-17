@@ -115,10 +115,19 @@ if ! nginx -t; then
     echo "nginx rejected the new site; the previous one and its settings are back in place" >&2
     exit 1
 fi
-rm -f "$SITE.prev"
+# The live settings are kept as .prev until nginx is running on the new ones;
+# if it does not start, the previous site and settings go back.
+rm -f "$SETTINGS.prev"
+[ -f "$SETTINGS" ] && cp -p "$SETTINGS" "$SETTINGS.prev"
 mv -f "$CONFIG_JSON" "$SETTINGS"
-systemctl enable nginx
-systemctl restart nginx
+if ! { systemctl enable nginx && systemctl restart nginx; }; then
+    [ -f "$SITE.prev" ] && mv -f "$SITE.prev" "$SITE"
+    [ -f "$SETTINGS.prev" ] && mv -f "$SETTINGS.prev" "$SETTINGS"
+    systemctl restart nginx || true
+    echo "nginx did not start with the new site; the previous one and its settings are back in place" >&2
+    exit 1
+fi
+rm -f "$SITE.prev" "$SETTINGS.prev"
 
 # ---- the kiosk and the theme service ----------------------------------------------
 log "services"
