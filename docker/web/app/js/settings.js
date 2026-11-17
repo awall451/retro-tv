@@ -34,6 +34,17 @@ export const SETTINGS = [
     ],
   },
   {
+    // The sleep timer (js/idle.js). "Server" is whatever IDLE_TIMEOUT_MIN says.
+    id: 'sleep', label: 'Sleep', default: 'server',
+    options: [
+      ['server', 'As the server says', 'Asks "Are you still watching?" when the show ends after this long without a key press, as set on the server (IDLE_TIMEOUT_MIN; off unless set). No answer: it stops.'],
+      ['60', 'After 1 hour', 'After an hour without a key press, asks "Are you still watching?" once the show on then ends. No answer: it stops.'],
+      ['90', 'After 90 min', 'After 90 minutes without a key press, asks "Are you still watching?" once the show on then ends. No answer: it stops.'],
+      ['180', 'After 3 hours', 'After three hours without a key press, asks "Are you still watching?" once the show on then ends. No answer: it stops.'],
+      ['off', 'Off', 'Never asks; plays until you stop it. The server keeps the channel running all that time.'],
+    ],
+  },
+  {
     id: 'warm', label: 'Fast flipping', default: 'on',
     options: [
       ['on', 'On', 'While you flip channels, the next one is started ahead of time, so it appears at once.'],

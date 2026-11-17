@@ -13,6 +13,7 @@ import { SETTINGS, getSetting, cycleSetting, setSetting } from './settings.js';
 import { applyTheme, THEMES } from './themes.js';
 import { showSplash, isSplashShowing } from './splash.js';
 import { loadWebChannels, WebScreen } from './web.js';
+import { Idle, loadIdleConfig } from './idle.js';
 
 const $ = id => document.getElementById(id);
 const el = {
@@ -185,6 +186,10 @@ function applyLayout() {
   el.banner.style.bottom = roomBelow ? 'auto' : `${below}px`;
   fullLabel();
   px(el.osd, { top: L.by + margin, right: L.vw - L.bx - L.bw + margin });
+  // The sleep timer's screens cover the window; --iu is a 640x480 pixel.
+  const sleepBox = $('idle');
+  if (sleepBox) px(sleepBox, { width: L.vw, height: L.vh });
+  root.setProperty('--iu', `${Math.min(L.vw / 640, L.vh / 480)}px`);
   placeScreen(false);
 }
 
@@ -572,7 +577,7 @@ function renderSettings() {
 }
 
 // The panel has the 270 design pixels under the picture. A Pi box with HD
-// channels lists seven rows (Power and Network as well), which do not fit
+// channels lists eight rows (Power and Network as well), which do not fit
 // there at the normal spacing, and the short-screen rules in guide.css only
 // apply below 540 px: a box on a 1080p screen is scaled from the same
 // 640x480 design and does not get them. So the panel measures itself and
@@ -670,6 +675,7 @@ function changeSetting(step) {
     }
   }
   if (id === 'warm' && getSetting('warm') !== 'on') stopSurf();
+  if (id === 'sleep') applySleep();
   renderSettings();
 }
 
@@ -812,7 +818,7 @@ function watch(ch) {
 let startPending = false;
 function autoStart() {
   const ch = focusChannel();
-  if (!ch || S.tunedId) return;
+  if (!ch || S.tunedId || idle.asleep) return;
   if (document.hidden) { startPending = true; return; }
   startPending = false;
   tune(ch);
@@ -1024,6 +1030,94 @@ function commitDigits() {
   render();
 }
 
+// ---- Sleep timer ("Are you still watching?", js/idle.js) -------------------
+// No input for the sleep time: at the end of the programme on then, the
+// question; no answer, everything stops and a standby screen waits for a key,
+// which resumes the same channel. With the timer on, a tab hidden for two
+// minutes goes to standby straight away; on the Pi box, so does the TV being
+// switched off.
+
+const QUERY = new URLSearchParams(location.search);
+let idleServer = { timeoutMin: 0, promptSec: 60 };
+let sleptId = null;                      // the channel to resume after standby
+let wakeOnShow = false;                  // woken while hidden: resume once looked at
+const idle = new Idle({ playing: idlePlaying, boundary: idleBoundary, stop: sleep, resume: wakeUp });
+
+// Something the timer should stop is playing.
+function idlePlaying() {
+  return !!player.channel;
+}
+
+// When the programme on the channel being watched at instant t ends (NaN:
+// not known, ask at once).
+function idleBoundary(t) {
+  const ch = tunedChannel();
+  const p = ch && programmeAt(ch, t);
+  return p ? p.stop : NaN;
+}
+
+// Stop everything: the stream (hls.js lets go of the playlist, so the
+// server ends its transcode) and any warm-up.
+function sleep() {
+  sleptId = S.tunedId;
+  wakeOnShow = false;
+  player.stop();
+  stopSurf();
+  bars.reset();
+  hideBanner();
+  hideOsd();
+}
+
+// A key on the standby screen (or the TV switched back on): the same channel.
+// Asleep since before anything was tuned (the TV was off at start-up), or
+// the channel has left the guide meanwhile: the focused channel, as
+// autoStart() would have; the stale tuned channel is forgotten first, or
+// autoStart() would take it as still playing and do nothing.
+// The TV switched on while the tab is hidden (the Pi box's CEC poll): nothing
+// starts unseen; the channel is kept and resumes once the tab is looked at.
+function wakeUp() {
+  if (document.hidden) { wakeOnShow = true; return; }
+  wakeOnShow = false;
+  const ch = S.channels.find(c => c.id === sleptId);
+  sleptId = null;
+  if (!ch) { S.tunedId = null; autoStart(); return; }
+  tune(ch);
+  render();
+  showBanner();
+}
+
+// The device's own Sleep setting, else the server's; ?idle=<minutes> and
+// ?idleprompt=<seconds> override both (for trying it out).
+function applySleep() {
+  const own = getSetting('sleep');
+  let min = own === 'server' ? idleServer.timeoutMin : own === 'off' ? 0 : +own;
+  let sec = idleServer.promptSec;
+  const qMin = parseFloat(QUERY.get('idle')), qSec = parseFloat(QUERY.get('idleprompt'));
+  if (qMin >= 0) min = qMin;
+  if (qSec > 0) sec = qSec;
+  idle.configure(min, sec);
+}
+applySleep();
+loadIdleConfig().then(cfg => { idleServer = cfg; applySleep(); });
+
+// The Pi box: the TV's power as its HDMI-CEC service sees it (/pi/cec, see
+// pi-image/README.md). Off stops at once; on again resumes. Anywhere else,
+// or on a box without CEC, it is a 404 and asked again only now and then.
+if (TV_MODE) {
+  let power = '';
+  const pollCec = () => fetch('/pi/cec', { cache: 'no-store' })
+    .then(r => (r.ok ? r.json() : null))
+    .then(st => {
+      const now = st && (st.power === 'on' || st.power === 'standby') ? st.power : '';
+      if (now === 'standby' && power !== 'standby') idle.standby('tv-off');
+      if (now === 'on' && power === 'standby') idle.input();
+      if (now) power = now;
+      setTimeout(pollCec, st ? 3000 : 60000);
+    })
+    .catch(() => setTimeout(pollCec, 60000));
+  pollCec();
+}
+
 // ---- One place where every input ends up ---------------------------------
 
 function act(action, repeat = false) {
@@ -1110,7 +1204,17 @@ const KEYS = {
   i: 'info', g: 'back', r: 'refresh', m: 'mute', f: 'fullscreen', s: 'settings',
 };
 
+// Keys whose press the sleep timer used up: their auto-repeat, while still
+// held, does nothing either.
+const keysUsed = new Set();
+window.addEventListener('keyup', e => keysUsed.delete(e.code));
+window.addEventListener('blur', () => keysUsed.clear());
+
 window.addEventListener('keydown', e => {
+  // Any key at all counts for the sleep timer; one that answers its
+  // question (or wakes the standby screen) does nothing else.
+  if (e.repeat && keysUsed.has(e.code)) { e.preventDefault(); return; }
+  if (idle.input()) { keysUsed.add(e.code); e.preventDefault(); return; }
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   const action = /^\d$/.test(e.key) ? e.key : KEYS[e.key.length === 1 ? e.key.toLowerCase() : e.key];
   if (!action) return;
@@ -1124,6 +1228,31 @@ window.addEventListener('keydown', e => {
 // details. Dragging the grid scrolls channels and time.
 
 let drag = null;
+
+// The sleep timer sees every click, touch, wheel turn and real mouse move
+// first. A press that answers its question or wakes the standby screen is
+// used up there, with the click that follows it.
+{
+  // The first move only sets where the pointer is (screen coordinates can
+  // be negative on a monitor left of the main one, so no marker value).
+  let swallowUntil = 0, seen = false, lastX = 0, lastY = 0;
+  const swallow = e => { e.preventDefault(); e.stopImmediatePropagation(); };
+  window.addEventListener('pointerdown', e => {
+    if (idle.input()) { swallowUntil = performance.now() + 800; swallow(e); }
+  }, true);
+  for (const name of ['pointerup', 'click', 'dblclick', 'contextmenu']) {
+    window.addEventListener(name, e => { if (performance.now() < swallowUntil) swallow(e); }, true);
+  }
+  window.addEventListener('wheel', e => { if (idle.input()) swallow(e); }, { capture: true, passive: false });
+  window.addEventListener('pointermove', e => {
+    // Not the "moves" some browsers send when the page under a still pointer changes.
+    if (seen && e.screenX === lastX && e.screenY === lastY) return;
+    const first = !seen;
+    seen = true;
+    lastX = e.screenX; lastY = e.screenY;
+    if (!first) idle.nudge();
+  }, { capture: true, passive: true });
+}
 
 function focusNode(node) {
   S.focusCh = +node.dataset.ci;
@@ -1245,6 +1374,7 @@ el.tpGrid.addEventListener('click', e => {
 const PAD_BUTTONS = { 0: 'select', 1: 'back', 2: 'info', 3: 'settings', 4: 'padL', 5: 'padR', 9: 'settings', 12: 'up', 13: 'down', 14: 'left', 15: 'right' };
 const PAD_REPEATS = new Set(['up', 'down', 'left', 'right', 'padL', 'padR']);
 const padHeld = new Map();   // action -> time of next repeat
+const padUsed = new Set();   // held buttons whose press the sleep timer used up
 
 function pollPads(now) {
   const down = new Set();
@@ -1261,13 +1391,16 @@ function pollPads(now) {
     const next = padHeld.get(action);
     if (next === undefined) {
       padHeld.set(action, now + 400);
-      act(action);
-    } else if (PAD_REPEATS.has(action) && now >= next) {
+      if (idle.input()) padUsed.add(action);   // no repeats until it is let go
+      else act(action);
+    } else if (PAD_REPEATS.has(action) && now >= next && !padUsed.has(action)) {
       padHeld.set(action, now + 110);
-      act(action, true);
+      if (!idle.input()) act(action, true);
     }
   }
-  for (const action of padHeld.keys()) if (!down.has(action)) padHeld.delete(action);
+  for (const action of padHeld.keys()) {
+    if (!down.has(action)) { padHeld.delete(action); padUsed.delete(action); }
+  }
   requestAnimationFrame(pollPads);
 }
 requestAnimationFrame(pollPads);
@@ -1329,13 +1462,16 @@ setInterval(() => {
   if (!el.banner.hidden) fillBanner();
 }, 1000);
 
-// A forgotten tab must not keep the server streaming all night. A web
-// channel's page goes too: it may play a stream of its own (the TV Guide
-// Channel page's promo) or sound.
+// A forgotten tab must not keep the server streaming all night. Hidden for
+// five minutes, it stops, and picks the channel up again when it is looked
+// at. A web channel's page goes too: it may play a stream of its own (the TV
+// Guide Channel page's promo) or sound. With the sleep timer on, a playing
+// stream goes to standby at the same point instead, and a key brings it back.
 let hiddenTimer = 0, suspendedId = null;
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     hiddenTimer = setTimeout(() => {
+      if (idle.on && idlePlaying()) { idle.standby('hidden'); return; }
       const ch = tunedChannel();
       if (ch && web.showing) {
         suspendedId = ch.id;
@@ -1351,6 +1487,7 @@ document.addEventListener('visibilitychange', () => {
     return;
   }
   clearTimeout(hiddenTimer);
+  if (wakeOnShow) wakeUp();
   if (startPending) autoStart();
   if (suspendedId) {
     const ch = S.channels.find(c => c.id === suspendedId);
