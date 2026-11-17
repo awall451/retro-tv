@@ -167,7 +167,7 @@ viewer's Quality setting switches to it.
 
 - FFmpeg profile `HD 1920x1080 NVENC`: the CRT profile's settings at 1920x1080, 6000 kbps video
   (12000 buffer), 192 kbps audio.
-- A twin (Channels → Add Channel): number = the channel's + 100, group `HD`, Playout Source
+- A twin (Channels → Add Channel): number = the channel's + 1000, group `HD`, Playout Source
   **Mirror**, Mirror Source = the channel, offset 0, Show In EPG **on**, streaming engine
   **Next**, streaming mode MPEG-TS, the HD profile, name "<channel> HD". Every new channel
   needs its twin made by hand.
