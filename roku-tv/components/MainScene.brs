@@ -19,7 +19,7 @@
 '
 ' Kept in the Roku's registry (section "RetroTV"): server, channel (the
 ' last one watched, by number), quality ("sd" or "hd"), theme (an id from
-' themeIds()).
+' themeIds()), epnum ("on" or "off": season and episode numbers).
 
 ' ---- design units -------------------------------------------------------------
 
@@ -339,6 +339,7 @@ sub init()
         loading: false, retrySecs: 5, playState: "idle"
     }
     m.quality = regRead("quality", "sd")
+    m.epnum = regRead("epnum", "on")
     applyTheme(regRead("theme", "cable"))
 
     buildStage()
@@ -753,9 +754,24 @@ sub onGuideData()
     tunedNum = ""
     if m.S.tuned >= 0 then tunedNum = m.S.channels[m.S.tuned].num
 
+    ' HD twins: group "HD", numbered 1000 above the channel they mirror
+    ' (1 -> 1001). The older +100 numbering is still recognised; the first
+    ' offset that lands on a channel wins.
+    sd = {}
+    for each c in m.chTask.channels
+        if c.group <> "HD" then sd[c.num] = true
+    end for
     hd = {}
     for each c in m.chTask.channels
-        if c.group = "HD" then hd[(c.n - 100).ToStr()] = c.num
+        if c.group = "HD" then
+            for each offset in [1000, 100]
+                key = (c.n - offset).ToStr()
+                if sd.DoesExist(key) and not hd.DoesExist(key) then
+                    hd[key] = c.num
+                    exit for
+                end if
+            end for
+        end if
     end for
     chans = []
     for each c in m.chTask.channels
@@ -832,6 +848,25 @@ function cellLabel(cell as object) as string
     return cell.title
 end function
 
+' The season and episode of a programme ("S01E02"), when the setting is on.
+function epCode(p as object) as string
+    if p = invalid or m.epnum <> "on" then return ""
+    return p.ep
+end function
+
+' The panel's and the bar's second line: episode number, then the
+' episode's name (or a film's year).
+function epLine(p as object) as string
+    parts = []
+    if epCode(p) <> "" then parts.Push(epCode(p))
+    if p.sub <> "" then
+        parts.Push(Chr(34) + p.sub + Chr(34))
+    else if p.movie and p.year <> "" then
+        parts.Push(p.year)
+    end if
+    return parts.Join(" · ")
+end function
+
 ' The info lines for a cell (describe in the viewer).
 function describe(cell as object) as object
     ep = ""
@@ -840,11 +875,7 @@ function describe(cell as object) as object
     if cell.items.Count() > 0 then rating = cell.items[0].rating
     if cell.items.Count() = 1 then
         one = cell.items[0]
-        if one.sub <> "" then
-            ep = Chr(34) + one.sub + Chr(34)
-        else if one.movie and one.year <> "" then
-            ep = one.year
-        end if
+        ep = epLine(one)
         plot = one.desc
     else if cell.items.Count() > 1 then
         ep = cell.items.Count().ToStr() + " shorts"
@@ -908,7 +939,9 @@ end sub
 
 ' One grid cell in the theme's shape, and a label unless it is too narrow
 ' (30 px). kind as in cellBox.
-sub drawCell(x as integer, y as integer, w as integer, text as string, kind as string, bg as string, fg as string, withLabel as boolean)
+' code: an episode number drawn at the cell's right end, where the title
+' (cut short first) cannot push it out.
+sub drawCell(x as integer, y as integer, w as integer, text as string, kind as string, bg as string, fg as string, withLabel as boolean, code = "" as string)
     th = m.T
     r = cellBox(m.gridCells, px(x), px(y), px(x + w) - px(x), px(27), kind, bg)
     if not withLabel then return
@@ -917,7 +950,19 @@ sub drawCell(x as integer, y as integer, w as integer, text as string, kind as s
     if kind = "clock" then fsize = th.clockSize
     pad = 7
     if fsize > 16 then pad = 5
-    l = label(r, px(pad), 0, px(w) - px(2 * pad), px(27), fsize * KK(), true, fg)
+    textW = w - 2 * pad
+    if code <> "" then
+        ' A generous guess at the number's width: Labels cannot be measured
+        ' before they are drawn.
+        codeW = Int(Len(code) * fsize * 0.85 * 0.7) + 2
+        textW = textW - codeW - 6
+        n = label(r, px(w - pad - codeW), 0, px(codeW), px(27), fsize * 0.85 * KK(), true, fg)
+        n.horizAlign = "right"
+        n.opacity = 0.75
+        n.text = cellCase(code, false)
+        if kind <> "sel" and kind <> "selchan" then addShadow(n)
+    end if
+    l = label(r, px(pad), 0, px(textW), px(27), fsize * KK(), true, fg)
     if th.centerBar and (kind = "clock" or kind = "bar") then l.horizAlign = "center"
     l.text = cellCase(text, kind = "chan" or kind = "selchan")
     if kind <> "sel" and kind <> "selchan" then addShadow(l)
@@ -996,7 +1041,12 @@ sub renderGrid()
                     cbg = col("yellow")
                     cfg = col("seltext")
                 end if
-                drawCell(lx, y, w, cellLabel(c), skind, cbg, cfg, w >= 30)
+                ' The episode number only in a cell an hour wide or more:
+                ' a half-hour cell keeps all its room for the title (the
+                ' panel above still shows the number).
+                code = ""
+                if c.items.Count() = 1 and w >= gx(t0 + 2 * HALF()) - gx(t0) - 4 then code = epCode(c.items[0])
+                drawCell(lx, y, w, cellLabel(c), skind, cbg, cfg, w >= 30, code)
             end if
             if not (b > t) then exit while
             t = b
@@ -1083,7 +1133,7 @@ sub renderDetails()
 
     meta = []
     if one <> invalid then
-        for each part in [one.ep, one.year, one.rating, one.genres]
+        for each part in [epCode(one), one.year, one.rating, one.genres]
             if part <> "" then meta.Push(part)
         end for
     else if first <> invalid then
@@ -1160,6 +1210,11 @@ function settingRows() as object
             help = "The same channels in widescreen 1080p, for modern screens. Needs a faster connection."
         end if
         rows.Push({ id: "quality", label: "Quality", value: q, help: help })
+    end if
+    if m.epnum = "on" then
+        rows.Push({ id: "epnum", label: "Episode numbers", value: "On", help: "Season and episode (S01E02) beside a show's title in the guide, the panel and the channel bar." })
+    else
+        rows.Push({ id: "epnum", label: "Episode numbers", value: "Off", help: "Titles only, as the old guides printed them." })
     end if
     rows.Push({ id: "server", label: "TV server", value: m.server, help: "Where ErsatzTV answers on your network. OK to change it." })
     return rows
@@ -1275,6 +1330,14 @@ sub changeSetting()
         regWrite("quality", m.quality)
         ' Switch the channel being watched to its other stream right away.
         if m.S.tuned >= 0 then playStream()
+    else if id = "epnum" then
+        if m.epnum = "on" then
+            m.epnum = "off"
+        else
+            m.epnum = "on"
+        end if
+        regWrite("epnum", m.epnum)
+        render()
     else if id = "server" then
         askServer(m.server)
     end if
@@ -1542,11 +1605,8 @@ sub fillBanner()
     if p <> invalid then
         title = p.title
         parts = []
-        if p.sub <> "" then
-            parts.Push(Chr(34) + p.sub + Chr(34))
-        else if p.movie and p.year <> "" then
-            parts.Push(p.year)
-        end if
+        epl = epLine(p)
+        if epl <> "" then parts.Push(epl)
         t = fmtRange(p.start, p.ends)
         if p.rating <> "" then t = t + " · " + p.rating
         parts.Push(t)

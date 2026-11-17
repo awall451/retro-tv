@@ -92,7 +92,7 @@ Each piece's page lists its parts in detail and names the hardware it was built 
   from the ErsatzTV server's config (`.gitignore` blocks the first ones).
 - **Line endings.** Files that run on the Pis keep Unix line endings whatever the PC says
   (`.gitattributes`); a shell script with Windows line endings fails on Batocera.
-- **HD twins.** The server gives every channel an HD copy (number + 100, group `HD`) for modern
+- **HD twins.** The server gives every channel an HD copy (number + 1000, group `HD`) for modern
   screens. The CRT boxes hide that group; the browser app and the Roku offer Standard / HD.
 
 ## License

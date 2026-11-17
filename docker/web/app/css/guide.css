@@ -441,6 +441,10 @@ body.tv, body.tv * { cursor: none !important; }
 .cell.narrow { padding: 0; color: transparent; }
 .cell.sel { background: var(--fill-sel); color: var(--sel-text); box-shadow: var(--sel-shadow); z-index: 1; }
 .cell.narrow.sel { color: transparent; }
+/* A show with its episode number: the title is cut short, the number never. */
+.cell.with-ep { display: flex; }
+.cell.with-ep .name { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.cell.with-ep .num { flex: none; margin-left: 0.45em; font-size: 0.85em; opacity: 0.75; }
 
 /* The channel being watched: a small flat triangle before its name. */
 .cell.chan.playing::before {
@@ -477,11 +481,15 @@ body.settings #cog { color: var(--ink-accent); }
   padding: 10px 8px 8px; display: flex; flex-direction: column; gap: 8px;
 }
 #setTitle { flex: none; font-size: 16px; color: var(--ink-accent); }
+/* The list gives way before the title and the Done button when the panel is
+   short: it scrolls (js/app.js keeps the highlighted row in view). */
 #setRows {
-  flex: none; align-self: flex-start; min-width: min(100%, 380px);
+  flex: 0 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; position: relative;
+  align-self: flex-start; min-width: min(100%, 380px);
   display: grid; grid-template-columns: auto 1fr; gap: 2px;
   background: var(--lines); border: 2px solid var(--lines);
 }
+#setRows::-webkit-scrollbar { display: none; }
 #setRows > div {
   height: 27px; line-height: 27px; padding: 0 10px; font-size: 15px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -491,7 +499,7 @@ body.settings #cog { color: var(--ink-accent); }
 .setLabel.sel, .setValue.sel { background: var(--fill-sel); color: var(--sel-text); box-shadow: var(--sel-shadow); }
 .setInfo { background: var(--fill-channel); color: var(--soft); border-radius: var(--r); box-shadow: var(--cell-shadow); }   /* read-only row: the box's network */
 #setHelp {
-  flex: 1 1 0; min-height: 0; overflow: hidden;
+  flex: 1 1 0; min-height: 20px; overflow: hidden;
   font-size: 15px; font-weight: 400; line-height: 20px; color: var(--soft);
 }
 #setButtons { flex: none; align-self: flex-start; display: flex; background: var(--lines); border: 2px solid var(--lines); }
@@ -673,15 +681,24 @@ body.tv #banner.narrow #banMute { border-right: 0; }
   font-size: calc(21 * var(--b)); white-space: nowrap;
 }
 
-/* Short screens (the 480-line TV): the settings list has up to six rows and
-   must leave room for the help line and the Done button. */
+/* Short screens (the 480-line TV), and a settings list too long for its
+   area at any screen size (#settings.compact, set by js/app.js): the list
+   has up to seven rows and must leave room for the help line and the Done
+   button. */
 @media (max-height: 540px) {
   #settings { padding: 6px 8px; gap: 5px; }
   #setTitle { font-size: 14px; }
   #setRows > div { height: 22px; line-height: 22px; font-size: 14px; }
-  #setHelp { font-size: 13px; line-height: 16px; }
+  #setHelp { font-size: 13px; line-height: 16px; min-height: 16px; }
   #settings .btn { height: 24px; line-height: 24px; font-size: 14px; }
 }
+/* The same rules at the same weight (:where adds none), so a theme's sizes
+   and the touch rules below still win where they win on a short screen. */
+#settings:where(.compact) { padding: 6px 8px; gap: 5px; }
+:where(.compact) #setTitle { font-size: 14px; }
+:where(.compact) #setRows > div { height: 22px; line-height: 22px; font-size: 14px; }
+:where(.compact) #setHelp { font-size: 13px; line-height: 16px; min-height: 16px; }
+#settings:where(.compact) .btn { height: 24px; line-height: 24px; font-size: 14px; }
 
 /* Touch screens: buttons a finger can hit. */
 @media (pointer: coarse) {
