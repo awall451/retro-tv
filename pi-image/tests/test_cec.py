@@ -154,6 +154,27 @@ class BusTest(unittest.TestCase):
         tv.poll()                          # the immediate query goes unanswered while it starts
         self.assertEqual(tv.interval(), cec.POLL_S)
 
+    def test_tv_chatter_does_not_hold_off_unknown(self):
+        tv = self.tv
+        self.feed("Received from TV to Playback Device 1 (0 to 4): REPORT_POWER_STATUS (0x90):\n"
+                  "\tpwr-state: on (0x00)\n")
+        self.assertEqual(self.published(), "on")
+        tv.cec = lambda *a, **k: REPLY_NACK
+        # The TV talks before every query but never answers one: its power is not known.
+        for i in range(cec.UNKNOWN_AFTER):
+            self.feed("Received from TV to all (0 to 15): REPORT_PHYSICAL_ADDR (0x84):\n"
+                      "\tphys-addr: 0.0.0.0\n\tprim-devtype: tv (0x00)\n")
+            tv.poll()
+            if i < cec.UNKNOWN_AFTER - 1:
+                self.assertEqual(self.published(), "on")
+        self.assertEqual(self.published(), "unknown")
+        self.assertEqual(tv.interval(), cec.POLL_S)   # it talks, so the normal pace stays
+        # An answer again resets both.
+        tv.cec = lambda *a, **k: REPLY_STANDBY
+        tv.poll()
+        self.assertEqual(self.published(), "standby")
+        self.assertEqual((tv.misses, tv.quiet), (0, 0))
+
 
 class AddressTest(unittest.TestCase):
     def test_phys_addr(self):

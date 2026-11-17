@@ -56,8 +56,8 @@ POLL_S = max(3.0, float(os.environ.get("CEC_POLL_SEC") or 10))
 KEYS = os.environ.get("CEC_KEYS", "0") == "1"
 AUTO = os.environ.get("CEC", "auto") != "1"     # auto: slow down while nothing answers
 OSD_NAME = (os.environ.get("CEC_OSD_NAME") or "Retro TV")[:14]   # CEC allows 14 characters
-UNKNOWN_AFTER = 3            # polls without an answer before the state is "unknown"
-QUIET_AFTER = 30             # polls without an answer (5 min at 10 s) before polling slows down
+UNKNOWN_AFTER = 3            # power queries without an answer before the state is "unknown"
+QUIET_AFTER = 30             # polls with the TV silent (5 min at 10 s) before polling slows down
 QUIET_POLL_S = 300.0         # the slow pace (CEC=auto only)
 MIN_GAP_S = 2.0              # at least this long between two polls, however often the bus pokes
 
@@ -129,7 +129,8 @@ class Tv:
         self.device = device
         self.power = "unknown"
         self.since = time.time()
-        self.misses = 0
+        self.misses = 0              # power queries unanswered since the last power answer
+        self.quiet = 0               # polls since the TV last said anything (paces polling)
         self.seen = 0                # bus observations so far; a poll older than the last one is dropped
         self.sender = None           # logical address of the monitor's last message header
         self.last_poll = 0.0
@@ -186,18 +187,22 @@ class Tv:
         self.last_poll = time.monotonic()
         state = parse_power(out)
         if state:
-            self.misses = 0
+            self.misses = self.quiet = 0
             self.set(state, "poll", seen)
         else:
+            # Kept apart: other talk from the TV ends the quiet pace (quiet),
+            # but says nothing about its power, so it does not hold off
+            # "unknown" (misses).
             self.misses += 1
+            self.quiet += 1
             if self.misses >= UNKNOWN_AFTER:
                 self.set("unknown", "no answer", seen)
-            if AUTO and self.misses == QUIET_AFTER:
+            if AUTO and self.quiet == QUIET_AFTER:
                 print(f"tv: no answer for {QUIET_AFTER} polls, asking every {QUIET_POLL_S:.0f} s", flush=True)
 
     def interval(self):
         """Seconds to the next poll: slow while the TV has long been silent (CEC=auto)."""
-        return QUIET_POLL_S if AUTO and self.misses >= QUIET_AFTER else POLL_S
+        return QUIET_POLL_S if AUTO and self.quiet >= QUIET_AFTER else POLL_S
 
     def poller(self):
         while True:
@@ -215,7 +220,8 @@ class Tv:
         own poll, which must not start another poll), and any other message
         from it (it woke up, it changed input) means a fresh look. Any
         message from the TV also ends the quiet pace (CEC=auto): it talks,
-        so it is polled at the normal pace again. A pwr-state line belongs
+        so it is polled at the normal pace again; only a power report or
+        <Standby> counts as an answer, though (misses). A pwr-state line belongs
         to the header above it, and counts only when that header is the
         TV's (logical address 0): an audio system in standby says nothing
         about the TV."""
@@ -223,16 +229,18 @@ class Tv:
             msg = parse_message(line)
             self.sender = msg[0] if msg else None
             if msg and msg[0] == 0:
-                if self.misses >= QUIET_AFTER:
+                if self.quiet >= QUIET_AFTER:
                     self.poll_now.set()      # it talks after all: back to the normal pace
-                self.misses = 0
+                self.quiet = 0
                 if msg[1] == "STANDBY":
+                    self.misses = 0
                     self.set("standby", "TV sent standby")
                 elif msg[1] != "REPORT_POWER_STATUS":
                     self.poll_now.set()
         elif "pwr-state" in line and self.sender == 0:
             state = parse_power(line)
             if state:
+                self.misses = 0
                 self.set(state, "report")
 
     def monitor(self):
