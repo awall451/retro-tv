@@ -519,7 +519,9 @@
       h("select", { onchange: set(k) }, opts.map(([v, t]) => h("option", { value: v, selected: f[k] === v }, t))));
     const search = h("input", { type: "search", placeholder: kind === "tv" ? "Search shows" : "Search films, directors", value: f.q, "aria-label": "Search" });
     let tmr;
-    search.addEventListener("input", (e) => { clearTimeout(tmr); tmr = setTimeout(() => { f.q = e.target.value; f.page = 0; renderLibraryBody(kind); }, 150); });
+    // The box may be gone by the time the timer fires (another page opened): its own
+    // library's search is kept, but nothing is drawn into the page now showing.
+    search.addEventListener("input", (e) => { clearTimeout(tmr); tmr = setTimeout(() => { f.q = e.target.value; f.page = 0; if (search.isConnected) renderLibraryBody(kind); }, 150); });
     const chOpts = [["any", "Any"], ["some", "On a channel"], ["none", "Not on any channel"], ...S.snap.channels.map((c) => [String(c.number), `${c.number} ${c.name}`])];
     main.append(h("div", { class: "toolbar" },
       h("label", { class: "fld search" }, h("span", { text: kind === "tv" ? "TV library" : "Movie library" }), search),
@@ -674,14 +676,18 @@
   $("#queuebar").addEventListener("submit", async (e) => {
     e.preventDefault();
     const action = $("#qbAction").value;
-    const body = { action, items: [...S.sel.values()].map(({ type, id }) => ({ type, id })), note: $("#qbNote").value.trim() || null };
+    const sent = [...S.sel.keys()], noteText = $("#qbNote").value;
+    const body = { action, items: sent.map((k) => S.sel.get(k)).map(({ type, id }) => ({ type, id })), note: noteText.trim() || null };
     if (action !== "remove") body.channel = refOf($("#qbTo").value);
     if (action === "remove" || action === "move") body.from = refOf($("#qbFrom").value);
     const btn = $("#qbSubmit"); btn.disabled = true;
     try {
       const r = await api("POST", "/api/requests", body);
       toast(`Queued #${r.id}: ${action} ${plural(r.items.length, "item")}`);
-      S.sel.clear(); $("#qbNote").value = ""; delete $("#queuebar").dataset.fromTouched;
+      // only what was sent: anything picked while the request was on its way stays picked
+      for (const k of sent) S.sel.delete(k);
+      if ($("#qbNote").value === noteText) $("#qbNote").value = "";
+      delete $("#queuebar").dataset.fromTouched;
       await loadQueue(); render();
     } catch (err) { toast(err.message, true); }
     finally { btn.disabled = false; }
