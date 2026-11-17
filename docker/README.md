@@ -220,12 +220,13 @@ A channel without a twin simply plays in Standard.
 
 With `TRACKER_URL` set, the viewer tells the [channel tracker](../tracker/README.md) (an optional
 second container, `docker compose --profile tracker up -d`) which channel it is playing: once a
-tune settles, every minute while playing, and on leaving. Each beacon is a small `text/plain`
+stream's first frame, every minute while playing, and on leaving. Each beacon is a small `text/plain`
 POST to `<TRACKER_URL>/api/watch/beacon` with the channel number, HD or not, the channels being
 warmed for fast flipping, the kind of screen (`tv`, `mobile`, `desktop`) and a random id kept in
 the browser's storage (`retro-tv.client-id`), so the tracker can join one screen's minutes.
-Nothing else: no titles, no names. A stream counts while it plays, also in a hidden tab until
-the viewer stops it there. With the [sleep timer](#sleep-timer) on, each beacon also carries
+Nothing else: no titles, no names. A stream counts only while it really plays: not while it
+tunes, retries or sits buffering (a picture that has not moved for 20 seconds sends a stop
+beacon), and also in a hidden tab until the viewer stops it there. With the [sleep timer](#sleep-timer) on, each beacon also carries
 `idle` (seconds since the last key press, click or touch) and `idleAfter` (the sleep time in
 seconds), so the tracker can keep a TV left on with nobody at the controls apart from watching;
 going to standby sends a stop beacon. With the timer off, beacons carry neither.

@@ -12,8 +12,11 @@
 // the minutes of one screen. Nothing else: no titles, no names. With the
 // sleep timer on, also the seconds since the last key press and its setting
 // (idle, idleAfter), so the tracker keeps a TV left on with nobody at the
-// controls apart. A stream counts while it plays (also in a hidden tab,
-// until the viewer stops it there or the sleep timer goes to standby).
+// controls apart. A stream counts while it plays: from its first frame, and
+// only while the picture moves (not while tuning, retrying or stuck
+// buffering), also in a hidden tab until the viewer stops it there or the
+// sleep timer goes to standby. A web page shown instead of a stream (kind
+// 'web') counts while it is on screen.
 
 import { serverSetting } from './config.js';
 

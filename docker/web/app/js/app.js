@@ -445,8 +445,11 @@ function closeDetails() {
 const SOUND_HINT = 'Sound is off: press a key or click';
 let autoMuted = false;
 
+let playerStateHook = () => {};          // set once the watch beacon exists (below)
+
 const player = new Player(el.video, {
   onState(state, ch) {
+    playerStateHook(state);
     const text = {
       tuning: ch && `Tuning to ${ch.num} ${ch.name}…`,
       error: 'Channel unavailable, retrying…',
@@ -746,9 +749,24 @@ const warmer = new Warmer();
 // the last input and the sleep time, so the tracker can keep a TV left on
 // apart from watching (js/idle.js). With it off they carry neither, as
 // before.
+// A stream counts only while its picture moves: from the player's first
+// frame ('playing'), and not once the video has stood still for
+// BEACON_STUCK_MS (a stream stuck buffering, a player retrying for ever).
+// Tuning, retrying and errors count for nothing; the beacon says stop.
+const BEACON_STUCK_MS = 20 * 1000;
+let progress = { channel: null, t: -1, at: 0 };
+function noteProgress() {
+  const t = el.video.currentTime;
+  if (progress.channel !== player.channel || t !== progress.t) progress = { channel: player.channel, t, at: Date.now() };
+}
+el.video.addEventListener('timeupdate', noteProgress);
+function videoMoving() {
+  noteProgress();
+  return Date.now() - progress.at < BEACON_STUCK_MS;
+}
 const beacon = new Beacon(loadTracker(), () => {
   const ch = tunedChannel();
-  if (!ch || idle.asleep || !player.channel || player.state === 'idle' || player.state === 'error') return null;
+  if (!ch || idle.asleep || !player.channel || player.state !== 'playing' || !videoMoving()) return null;
   return { channel: player.stream, kind: 'stream', hd: player.stream !== ch.num, warm: warmer.channels() };
 }, {
   tvMode: TV_MODE,
@@ -757,6 +775,9 @@ const beacon = new Beacon(loadTracker(), () => {
     idleAfter: Math.min(Math.round(idle.timeoutMs / 1000), BEACON_MAX_IDLE_S),
   } : {}),
 });
+// The player started, stopped or failed: tell the tracker once it settles
+// (a tune's beacon goes out before the first frame and counts for nothing).
+playerStateHook = () => beacon.changed();
 let surfTimer = 0, surfSettleTimer = 0;
 
 function surf(direction) {
