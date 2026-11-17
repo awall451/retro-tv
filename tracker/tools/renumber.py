@@ -124,7 +124,8 @@ def remap_events(events: list, mp: dict) -> tuple[list, int]:
     return events, n
 
 
-def write_atomic(path: str, data: bytes) -> None:
+def stage(path: str, data: bytes) -> str:
+    """data written and synced to a temp file next to path; its name."""
     d = os.path.dirname(path) or "."
     fd, tmp = tempfile.mkstemp(dir=d, prefix=f".{os.path.basename(path)}.", suffix=".tmp")
     try:
@@ -132,11 +133,74 @@ def write_atomic(path: str, data: bytes) -> None:
             f.write(data)
             f.flush()
             os.fsync(f.fileno())
+    except BaseException:
+        os.remove(tmp)
+        raise
+    return tmp
+
+
+def write_atomic(path: str, data: bytes) -> None:
+    tmp = stage(path, data)
+    try:
         os.replace(tmp, path)
     except BaseException:
         if os.path.exists(tmp):
             os.remove(tmp)
         raise
+
+
+def backup_stamp() -> str:
+    return dt.datetime.now().strftime("%Y%m%dT%H%M%S")
+
+
+def make_backup(path: str, stamp: str) -> str:
+    """A copy of path as <path>.bak-<stamp> (-2, -3, ... if taken), created exclusively:
+    an earlier backup is never overwritten."""
+    n = 1
+    while True:
+        bak = f"{path}.bak-{stamp}" + (f"-{n}" if n > 1 else "")
+        try:
+            dst = open(bak, "xb")
+        except FileExistsError:
+            n += 1
+            continue
+        try:
+            with dst, open(path, "rb") as src:
+                shutil.copyfileobj(src, dst)
+                dst.flush()
+                os.fsync(dst.fileno())
+            shutil.copystat(path, bak)
+        except BaseException:
+            os.remove(bak)
+            raise
+        return bak
+
+
+def apply_all(outputs: dict) -> dict:
+    """Replace each file in {path: data} with its new contents, all or none: both new files
+    are written and both backups taken before anything is replaced, and a file already
+    replaced is put back from its backup if a later one fails. {path: backup}."""
+    staged, baks, done = {}, {}, []
+    try:
+        for p, data in outputs.items():
+            staged[p] = stage(p, data)
+        stamp = backup_stamp()
+        for p in outputs:
+            baks[p] = make_backup(p, stamp)
+        try:
+            for p, tmp in staged.items():
+                os.replace(tmp, p)
+                done.append(p)
+        except BaseException:
+            for p in done:
+                with open(baks[p], "rb") as f:
+                    write_atomic(p, f.read())
+            raise
+    finally:
+        for tmp in staged.values():
+            if os.path.exists(tmp):
+                os.remove(tmp)
+    return baks
 
 
 def run(data_dir: str, pairs: list[str], apply: bool, out=None) -> int:
@@ -178,16 +242,14 @@ def run(data_dir: str, pairs: list[str], apply: bool, out=None) -> int:
         print("dry run: nothing written (add --apply; stop the tracker first)", file=out)
         return 0
 
-    stamp = dt.datetime.now().strftime("%Y%m%dT%H%M%S")
+    outputs = {}
     for name, obj in results.items():
-        p = os.path.join(data_dir, name)
-        bak = f"{p}.bak-{stamp}"
-        shutil.copy2(p, bak)
         if name == "watch-daily.json":
             data = json.dumps(obj, separators=(",", ":")).encode()
         else:
             data = json.dumps(obj, ensure_ascii=False, indent=1).encode()
-        write_atomic(p, data)
+        outputs[os.path.join(data_dir, name)] = data
+    for p, bak in apply_all(outputs).items():
         print(f"wrote {p} (backup {os.path.basename(bak)})", file=out)
     return 0
 
