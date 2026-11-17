@@ -1013,6 +1013,7 @@ function commitDigits() {
 const QUERY = new URLSearchParams(location.search);
 let idleServer = { timeoutMin: 0, promptSec: 60 };
 let sleptId = null;                      // the channel to resume after standby
+let wakeOnShow = false;                  // woken while hidden: resume once looked at
 const idle = new Idle({ playing: idlePlaying, boundary: idleBoundary, stop: sleep, resume: wakeUp });
 
 // Something the timer should stop is playing.
@@ -1032,6 +1033,7 @@ function idleBoundary(t) {
 // server ends its transcode) and any warm-up.
 function sleep() {
   sleptId = S.tunedId;
+  wakeOnShow = false;
   player.stop();
   stopSurf();
   bars.reset();
@@ -1040,12 +1042,18 @@ function sleep() {
 }
 
 // A key on the standby screen (or the TV switched back on): the same channel.
-// Asleep since before anything was tuned (the TV was off at start-up): the
-// start-up channel, as autoStart() would have.
+// Asleep since before anything was tuned (the TV was off at start-up), or
+// the channel has left the guide meanwhile: the focused channel, as
+// autoStart() would have; the stale tuned channel is forgotten first, or
+// autoStart() would take it as still playing and do nothing.
+// The TV switched on while the tab is hidden (the Pi box's CEC poll): nothing
+// starts unseen; the channel is kept and resumes once the tab is looked at.
 function wakeUp() {
+  if (document.hidden) { wakeOnShow = true; return; }
+  wakeOnShow = false;
   const ch = S.channels.find(c => c.id === sleptId);
   sleptId = null;
-  if (!ch) { autoStart(); return; }
+  if (!ch) { S.tunedId = null; autoStart(); return; }
   tune(ch);
   render();
   showBanner();
@@ -1198,7 +1206,9 @@ let drag = null;
 // first. A press that answers its question or wakes the standby screen is
 // used up there, with the click that follows it.
 {
-  let swallowUntil = 0, lastX = -1, lastY = -1;
+  // The first move only sets where the pointer is (screen coordinates can
+  // be negative on a monitor left of the main one, so no marker value).
+  let swallowUntil = 0, seen = false, lastX = 0, lastY = 0;
   const swallow = e => { e.preventDefault(); e.stopImmediatePropagation(); };
   window.addEventListener('pointerdown', e => {
     if (idle.input()) { swallowUntil = performance.now() + 800; swallow(e); }
@@ -1209,8 +1219,9 @@ let drag = null;
   window.addEventListener('wheel', e => { if (idle.input()) swallow(e); }, { capture: true, passive: false });
   window.addEventListener('pointermove', e => {
     // Not the "moves" some browsers send when the page under a still pointer changes.
-    if (e.screenX === lastX && e.screenY === lastY) return;
-    const first = lastX < 0;
+    if (seen && e.screenX === lastX && e.screenY === lastY) return;
+    const first = !seen;
+    seen = true;
     lastX = e.screenX; lastY = e.screenY;
     if (!first) idle.nudge();
   }, { capture: true, passive: true });
@@ -1441,6 +1452,7 @@ document.addEventListener('visibilitychange', () => {
     return;
   }
   clearTimeout(hiddenTimer);
+  if (wakeOnShow) wakeUp();
   if (startPending) autoStart();
   if (suspendedId) {
     const ch = S.channels.find(c => c.id === suspendedId);
