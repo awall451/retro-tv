@@ -116,14 +116,30 @@ What it does:
    schedule items, smart collection, search query. The query is evaluated by a small evaluator
    for the common part of ErsatzTV's search syntax: `field:term`, `field:"phrase"`, `[a TO b]`
    ranges (open at either end with `*`: `release_date:[* TO 19891231]`), AND / OR / NOT / `+` / `-` and parentheses (read as Lucene's classic parser reads
-   them: `a NOT b` is a without b, and `a OR b AND NOT c` is b without c), on the fields `type`,
-   `title`, `show_title`, `genre`, `tag`, `studio`, `director`, `library_name`,
-   `content_rating`, `state`, `season_number`, `episode_number`, `release_date`, `year`,
-   `minutes`, `height`, `width`. Titles match as analysed phrases, so `show_title:"Cowboy
-   Bebop"` also matches "Cowboy Bebop (2021)", as in ErsatzTV. A query with anything else
-   (wildcards such as `trek*`, fields such as `actor` or `language`, a group of only NOT
-   clauses, which matches nothing in Lucene) and schedule items that are not smart collections
-   are not evaluated: that channel shows no members and a note saying why. A query that filters
+   them: `a NOT b` is a without b, and `a OR b AND NOT c` is b without c). The fields and
+   their matching follow ErsatzTV's search index (v26.11.6):
+   - text, split on spaces and lowercased, nothing dropped: `title`, `genre`, `tag`, `studio`,
+     `actor`, `director`, `writer`, `country`, `library_name`, and for episodes their show's
+     `show_title`, `show_genre`, `show_tag`, `show_studio`, `show_network`. Punctuation stays
+     on its word, so `title:it` finds "It", and `show_title:"Cowboy Bebop"` also matches
+     "Cowboy Bebop (2021)", but `show_title:trek` does not find "Star Trek: Voyager" (its word
+     is `trek:`), in ErsatzTV either;
+   - `plot`: words, lowercased, English stop words dropped (Lucene's StandardAnalyzer);
+   - exact, case and all: `type`, `state`, `content_rating`, `show_content_rating`,
+     `release_date` (yyyymmdd), `tag_full`. So `content_rating:R` but not `content_rating:r`;
+   - whole numbers: `season_number`, `episode_number`, `minutes`, `seconds`, `height`, `width`,
+     `chapters`, from every version of a file (a film in 720p and 1080p matches either height).
+
+   An episode's `genre`, `tag` and the rest are its own; its show's are the `show_*` fields
+   (`type:episode AND genre:comedy` needs comedy episodes, `show_genre:comedy` a comedy show),
+   and an episode has no `content_rating` of its own. A range on a text or exact field compares
+   the words as text, its bounds lowercased, as Lucene does (`release_date:[1988 TO 1989]`
+   takes all of 1988). A query with anything else (wildcards such as `trek*`, fields such as
+   `language` or `video_codec`, `year` (ErsatzTV has no such field, so it matches nothing
+   there), `network` (shows only), a clause of only stop words, a group of only NOT clauses,
+   which matches nothing in Lucene) and schedule items that are not smart collections are not
+   evaluated: that channel shows no members and a note saying why, as does a query the
+   evaluator fails on. A query that filters
    on a field some of the items it could match never have (other videos, such as news tapes,
    usually have no genre and no date, so `genre:news` or a `release_date` range cannot match
    them, in ErsatzTV either) gets a note saying so, as does a query that matches nothing. An HD
@@ -218,10 +234,19 @@ time.
 
 - The query evaluator assumes ErsatzTV's default operator is OR (Lucene's default, and
   ErsatzTV's); a query read with AND as the default would resolve differently.
-- Stop words (a list close to Lucene's English one) are dropped from titles and query text
-  alike, but a clause of only stop words (`title:the`) is not dropped as Lucene drops it: here
-  it matches nothing, so `... AND title:the` leaves the channel empty. The playout check
-  (`check.outsideMembers`) shows such a difference.
+- The evaluator mirrors ErsatzTV v26.11.6's search index (fields, analyzers, item types). A
+  query that relies on something it does not model (shows as items, the `collection`, language
+  and codec fields, ...) gets a note instead of members. The plot analyzer is an approximation
+  of Lucene's StandardAnalyzer (word boundaries differ on some punctuation). The playout check
+  (`check.outsideMembers`) shows any difference.
+- Where the database is read without Python next to it (the `cat` fallback), the copy of the
+  database and its write-ahead log can be inconsistent if a checkpoint lands between the two
+  reads, and `quick_check` does not always catch it. A follow-up will stream a proper backup
+  instead.
+- The ErsatzTV API key (`X-Etv-Api-Key`) and the tracker token (`X-Tracker-Token`) travel in
+  clear over `http://` URLs. The tracker is meant for a trusted home network; beyond that, put
+  ErsatzTV and the tracker behind https (a TLS proxy) or a VPN. A URL given as `https://` is
+  used as https.
 - A new channel gets no watch time from the viewer until the snapshot is generated again: its
   beacons are refused (ErsatzTV's own sessions still count, as **direct**), and its HD twin is
   not recognised.
@@ -245,7 +270,8 @@ docker compose --profile tracker start tracker
 
 Pairs are `OLD=NEW`, or a range `LO-HI=+N` (`101-199=+900`); all apply at once, so `1=2 2=1`
 swaps. Channels moved onto one number have their minutes added up. `--apply` first copies each
-file it changes to `<file>.bak-<time>` in the data folder. Without Docker:
+file it changes to `<file>.bak-<time>` in the data folder (a new name, `-2`, `-3`, ... if one
+is taken: a backup is never overwritten), and changes both files or neither. Without Docker:
 `python3 tools/renumber.py --data-dir <folder> ...`.
 
 HD twins are counted under their channel's own number, so moving the twins (from number + 100
