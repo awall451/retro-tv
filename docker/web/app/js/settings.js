@@ -27,6 +27,13 @@ export const SETTINGS = [
     ],
   },
   {
+    id: 'epnum', label: 'Episode numbers', default: 'on',
+    options: [
+      ['on', 'On', 'Season and episode (S01E02) beside a show\'s title in the guide, the panel and the channel bar.'],
+      ['off', 'Off', 'Titles only, as the old guides printed them.'],
+    ],
+  },
+  {
     // The sleep timer (js/idle.js). "Server" is whatever IDLE_TIMEOUT_MIN says.
     id: 'sleep', label: 'Sleep', default: 'server',
     options: [
