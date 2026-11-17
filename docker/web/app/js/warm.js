@@ -42,6 +42,11 @@ export class Warmer {
     }
   }
 
+  // The channel numbers being kept warm (for the watch beacon).
+  channels() {
+    return [...this.#entries.keys()];
+  }
+
   // True once the channel has video waiting on the server.
   isReady(channel) {
     const entry = this.#entries.get(channel.num);

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Channel Tracker</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="7" width="26" height="19" rx="4"/><path d="M11 3l5 4 5-4"/></svg>
+    <div>
+      <h1>Channel Tracker</h1>
+      <p id="snapinfo" class="muted small">Loading…</p>
+    </div>
+  </div>
+  <nav class="tabs" aria-label="Views">
+    <a href="#channels" data-view="channels">Channels</a>
+    <a href="#tv" data-view="tv">TV</a>
+    <a href="#movies" data-view="movies">Movies</a>
+    <a href="#popular" data-view="popular">Popular</a>
+    <a href="#queue" data-view="queue">Queue <span id="pendingBadge" class="badge" hidden>0</span></a>
+  </nav>
+  <button id="themeBtn" class="icon-btn" type="button" title="Theme" aria-label="Theme">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5"/><path d="M12 7a5 5 0 0 1 0 10z" class="fill"/></svg>
+    <span id="themeLabel" class="small">Auto</span>
+  </button>
+</header>
+
+<main id="main" tabindex="-1"></main>
+
+<form id="queuebar" class="queuebar" hidden autocomplete="off">
+  <div class="qb-row">
+    <span id="qbCount" class="qb-count">0 selected</span>
+    <button type="button" id="qbClear" class="link-btn">Clear</button>
+    <button type="button" id="qbShow" class="link-btn">Show</button>
+  </div>
+  <div class="qb-row qb-fields">
+    <label class="fld"><span>Action</span>
+      <select id="qbAction">
+        <option value="add">Add to channel</option>
+        <option value="remove">Remove from channel</option>
+        <option value="move">Move to channel</option>
+        <option value="note">Note</option>
+      </select>
+    </label>
+    <label class="fld" id="qbFromWrap"><span>From</span><select id="qbFrom"></select></label>
+    <label class="fld" id="qbToWrap"><span id="qbToLabel">To</span><select id="qbTo"></select></label>
+    <label class="fld grow"><span>Note (optional)</span><input id="qbNote" type="text" maxlength="4000" placeholder="Why, or any detail"></label>
+    <button type="submit" id="qbSubmit" class="btn primary">Queue change</button>
+  </div>
+</form>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>
