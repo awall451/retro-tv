@@ -555,6 +555,7 @@ class Watch:
         self.etv = {}       # session id -> event (sessions seen in the raw window)
         self.clients = {}   # hashed client id -> its open beacon event (memory only)
         self.live_etv = {}  # session id -> lastAccess, from the last poll
+        self.classified_by = None   # the snapshot (etag) the sessions' channels were read with
         self.daily = {}
         self.dirty = False
         self.computed = None
@@ -571,9 +572,24 @@ class Watch:
             self.status["since"] = d.get("since") if isinstance(d, dict) else None
 
     # -- poller -------------------------------------------------------------
+    def reclassify(self):
+        """Sessions seen with no snapshot, or with an older one, counted under the channel the
+        current snapshot says (an HD twin under its SD channel, so beacons claim it)."""
+        if not snapshot.channels or self.classified_by == snapshot.etag:
+            return
+        self.classified_by = snapshot.etag
+        for sid, e in self.etv.items():
+            c, hd = sd_of(sid.split("@", 1)[0])
+            if (e.get("c"), e.get("hd")) != (c, int(hd)):
+                e["c"], e["hd"] = c, int(hd)
+                self.dirty = True
+
     def poll_once(self, sessions, t=None):
         t = t or time.time()
+        with lock:
+            snapshot.refresh()
         with self.lock:
+            self.reclassify()
             live = {}
             for s in sessions or []:
                 if not isinstance(s, dict) or s.get("channelNumber") is None:
