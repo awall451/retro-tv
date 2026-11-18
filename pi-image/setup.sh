@@ -36,6 +36,7 @@ DISPLAY_MODE=${DISPLAY_MODE:-hdmi480}
 MARGIN_LEFT=${MARGIN_LEFT:-0}; MARGIN_RIGHT=${MARGIN_RIGHT:-0}
 MARGIN_TOP=${MARGIN_TOP:-0}; MARGIN_BOTTOM=${MARGIN_BOTTOM:-0}
 TAILSCALE=${TAILSCALE:-0}
+CEC=${CEC:-auto}; CEC_KEYS=${CEC_KEYS:-0}
 case "$DISPLAY_MODE" in hdmi480|composite) ;; *) echo "DISPLAY_MODE must be hdmi480 or composite" >&2; exit 2;; esac
 
 # ---- packages -----------------------------------------------------------------
@@ -43,6 +44,8 @@ log "packages"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -q
 pkgs=(cage wlr-randr nginx-light plymouth plymouth-themes ir-keytable python3 python3-yaml rsync bluez pipewire-audio)
+# HDMI-CEC (cec-ctl) for an HDMI TV; composite has no CEC.
+[ "$DISPLAY_MODE" != composite ] && [ "$CEC" != 0 ] && pkgs+=(v4l-utils)
 if apt-cache show chromium >/dev/null 2>&1; then pkgs+=(chromium); else pkgs+=(chromium-browser); fi
 apt-get install -y -q --no-install-recommends "${pkgs[@]}"
 
@@ -145,6 +148,50 @@ systemctl enable retro-tv-themed.service retro-tv.service retro-tv-net-restore.s
 systemctl start retro-tv-net-check.timer
 systemctl disable getty@tty1.service >/dev/null 2>&1 || true
 systemctl set-default graphical.target
+
+# HDMI-CEC: whether the TV is on (/pi/cec), optionally its remote. Only for an
+# HDMI display mode on a Pi with a CEC device; otherwise off, and the viewer
+# simply finds no /pi/cec.
+# The service runs as its own user (group video: /dev/cec*) and gets only the
+# CEC_* settings, in a file of its own.
+install -m 755 "$HERE/config/retro-tv-cec.py" /usr/local/bin/retro-tv-cec.py
+install -m 644 "$HERE/config/retro-tv-cec.service" /etc/systemd/system/retro-tv-cec.service
+id retro-tv-cec >/dev/null 2>&1 ||
+    useradd --system --user-group --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin retro-tv-cec
+usermod -aG video retro-tv-cec
+# Built aside and moved into place (same directory, so the move is atomic); the
+# old file is kept as .prev until the new one is in, as for the nginx site.
+CEC_ENV=/etc/retro-tv-cec.env
+[ -f "$CEC_ENV" ] && cp -p "$CEC_ENV" "$CEC_ENV.prev"
+body="# Written by retro-tv setup.sh from $CFG (the CEC_* settings only); edit it there."$'\n'
+for v in CEC CEC_DEVICE CEC_KEYS CEC_POLL_SEC CEC_OSD_NAME; do
+    val=${!v:-}; val=${val//\\/\\\\}; val=${val//\"/\\\"}
+    if [ -n "$val" ]; then body+="$v=\"$val\""$'\n'; fi
+done
+if printf '%s' "$body" > "$CEC_ENV.new" && chmod 644 "$CEC_ENV.new" && mv -f "$CEC_ENV.new" "$CEC_ENV"; then
+    rm -f "$CEC_ENV.prev"
+else
+    rm -f "$CEC_ENV.new"
+    echo "could not write $CEC_ENV; the previous one (if any) is left in place" >&2
+    exit 1
+fi
+mkdir -p /etc/rc_keymaps
+install -m 644 "$HERE/config/rc_keymaps/retro-tv-cec.toml" /etc/rc_keymaps/
+systemctl daemon-reload
+sed -i '/retro-tv-cec\.toml/d' /etc/rc_maps.cfg 2>/dev/null || true
+if [ "$DISPLAY_MODE" != composite ] && [ "$CEC" != 0 ] && ls /dev/cec* >/dev/null 2>&1; then
+    log "HDMI-CEC on (keys: $CEC_KEYS)"
+    if [ "$CEC_KEYS" = 1 ]; then
+        printf '*\trc-cec\tretro-tv-cec.toml\n' >> /etc/rc_maps.cfg
+        # udev loads the map (ir-keytable, as root) for an rc device that is already there
+        udevadm trigger --subsystem-match=rc --action=add || true
+    fi
+    systemctl enable retro-tv-cec.service
+    systemctl restart retro-tv-cec.service
+else
+    # Stopping it removes its RuntimeDirectory, /run/retro-tv/cec: no /pi/cec.
+    systemctl disable --now retro-tv-cec.service >/dev/null 2>&1 || true
+fi
 
 # ---- boot splash -------------------------------------------------------------------
 log "plymouth theme"

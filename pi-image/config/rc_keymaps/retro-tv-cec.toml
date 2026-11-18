@@ -1,0 +1,41 @@
+# Retro TV over HDMI-CEC: the TV's own remote, as passed on by the TV
+# (<User Control Pressed>), mapped to the plain keyboard keys the viewer
+# understands (docker/web/app/js/app.js, KEYS), like retro-tv-mce.toml does
+# for the IR remote. The kernel's CEC framework turns the messages into key
+# presses on the adapter's rc device (rc-cec) when RC passthrough is on, which
+# retro-tv-cec.py leaves on only with CEC_KEYS=1. Scan codes are CEC UI
+# command codes (HDMI-CEC 1.4, table 27). Loaded through /etc/rc_maps.cfg
+# (setup.sh) and by retro-tv-cec.py at start. Untested on hardware so far.
+[[protocols]]
+name = "retro-tv-cec"
+protocol = "cec"
+[protocols.scancodes]
+0x00 = "KEY_ENTER"       # Select / OK
+0x01 = "KEY_UP"
+0x02 = "KEY_DOWN"
+0x03 = "KEY_LEFT"
+0x04 = "KEY_RIGHT"
+0x09 = "KEY_ESC"         # Root menu (Home): guide <-> picture
+0x0a = "KEY_S"           # Setup menu: settings
+0x0b = "KEY_ESC"         # Contents menu
+0x0d = "KEY_ESC"         # Exit / Back
+0x20 = "KEY_0"
+0x21 = "KEY_1"
+0x22 = "KEY_2"
+0x23 = "KEY_3"
+0x24 = "KEY_4"
+0x25 = "KEY_5"
+0x26 = "KEY_6"
+0x27 = "KEY_7"
+0x28 = "KEY_8"
+0x29 = "KEY_9"
+0x2b = "KEY_ENTER"       # Enter (after digits)
+0x30 = "KEY_PAGEUP"      # Channel up
+0x31 = "KEY_PAGEDOWN"    # Channel down
+0x35 = "KEY_I"           # Display information
+0x44 = "KEY_ENTER"       # Play
+0x46 = "KEY_I"           # Pause: details
+0x48 = "KEY_PAGEDOWN"    # Rewind
+0x49 = "KEY_PAGEUP"      # Fast forward
+0x53 = "KEY_ESC"         # Electronic programme guide
+0x71 = "KEY_R"           # F1 (blue): reload the listings

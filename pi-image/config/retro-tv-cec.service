@@ -1,0 +1,42 @@
+# The HDMI-CEC service behind /pi/cec (see retro-tv-cec.py). setup.sh enables
+# it only for an HDMI display mode on a box with a CEC device.
+#
+# It runs as its own user (retro-tv-cec, made by setup.sh, in group video for
+# /dev/cec*) and sees only the CEC_* settings, which setup.sh copies into
+# /etc/retro-tv-cec.env; the rest of /etc/retro-tv.env is not its business.
+# CAP_NET_ADMIN is what the kernel asks of a CEC bus monitor (cec-ctl -m).
+# It writes only its RuntimeDirectory, /run/retro-tv/cec: systemd makes it
+# for this user and removes it (that directory alone, not /run/retro-tv,
+# which the network keeper shares) when the service stops.
+[Unit]
+Description=Retro TV HDMI-CEC (TV power, optional remote keys)
+After=local-fs.target
+ConditionPathExistsGlob=/dev/cec*
+
+[Service]
+Type=simple
+User=retro-tv-cec
+Group=retro-tv-cec
+SupplementaryGroups=video
+EnvironmentFile=-/etc/retro-tv-cec.env
+ExecStart=/usr/bin/python3 /usr/local/bin/retro-tv-cec.py
+Restart=always
+RestartSec=5
+RuntimeDirectory=retro-tv/cec
+RuntimeDirectoryMode=0755
+AmbientCapabilities=CAP_NET_ADMIN
+CapabilityBoundingSet=CAP_NET_ADMIN
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX
+RestrictNamespaces=yes
+RestrictRealtime=yes
+LockPersonality=yes
+
+[Install]
+WantedBy=multi-user.target
